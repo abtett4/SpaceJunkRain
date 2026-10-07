@@ -20,6 +20,15 @@ The timeline tools need no third-party packages; Python 3.8+ standard library on
 orbital tools below have separate dependencies. Pushing to `main` redeploys the site
 from `web/` (see `.github/workflows/pages.yml`).
 
+## Tracer visualization model
+
+Tracers prioritize useful object/event attributes and visually plausible geometry, with
+explicit distinctions between reported data, estimates, and display choices. Date-only
+events and missing attributes remain eligible for visualization. See the
+[tracer model and approximation policy](notes/tracer-model.md) and the
+[populated Tiangong-1 design example](data/examples/tracer-37820-reentry.json).
+These specify the next adapter; representative/symbolic fallback rendering is not yet implemented.
+
 ## One-object orbital prototype
 
 The first offline trajectory uses **TIANGONG 1, NORAD 37820**, already present in the

@@ -1,0 +1,219 @@
+{
+  "schemaVersion": "0.1-draft",
+  "status": "design-example-not-yet-consumed",
+  "eventId": "37820:reentry:2018-04-02",
+  "eventKind": "reentry",
+  "object": {
+    "noradId": 37820,
+    "objectId": "2011-053A",
+    "name": "TIANGONG 1",
+    "launchFamily": "2011-053"
+  },
+  "representation": {
+    "kind": "individual",
+    "noradIds": [
+      37820
+    ],
+    "representedObjectCount": 1
+  },
+  "eventTime": {
+    "date": "2018-04-02",
+    "precision": "day",
+    "intervalUtc": [
+      "2018-04-02T00:00:00Z",
+      "2018-04-03T00:00:00Z"
+    ],
+    "basis": "reported",
+    "source": "decay",
+    "meaning": "Reported calendar day, not a confidence interval."
+  },
+  "attributes": {
+    "objectType": {
+      "value": "PAYLOAD",
+      "basis": "reported",
+      "source": "gpHistory:OBJECT_TYPE"
+    },
+    "structure": {
+      "value": null,
+      "basis": "unknown",
+      "note": "Catalog PAYLOAD class alone does not establish physical intactness near reentry."
+    },
+    "debrisOrigin": {
+      "value": null,
+      "basis": "unknown",
+      "note": "No collision, fragmentation, or other origin classification established by these inputs."
+    },
+    "parentNoradIds": {
+      "value": null,
+      "basis": "unknown",
+      "note": "No parent-object link established by these inputs."
+    },
+    "breakupEventId": {
+      "value": null,
+      "basis": "unknown",
+      "note": "No sourced breakup association."
+    },
+    "physicalSize": {
+      "value": null,
+      "basis": "unknown",
+      "note": "No sourced dimensions or mass in the selected inputs."
+    },
+    "radarSize": {
+      "value": "LARGE",
+      "basis": "proxy",
+      "source": "gpHistory:RCS_SIZE",
+      "note": "Radar size class; not diameter or mass."
+    },
+    "orbitNearEvent": {
+      "epochUtc": "2018-04-01T16:07:05.931552Z",
+      "frame": "TEME",
+      "basis": "reported",
+      "source": "gpHistory",
+      "inclinationDeg": 42.7393,
+      "raanDeg": 196.1141,
+      "perigeeKm": 144.505,
+      "apogeeKm": 152.315,
+      "eccentricity": 0.0005983,
+      "periodMinutes": 87.455,
+      "meaning": "Mean-element descriptors at the source epoch, not exact values at reentry."
+    },
+    "orbitRegimeNearEvent": {
+      "value": "LEO",
+      "basis": "derived",
+      "source": "gpHistory",
+      "note": "Example rule: both perigee and apogee are positive and below 2000 km at the selected epoch."
+    },
+    "orbitRegimeLifetime": {
+      "value": null,
+      "basis": "unknown",
+      "note": "Only a four-day terminal history window was queried; lifetime classification not established."
+    },
+    "eventLocation": {
+      "value": null,
+      "basis": "unknown",
+      "note": "Reentry geography is not constrained to a point or region by these inputs."
+    },
+    "launchSite": {
+      "code": {
+        "value": "JSC",
+        "basis": "reported",
+        "source": "gpHistory:SITE"
+      },
+      "coordinates": {
+        "value": null,
+        "basis": "unknown",
+        "note": "Site-code lookup has not been added; this is not a reentry location."
+      }
+    },
+    "catalogCountry": {
+      "value": "PRC",
+      "basis": "reported",
+      "source": "gpHistory:COUNTRY_CODE",
+      "note": "Catalog attribution, distinct from institutional ownership."
+    },
+    "owner": {
+      "value": null,
+      "basis": "unknown",
+      "note": "Not established by the selected records."
+    },
+    "operator": {
+      "value": null,
+      "basis": "unknown",
+      "note": "Not established by the selected records."
+    },
+    "missionType": {
+      "value": null,
+      "basis": "unknown",
+      "note": "Requires a sourced mission lookup."
+    },
+    "functionalStatus": {
+      "value": null,
+      "basis": "unknown",
+      "note": "No event-time operational state established by these inputs."
+    },
+    "reentryControl": {
+      "value": null,
+      "basis": "unknown",
+      "note": "No sourced controlled/uncontrolled determination in the selected records."
+    }
+  },
+  "presentation": {
+    "mode": "illustrative-replay-of-propagated-orbit",
+    "displayAnchorUtc": "2018-04-02T12:00:00Z",
+    "anchorBasis": "visual-convention",
+    "anchorPolicy": "UTC noon within reported day; matches existing timeline",
+    "geometryAsset": "../processed/trajectories/37820.json",
+    "geometryFrame": "TEME",
+    "geometryUnits": "km",
+    "geometrySourceIntervalUtc": [
+      "2018-04-01T22:00:00Z",
+      "2018-04-02T00:00:00Z"
+    ],
+    "timeMapping": "Replay source geometry around the shared display anchor; do not rewrite source sample timestamps.",
+    "mappingStatus": "proposed-not-implemented",
+    "geographicEndpoint": null,
+    "locationClaim": "none",
+    "style": {
+      "color": null,
+      "width": null,
+      "brightness": null,
+      "duration": null
+    },
+    "styleMeaning": "Available attribute mappings, not yet assigned. Marker width may be exaggerated."
+  },
+  "bounds": {
+    "eventDay": {
+      "intervalUtc": [
+        "2018-04-02T00:00:00Z",
+        "2018-04-03T00:00:00Z"
+      ],
+      "meaning": "Reported support; end exclusive."
+    },
+    "sourceElementAgeAtReportedDecayHours": {
+      "interval": [
+        7.88168568,
+        31.88168568
+      ],
+      "meaning": "Age during reported calendar day; not a propagation accuracy bound; upper end exclusive."
+    },
+    "sampledRadiusMinusReferenceKm": {
+      "interval": [
+        130.70800198037796,
+        141.65839296367358
+      ],
+      "referenceRadiusKm": 6378.135,
+      "meaning": "Model sample range; not true-altitude uncertainty or mean-element perigee/apogee."
+    },
+    "reentryLocation": {
+      "region": null,
+      "meaning": "Unknown; do not generate a factual point location."
+    }
+  },
+  "sources": {
+    "gpHistory": {
+      "path": "data/raw/gp_history/37820/6c2ffa38f41e5d8e/response.json",
+      "query": "/basicspacedata/query/class/gp_history/NORAD_CAT_ID/37820/EPOCH/2018-03-30T00:00:00--2018-04-03T00:00:00/orderby/EPOCH asc/format/json",
+      "sha256": "11d6b5bda4e7d54ed447d9e89805515c2e4e535812a62225ccde859b27ac20c7",
+      "retrievedAt": "2026-10-07T21:12:12Z",
+      "source": "USSPACECOM via Space-Track.org",
+      "rowCount": 18
+    },
+    "decay": {
+      "path": "data/raw/decay/37820/f0e22da9e3871b49/response.json",
+      "query": "/basicspacedata/query/class/decay/NORAD_CAT_ID/37820/MSG_TYPE/Historical/orderby/PRECEDENCE asc/format/json",
+      "sha256": "46a26d8580c02491d547f88e294ead65ff91b7d4f97e389692ff467b2480ea5a",
+      "retrievedAt": "2026-10-07T21:11:49Z",
+      "source": "USSPACECOM via Space-Track.org",
+      "rowCount": 2
+    }
+  },
+  "geometryProvenance": {
+    "gpId": "119038425",
+    "elementSha256": "bd5871383dc6484db7b2f57093b0debb32abd039e9639128dcbe81bf467cbf76",
+    "trajectorySha256": "ac8707db8f7434ea07ecaf957fa341333d04fb552f890c1bb071351f2bc1d918"
+  },
+  "diagnostics": {
+    "alternativeSetMaximumSeparationKm": 145.3661886008241,
+    "meaning": "Sensitivity between element sets, not a calibrated error radius."
+  }
+}
