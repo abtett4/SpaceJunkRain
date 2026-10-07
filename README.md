@@ -16,70 +16,72 @@ Two views: **By source** (one row per major breakup, debris on its reentry day, 
 right) and **Time in orbit** (decay date vs. lifespan, log scale). A row appears for any launch
 with 150+ reentered debris pieces, plus every launch linked in `data/events.json`.
 
-No third-party packages; Python 3.8+ standard library only. Pushing to `main` redeploys the site
+The timeline tools need no third-party packages; Python 3.8+ standard library only. The optional
+orbital tools below have separate dependencies. Pushing to `main` redeploys the site
 from `web/` (see `.github/workflows/pages.yml`).
 
-## One-object orbital prototype: acquisition
+## One-object orbital prototype
 
-The orbital contribution starts with historical data acquisition; no Earth renderer or
-propagation is implemented yet. It uses the same credentials and downloader as the timeline.
-Do not put credentials in the browser or commit `.env`.
+The first offline trajectory uses **TIANGONG 1, NORAD 37820**, already present in the
+timeline, with reported decay **date 2018-04-02**. It is a last-known orbital estimate,
+not an observed atmospheric reentry or impact path. The original candidate, IRIDIUM 33
+DEB (38023), was rejected because its last available pre-decay element was over a year old.
+See [the evidence and limitations](notes/orbital-prototype.md).
 
-The initial candidate in `web/data/decays.json` is **IRIDIUM 33 DEB, NORAD 38023**, launch
-family `1997-051`, with decay **date 2024-01-05**. Its noon timestamp is a plotting convention,
-not a verified reentry instant. The committed dataset currently has `preciseEpochs: 0`.
-
-First inspect the query, then fetch this object's historical DECAY messages:
-
-```sh
-python tools/spacetrack_fetch.py decay --norad-id 38023 --dry-run
-python tools/spacetrack_fetch.py decay --norad-id 38023
-```
-
-The downloader reuses an existing local full DECAY file if it contains this object's
-historical messages. Otherwise it saves the original response bytes and a `metadata.json`
-sidecar under `data/raw/decay/38023/<query-hash>/`. Inspect `DECAY_EPOCH`, `MSG_EPOCH`,
-`PRECEDENCE`, and any uncertainty fields before choosing the GP_HISTORY interval. Lowest
-PRECEDENCE wins in the existing builder, but conflicting/tied messages need inspection.
-Timestamp formatting alone does not establish its accuracy; midnight may be date-only.
-If only a date is supported, retain that uncertainty or choose another candidate.
-
-Then query a narrow interval of **element epochs**, using explicit UTC bounds. This is
-an illustrative dry run; its end is not a verified decay time:
+The downloader uses the same `.env` credentials as the timeline. Add `--dry-run` to either
+command to inspect its URL without authentication, writes, or network requests:
 
 ```sh
-python tools/spacetrack_fetch.py gp_history --norad-id 38023 \
-  --start 2024-01-02T00:00:00Z --end 2024-01-05T00:00:00Z --dry-run
+python tools/spacetrack_fetch.py decay --norad-id 37820
+python tools/spacetrack_fetch.py gp_history --norad-id 37820 \
+  --start 2018-03-30T00:00:00Z --end 2018-04-03T00:00:00Z
 ```
 
-After establishing the appropriate bounds, omit `--dry-run` to fetch. This prototype limits
-requests to one object and at most seven days; endpoints are inclusive. The complete JSON
-records, including the propagation fields supplied by Space-Track, are preserved under
-`data/raw/gp_history/38023/<query-hash>/`. Acquisition validates object IDs and epochs; it
-does **not** establish that an element set is physically trustworthy or propagable.
+Historical requests are limited to one object and GP windows of at most seven days, with
+inclusive endpoints. Response bytes and metadata (query, retrieval time, SHA-256, row count)
+are saved in `data/raw/<class>/<NORAD ID>/<query-hash>/`. Identical requests reuse the
+snapshot indefinitely, including empty responses; `--force` is unavailable in targeted
+mode. Corrupt/incomplete snapshots stop instead of triggering a download. Existing full
+DECAY files are reused if they contain the object. Consult saved windows before changing
+query bounds: a different window creates a new request. Space-Track asks that
+[downloaded histories be stored and reused](https://www.space-track.org/documentation).
+The legacy full-catalog commands retain their existing replaceable 24-hour cache.
 
-Each new historical snapshot records the query, retrieval time, row count, and SHA-256 of
-the untouched response. Identical requests reuse that snapshot indefinitely, including
-empty responses, without logging in. `--force` is unavailable in targeted mode. Corrupt or
-incomplete snapshots stop the command instead of causing another download. Consult saved
-windows before choosing a different query; changing the window produces a new request.
-Space-Track asks that [downloaded histories be stored and reused](https://www.space-track.org/documentation).
-The original full-catalog commands still use their existing 24-hour, replaceable cache.
-
-Run the offline checks without credentials or third-party packages:
+Set up the optional orbital tools (Python 3.11+ for the pinned plotting dependencies):
 
 ```sh
-python -m unittest discover -s tests -v
+python -m venv .venv
+.venv/bin/python -m pip install -r requirements-orbit.txt
+.venv/bin/python -m unittest discover -s tests -v
+.venv/bin/python tools/propagate.py --norad-id 37820 \
+  --gp-history data/raw/gp_history/37820/6c2ffa38f41e5d8e/response.json \
+  --decay data/raw/decay/37820/f0e22da9e3871b49/response.json
 ```
 
-Next: select a usable pre-decay element set, record its age relative to the reported decay,
-and propagate offline with SGP4. Preserve the full source OMM/TLE, including BSTAR; the
-timeline's date parser is unsuitable because it shifts midnight to noon and rounds times.
-The diagnostic should show a reconstructed last-known orbit, not claim an observed
-atmospheric reentry or impact path. Trajectory exports will specify UTC times, TEME
-coordinates, kilometer units, source provenance, and any propagation failures. Derived
-diagnostics belong in `data/processed/`; browser-ready exports can later go in
-`web/data/trajectories/` without changing the existing deployment structure.
+Use the paths printed by the downloader if they differ. If it reuses a full DECAY file,
+this first propagator requires a targeted snapshot with its metadata sidecar; it does not
+yet read the legacy bulk format. Do not refetch just to change formats.
+
+The offline propagator verifies snapshot checksums, retains original UTC times, selects
+the latest numerically usable element epoch before the cutoff, and uses the full OMM
+record including BSTAR. The default 24-hour age limit is a screening policy, not an
+accuracy guarantee. It plots the last two hours (or the shorter available interval) at
+30-second spacing, stops on an SGP4 failure, then exports JSON. It compares nearby
+element sets to reveal sensitivity; this comparison is not a calibrated error bound.
+
+Outputs are `data/processed/trajectories/37820-diagnostic.png` and `37820.json` (Git-ignored).
+JSON positions are `[UTC timestamp, x, y, z]` in **TEME kilometers**, with NORAD identity,
+source hashes, element age, decay precision, numerical diagnostics, and warnings. The
+radius plot subtracts a WGS72 reference sphere; it is not geodetic altitude. Earth-fixed
+coordinates would require a separate frame conversion before rendering geographic detail.
+
+The retrieved DECAY records only support a calendar day, so this trajectory stops at the
+**start** of April 2 UTC. Midnight is not promoted to an exact decay time. No ground
+intersection or atmospheric descent is synthesized. The existing timeline dataset and
+browser remain unchanged; Earth/clock/audio integration is a later step.
+
+Without orbital dependencies, `python -m unittest discover -s tests -v` still runs the
+acquisition checks and explicitly skips the orbital checks.
 
 ## Data and citation
 
