@@ -110,7 +110,7 @@
   }
 
   // ---- state -------------------------------------------------------------
-  const state = { view: 'parent', playhead: X_MAX, playing: false, secPerYear: 3.1470588, family: -1, hover: null };
+  const state = { view: 'parent', playhead: X_MAX, playing: false, secPerYear: 3.1470588, family: -1, hover: null, showAgg: false };
   let revealed = N, drawnTo = 0, lastYear = -1;
   const eventFlash = new Map();
   const inFamily = (i) => state.family < 0 || F[i] === state.family;
@@ -185,8 +185,21 @@
     document.getElementById('chart-title').textContent = VIEWS[v].title;
     document.getElementById('chart-note').innerHTML = VIEWS[v].note;
     document.getElementById('tb-sheet').textContent = `${v === 'parent' ? 1 : 2} of 2`;
+    aggBtn.hidden = v !== 'parent';
     layout(); rebuild();
   }
+
+  const aggBtn = document.getElementById('agg-toggle');
+  const aggTotal = AGG.reduce((s, a) => s + a.n, 0);
+  function renderAggBtn() {
+    aggBtn.setAttribute('aria-expanded', String(state.showAgg));
+    aggBtn.innerHTML = state.showAgg
+      ? '▾ Hide everything else'
+      : `▸ Everything else <span class="count">· ${fmtInt(aggTotal)} more reentries in ${AGG.length} rows</span>: ` +
+        'thousands of smaller breakups, spent rocket stages, Starlink and other satellites';
+  }
+  aggBtn.addEventListener('click', () => { state.showAgg = !state.showAgg; renderAggBtn(); layout(); rebuild(); });
+  renderAggBtn();
   tabs.parent.addEventListener('click', () => setView('parent'));
   tabs.lifespan.addEventListener('click', () => setView('lifespan'));
 
@@ -217,11 +230,17 @@
   const radius = (i) => state.view === 'parent' ? (LANES[laneOf[i]].agg ? 1.4 : 1.8) : ([1.6, 2.4, 3.2][R[i]] || 2);
   const narrow = () => wrap.clientWidth < 700;
 
+  // the four "Everything else" rows stay folded away until the viewer opens them
+  const laneShown = (li) => !LANES[li].agg || state.showAgg;
+  const hiddenPt = new Uint8Array(N);
+
   function layout() {
     if (state.view === 'parent') {
-      M = { l: narrow() ? 120 : 196, r: narrow() ? 12 : 128, t: 34, b: 26 };
+      // taller top margin: event symbols, then a second row of year labels above the rows
+      M = { l: narrow() ? 120 : 196, r: narrow() ? 12 : 128, t: 52, b: 26 };
       let y = M.t;
       laneY = LANES.map((ln, li) => {
+        if (!laneShown(li)) return null;
         if (ln.agg && !LANES[li - 1].agg) y += 30; // gap + heading before the aggregates
         const top = y; y += ln.h; return top;
       });
@@ -236,6 +255,8 @@
     spatial = new Map();
     for (let i = 0; i < N; i++) {
       PX[i] = xOf(D[i], main, M);
+      hiddenPt[i] = state.view === 'parent' && !laneShown(laneOf[i]) ? 1 : 0;
+      if (hiddenPt[i]) continue;
       if (state.view === 'parent') {
         const ln = LANES[laneOf[i]], pad = 4;
         PY[i] = laneY[laneOf[i]] + pad + hash01(cols.id[i]) * (ln.h - 2 * pad);
@@ -253,6 +274,7 @@
   function paintPoints(from, to) {
     bctx.globalAlpha = state.view === 'parent' ? 0.7 : 0.8;
     for (let i = from; i < to; i++) {
+      if (hiddenPt[i]) continue;
       bctx.fillStyle = colorOf(i);
       bctx.beginPath(); bctx.arc(PX[i], PY[i], radius(i), 0, 6.2832); bctx.fill();
     }
@@ -280,7 +302,7 @@
     }
     binMax = Math.max(1, ...bins);
   }
-  const PEAK = { bin: 0, day: Infinity, text: '' };
+  const PEAK = { bin: 0, day: Infinity, text: '', short: '' };
   { // busiest month tile (whole catalog)
     const save = state.family; state.family = -1; buildHistogram(); state.family = save;
     const b = bins.indexOf(binMax);
@@ -290,6 +312,7 @@
     const [topFam, topN] = [...byFam].sort((a, c) => c[1] - a[1])[0];
     PEAK.bin = b; PEAK.day = lo;
     PEAK.text = `${fmtMonth(lo)}: ${fmtInt(binMax)} reentries, ${fmtInt(topN)} of them ${pretty(families[topFam].name)} debris`;
+    PEAK.short = `${fmtMonth(lo)}: ${fmtInt(topN)} of ${fmtInt(binMax)} from ${pretty(families[topFam].name)}`;
     document.getElementById('t-peak').textContent = fmtMonth(lo);
     document.getElementById('t-peak-foot').textContent = `${fmtInt(binMax)} reentries, ${fmtInt(topN)} from ${pretty(families[topFam].name)}`;
   }
@@ -299,8 +322,9 @@
   const FONT = (px, w = 400, style = 'normal') => `${style} ${w} ${px}px ${SERIF}`;
 
   // graph paper: faint yearly rules, firmer decade rules, drafting ticks on the time axis
-  function drawXAxis(cv, m) {
-    const ctx = cv.ctx, base = cv.h - m.b + 0.5;
+  // top = also label the decades along the top edge, for rows far from the bottom axis
+  function drawXAxis(cv, m, top = false) {
+    const ctx = cv.ctx, base = cv.h - m.b + 0.5, head = m.t - 0.5;
     ctx.font = FONT(13); ctx.lineWidth = 1;
     ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillStyle = C.muted;
     for (let y = 1957; y <= 2030; y++) {
@@ -312,9 +336,14 @@
       ctx.strokeStyle = C.axis;
       ctx.beginPath(); ctx.moveTo(x, base); ctx.lineTo(x, base + (decade ? 6 : y % 5 === 0 ? 4 : 2)); ctx.stroke();
       if (decade) ctx.fillText(String(y), x, base + 7);
+      if (top) {
+        ctx.beginPath(); ctx.moveTo(x, head); ctx.lineTo(x, head - (decade ? 6 : y % 5 === 0 ? 4 : 2)); ctx.stroke();
+        if (decade) { ctx.textBaseline = 'bottom'; ctx.fillText(String(y), x, head - 7); ctx.textBaseline = 'top'; }
+      }
     }
     ctx.strokeStyle = C.axis;
     ctx.beginPath(); ctx.moveTo(m.l, base); ctx.lineTo(cv.w - m.r, base); ctx.stroke();
+    if (top) { ctx.beginPath(); ctx.moveTo(m.l, head); ctx.lineTo(cv.w - m.r, head); ctx.stroke(); }
   }
   function drawYTicks(cv, m, ticks) {
     const ctx = cv.ctx;
@@ -336,6 +365,7 @@
   function drawLanes() {
     const ctx = main.ctx, plotR = main.w - M.r;
     LANES.forEach((ln, li) => {
+      if (!laneShown(li)) return;
       const top = laneY[li], mid = top + ln.h / 2;
       const hl = state.family >= 0 && ln.fam === state.family;
       const hov = state.hover && state.hover.lane === li;
@@ -427,6 +457,7 @@
     const ctx = main.ctx;
     ctx.font = FONT(13.5, 400, 'italic'); ctx.fillStyle = C.text2; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
     laneNotes.forEach((variants, li) => {
+      if (!laneShown(li)) return;
       const ln = LANES[li];
       // the note sits in the empty stretch before the row's first mark, ending at its launch tick
       const from = ln.agg ? dateToDay('2019-06-01') : ln.events.length ? events[ln.events[0]].t : 0;
@@ -463,7 +494,11 @@
       ctx.globalAlpha = passed ? 0.6 + 0.4 * Math.max(glow, hov ? 1 : 0) : 0.25;
       ctx.strokeStyle = C.text2; ctx.lineWidth = 1 + 2 * glow;
       ctx.setLineDash([3, 3]);
-      ctx.beginPath(); ctx.moveTo(x, M.t - 6); ctx.lineTo(x, full ? main.h - M.b : M.t); ctx.stroke();
+      // in the parent view the top year labels sit between the symbol and the rows, so the
+      // marker line starts below them; otherwise it hangs from just under the symbol
+      const y0 = state.view === 'parent' ? M.t : M.t - 6;
+      if (full) { ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, main.h - M.b); ctx.stroke(); }
+      else if (state.view !== 'parent') { ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, M.t); ctx.stroke(); }
       ctx.setLineDash([]);
       ctx.font = FONT(12); ctx.fillStyle = C.text;
       ctx.fillText(KIND_GLYPH[e.kind], x, 14);
@@ -485,6 +520,7 @@
     const from = upperBound(D, state.playhead - flashDays);
     const ctx = main.ctx, drop = state.view === 'parent' ? 12 : 28;
     for (let i = from; i < revealed; i++) {
+      if (hiddenPt[i]) continue;
       const age = Math.min(1, (state.playhead - D[i]) / flashDays);
       const fall = (1 - age) * drop;
       ctx.strokeStyle = colorOf(i); ctx.globalAlpha = 1 - age * 0.7; ctx.lineWidth = radius(i) + 0.4;
@@ -501,7 +537,7 @@
 
     const ctx = main.ctx;
     ctx.clearRect(0, 0, main.w, main.h);
-    drawXAxis(main, M);
+    drawXAxis(main, M, state.view === 'parent');
     if (state.view === 'parent') drawLanes();
     else drawYTicks(main, M, Y_TICKS.map(([v, l]) => [yLife(v), l]));
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(base, 0, 0); ctx.restore();
@@ -548,7 +584,9 @@
     if (state.family < 0 && PEAK.day <= state.playhead) {
       ctx.font = FONT(13.5, 400, 'italic'); ctx.fillStyle = C.text2;
       ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-      haloText(ctx, PEAK.text, xOf(PEAK.day, hist, H) - 8, yv(bins[PEAK.bin]) + 6);
+      const x = xOf(PEAK.day, hist, H) - 8;
+      const text = [PEAK.text, PEAK.short].find((t) => x - ctx.measureText(t).width > H.l + 6);
+      if (text) haloText(ctx, text, x, yv(bins[PEAK.bin]) + 6);
     }
     const h = state.hover;
     if (h && h.bin != null) {
@@ -562,8 +600,8 @@
   let lastT = 0;
   function setPlaying(p) {
     state.playing = p;
-    playBtn.textContent = p ? '❚❚ Pause' : '▶ Play';
-    playBtn.setAttribute('aria-label', p ? 'Pause' : 'Play');
+    playBtn.textContent = p ? '❚❚ Pause' : '▶ Animate';
+    playBtn.setAttribute('aria-label', p ? 'Pause' : 'Animate');
     if (p) {
       if (state.playhead >= X_MAX) { state.playhead = X_MIN; eventFlash.clear(); }
       lastT = performance.now();
@@ -625,7 +663,7 @@
     });
     return best;
   }
-  const laneAt = (y) => LANES.findIndex((ln, li) => y >= laneY[li] && y < laneY[li] + ln.h);
+  const laneAt = (y) => LANES.findIndex((ln, li) => laneY[li] != null && y >= laneY[li] && y < laneY[li] + ln.h);
 
   function eventTip(e) {
     const fam = famLink(e).map((f) => `${pretty(f.name)}: ${fmtInt(f.n)} down, ${fmtInt(f.orbit)} still up`).join('<br>');

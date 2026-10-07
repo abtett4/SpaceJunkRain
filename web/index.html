@@ -38,7 +38,8 @@
     <p class="note" id="chart-note"></p>
 
     <div class="controls" aria-label="Playback and filters">
-      <button id="play" type="button" class="primary" aria-label="Play">▶ Play</button>
+      <button id="play" type="button" class="primary" aria-label="Animate" aria-describedby="silent-note">▶ Animate</button>
+      <span class="silent" id="silent-note">silent for now; sound is coming</span>
       <span class="readout"><span id="pulse" class="pulse" aria-hidden="true"></span><span id="date">Today</span><span class="count" id="now-count"></span></span>
       <label>Speed
         <select id="speed">
@@ -54,6 +55,7 @@
     </div>
 
     <div class="canvas-wrap" id="main-wrap"><canvas id="main" aria-label="Reentries chart"></canvas></div>
+    <button type="button" class="disclosure" id="agg-toggle" aria-expanded="false" aria-controls="main-wrap" hidden></button>
     <h2 class="second">Reentries per month</h2>
     <div class="canvas-wrap short"><canvas id="hist" aria-label="Reentries per month"></canvas></div>
 
