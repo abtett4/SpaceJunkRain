@@ -1,0 +1,17 @@
+{
+  "_readme": "Hand-edited collision table. kind = bump | crash | explosion | fragmentation (the SFX bank). families = launch designators (YYYY-NNN) whose debris belongs to the event; norad = parent catalog numbers, resolved to families at build time. source: 'scd' = from explode-5.scd (2019), 'new' = added 2026, worth double-checking. alt_km = approximate breakup altitude (from memory, verify).",
+  "events": [
+    { "date": "1985-09-13", "name": "Solwind P78-1 + ASM-135 ASAT", "kind": "crash", "alt_km": 525, "families": ["1979-017"], "source": "scd" },
+    { "date": "1994-01-14", "name": "Mir + Soyuz TM-17", "kind": "bump", "families": [], "source": "scd" },
+    { "date": "1997-06-25", "name": "Mir + Progress M-34", "kind": "bump", "families": [], "source": "scd" },
+    { "date": "2005-04-15", "name": "DART + MUBLCOM", "kind": "bump", "families": [], "source": "scd" },
+    { "date": "2007-01-11", "name": "Fengyun-1C + SC-19 ASAT", "kind": "crash", "alt_km": 865, "families": ["1999-025"], "source": "scd" },
+    { "date": "2008-02-21", "name": "USA-193 + SM-3 intercept", "kind": "crash", "alt_km": 247, "families": ["2006-057"], "source": "scd" },
+    { "date": "2009-02-10", "name": "Iridium 33 + Cosmos 2251", "kind": "explosion", "alt_km": 790, "families": ["1997-051", "1993-036"], "source": "scd" },
+    { "date": "2013-01-22", "name": "BLITS + Fengyun-1C debris", "kind": "crash", "families": [], "source": "scd" },
+    { "date": "2019-03-27", "name": "Microsat-R + PDV Mk-II ASAT", "kind": "crash", "alt_km": 283, "families": ["2019-006"], "source": "scd" },
+    { "date": "2021-03-18", "name": "Yunhai 1-02 + Zenit debris", "kind": "bump", "families": [], "source": "new" },
+    { "date": "2021-11-15", "name": "Kosmos 1408 + Nudol ASAT", "kind": "crash", "alt_km": 480, "families": ["1982-092"], "source": "new" },
+    { "date": "2026-09-13T21:13:00Z", "name": "USA 32 fragmentation", "kind": "fragmentation", "families": [], "norad": [19460], "source": "new" }
+  ]
+}

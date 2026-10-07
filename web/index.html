@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Space Junk Rain</title>
+<meta name="description" content="Every catalogued object that has reentered Earth's atmosphere since 1957, on its real decay date, traced back to the breakup that made it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="viz-root">
+  <header class="hero">
+    <div class="topline">
+      <p class="eyebrow">Space Junk Rain · 1957 to today</p>
+      <button type="button" class="theme-switch" id="theme" role="switch" aria-checked="false" aria-label="Blueprint (dark) mode">
+        <span class="opt">Paper</span><span class="track" aria-hidden="true"><span class="knob"></span></span><span class="opt">Blueprint</span>
+      </button>
+    </div>
+    <h1><span id="h-down">–</span> catalogued objects have fallen back to Earth.<br><span class="soft" id="h-up"></span></h1>
+    <p class="lede">Each one is placed on the day it came down and traced back to the launch it came from. A single collision or anti-satellite test can keep debris raining down for decades, or clear out within months, depending on how high it happened.</p>
+  </header>
+
+  <section class="tiles" aria-label="Summary">
+    <div class="tile"><span class="label">Biggest single source</span><span class="value" id="t-big">–</span><span class="foot" id="t-big-foot"></span></div>
+    <div class="tile"><span class="label">Fengyun-1C, still in orbit</span><span class="value" id="t-fy">–</span><span class="foot" id="t-fy-foot"></span></div>
+    <div class="tile"><span class="label">Busiest month</span><span class="value" id="t-peak">–</span><span class="foot" id="t-peak-foot"></span></div>
+  </section>
+
+  <section class="chart-card">
+    <div class="tabs" role="tablist" aria-label="Chart view">
+      <button role="tab" id="tab-parent" aria-selected="true">By source</button>
+      <button role="tab" id="tab-life" aria-selected="false">Time in orbit</button>
+    </div>
+    <h2 id="chart-title"></h2>
+    <p class="note" id="chart-note"></p>
+
+    <div class="controls" aria-label="Playback and filters">
+      <button id="play" type="button" class="primary" aria-label="Play">▶ Play</button>
+      <span class="readout"><span id="pulse" class="pulse" aria-hidden="true"></span><span id="date">Today</span><span class="count" id="now-count"></span></span>
+      <label>Speed
+        <select id="speed">
+          <option value="1">1 s per year</option>
+          <option value="3.1470588" selected>3.1 s per year</option>
+          <option value="10">10 s per year</option>
+          <option value="30">30 s per year</option>
+        </select>
+      </label>
+      <label>Highlight
+        <select id="family"><option value="-1">Nothing</option></select>
+      </label>
+    </div>
+
+    <div class="canvas-wrap" id="main-wrap"><canvas id="main" aria-label="Reentries chart"></canvas></div>
+    <h2 class="second">Reentries per month</h2>
+    <div class="canvas-wrap short"><canvas id="hist" aria-label="Reentries per month"></canvas></div>
+
+    <div class="titleblock" aria-label="Drawing information">
+      <div><span class="k">Title</span><span class="big">Space Junk Rain</span></div>
+      <div><span class="k">Subject</span>Reentries of catalogued objects</div>
+      <div><span class="k">Span</span><span id="tb-span">1957–</span></div>
+      <div><span class="k">Sheet</span><span id="tb-sheet">1 of 2</span></div>
+      <div><span class="k">Data</span>Space-Track.org SATCAT &amp; decay messages</div>
+      <div><span class="k">Retrieved</span><span id="tb-date"></span></div>
+      <div><span class="k">Scale</span>1 dot = 1 object</div>
+      <div><span class="k">Drawn by</span>A. Tett</div>
+    </div>
+  </section>
+
+  <details class="tables">
+    <summary>Data tables</summary>
+    <h3>Collisions and breakups</h3>
+    <table id="events-table"><thead><tr><th>Date (UTC)</th><th>Event</th><th>Kind</th><th class="num">Reentered</th><th class="num">Still in orbit</th></tr></thead><tbody></tbody></table>
+    <h3>Largest sources</h3>
+    <table id="families-table"><thead><tr><th>Launch</th><th>Source</th><th class="num">Reentered</th><th class="num">Still in orbit</th></tr></thead><tbody></tbody></table>
+  </details>
+
+  <footer class="notes">
+    <h3>About the data</h3>
+    <p id="credit"></p>
+    <ul>
+      <li>Decay dates come from the SATCAT and Space-Track's historical decay messages, which record each one to the day only. Each dot sits on its real day; nothing is smoothed or resampled. Within a row, dots are spread up and down only so they don't overlap.</li>
+      <li>A "source" is everything from one launch (its international designator, e.g. 1999-025). Debris usually keeps its parent's designator, so a breakup shows up as a burst within one source.</li>
+      <li>"Still in orbit" counts every tracked object, working satellites included. Only tracked objects appear here, roughly softball-sized and up in low orbit. Collision dates and altitudes are hand-curated.</li>
+    </ul>
+    <p class="credit-small">Builds on <em>Space Junk Rain</em> (2019), a SuperCollider sonification by Gerald Robinson and Alan Tett for ATLS 4519. Design after Edward Tufte, <em>The Visual Display of Quantitative Information</em>.</p>
+  </footer>
+
+  <div class="tooltip" id="tip" role="tooltip" hidden></div>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

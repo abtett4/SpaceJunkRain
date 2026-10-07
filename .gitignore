@@ -1,0 +1,22 @@
+# secrets
+.env
+
+# raw Space-Track downloads: each person fetches their own (see README)
+data/raw/
+data/decay.json
+data/satcat.json
+decay.json
+satcat.json
+
+# 2019 files that embed raw Space-Track records
+2023/**/*.json
+2023/**/jsonTest.maxpat
+
+# duplicates and editor/OS clutter
+2023/**/*.zip
+2023/**/__MACOSX/
+*.reapeaks
+*.rpp-bak
+.DS_Store
+__pycache__/
+.claude/
