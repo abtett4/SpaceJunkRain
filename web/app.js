@@ -514,6 +514,20 @@
     return { ...n, members };
   }).filter((n) => n.members.length);
 
+  const STREAK_WHY = {
+    '1998-067': 'Released from the station years after 1998 but catalogued under its launch, so time in orbit reads too long.',
+    '1965-082': 'Fragments of one upper stage share its 1965 launch date, so they fall along one curve.',
+  };
+  document.querySelector('#streaks-table tbody').innerHTML = STREAK_NOTES.map((n) => {
+    const f = families.find((x) => x.key === n.key), m = n.members;
+    const spans = m.map((i) => D[i] - L[i]).filter(isFinite);
+    const lo = Math.min(...spans), hi = Math.max(...spans);
+    return `<tr><td>${f.key}${f.launch != null ? ', ' + fmtDate(f.launch) : ''}</td><td>${pretty(f.name)}</td>` +
+      `<td>${TYPE_PLURALS[n.k].toLowerCase()}</td><td class="num">${fmtInt(m.length)}</td>` +
+      `<td>${yearOf(D[m[0]])}–${yearOf(D[m[m.length - 1]])}</td>` +
+      `<td class="num">${fmtSpan(lo)} to ${fmtSpan(hi)}</td><td>${STREAK_WHY[n.key] || ''}</td></tr>`;
+  }).join('');
+
   function drawLifeNotes() {
     const ctx = main.ctx;
     ctx.font = FONT(13.5, 400, 'italic'); ctx.fillStyle = C.text; ctx.textBaseline = 'middle';
