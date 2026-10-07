@@ -20,3 +20,7 @@ satcat.json
 .DS_Store
 __pycache__/
 .claude/
+
+# Local orbital environment and reproducible diagnostic outputs
+.venv/
+data/processed/
