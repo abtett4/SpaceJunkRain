@@ -133,7 +133,8 @@
   }
   const retrieved = meta.generated.slice(0, 10);
   document.getElementById('credit').textContent =
-    `Data: ${meta.source.replace('space-track.org', 'Space-Track.org')}, retrieved ${retrieved}. ` +
+    `Data: U.S. Space Command (USSPACECOM), via Space-Track.org: satellite catalog (SATCAT) and ` +
+    `satellite decay and reentry data, retrieved ${retrieved}. ` +
     `${fmtInt(meta.decayed)} reentered objects from ${fmtInt(families.length)} launches.`;
   document.getElementById('tb-date').textContent = retrieved;
   document.getElementById('tb-span').textContent = `1957–${yearOf(todayDay)}`;

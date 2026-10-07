@@ -28,7 +28,8 @@ as related work. We cover what comes down:
 2. **Forecast rain:** use the 93k Prediction messages in decay.json (currently dropped) for a
    "coming down in the next 60 days" panel; TIP messages for where things reenter.
 3. **Why the cadence pulses:** the solar-cycle sheet.
-4. **Always current:** scheduled rebuilds (check Space-Track terms first).
+4. **Always current:** scheduled rebuilds (fine under the data terms, with citation; respect
+   Space-Track's once-a-day SATCAT limit).
 5. **Every dot traceable:** link each object to its public CelesTrak SATCAT page.
 6. **Sound:** a multisensory, accessible piece.
 7. **Open method:** a reproducible pipeline.
@@ -50,7 +51,10 @@ Core identity: lifecycle + forecast + sound.
 - Accessibility: keyboard control, spoken event announcements during playback (aria-live),
   explicit "start listening" button (browsers block sound until a click).
 - **Still to verify:** the 2021 events and alt_km values marked "new" in data/events.json;
-  Space-Track redistribution terms before anything goes public.
+  Freesound licenses for the SFX now in the public repo.
+- **Data terms (resolved):** USSPACECOM allows redistribution of basic SSA data (SATCAT, decay
+  and reentry data) and publication of analysis, with appropriate citation. Keep the
+  "USSPACECOM via Space-Track.org" credit on every page and copy.
 
 Re-sonification (this week if time allows, otherwise the later audio assignment, which might
 then be something else): SuperCollider / Web Audio, one voice per source,
