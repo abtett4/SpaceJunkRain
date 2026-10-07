@@ -65,6 +65,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; } /* el.hidden must win over display rules below */
 body {
   margin: 0;
   background: var(--page);
@@ -150,6 +151,15 @@ button.primary:hover { background: var(--grid); }
 .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--text-primary); opacity: .25; transition: opacity .25s, transform .25s; }
 .pulse.on { opacity: 1; transform: scale(1.5); transition: none; }
 
+.controls label.check { gap: 5px; cursor: pointer; }
+.controls input[type="checkbox"] { accent-color: var(--text-primary); width: 14px; height: 14px; margin: 0; }
+.typefilter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 0 0 10px; font-size: 15px; }
+.typefilter .k { color: var(--text-secondary); font-variant: small-caps; letter-spacing: .05em; margin-right: 2px; }
+.typefilter button { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px 3px; }
+.typefilter button .sw { width: 9px; height: 9px; border-radius: 50%; }
+.typefilter button .n { color: var(--muted); font-variant-numeric: lining-nums tabular-nums; }
+.typefilter button[aria-pressed="false"] { color: var(--muted); border-style: dashed; }
+.typefilter button[aria-pressed="false"] .sw { background: transparent !important; box-shadow: inset 0 0 0 1px var(--muted); }
 .canvas-wrap { position: relative; height: 460px; touch-action: none; }
 .canvas-wrap.short { height: 150px; }
 .disclosure {

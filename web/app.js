@@ -110,7 +110,12 @@
   }
 
   // ---- state -------------------------------------------------------------
-  const state = { view: 'parent', playhead: X_MAX, playing: false, secPerYear: 3.1470588, family: -1, hover: null, showAgg: false };
+  const state = {
+    view: 'parent', playhead: X_MAX, playing: false, secPerYear: 3.1470588, family: -1, hover: null,
+    showAgg: false, notes: true, hiddenTypes: new Set(),
+  };
+  // the type filter belongs to the Time in orbit sheet; the By source sheet always shows every type
+  const typeShown = (i) => state.view !== 'lifespan' || !state.hiddenTypes.has(K[i]);
   let revealed = N, drawnTo = 0, lastYear = -1;
   const eventFlash = new Map();
   const inFamily = (i) => state.family < 0 || F[i] === state.family;
@@ -186,6 +191,7 @@
     document.getElementById('chart-note').innerHTML = VIEWS[v].note;
     document.getElementById('tb-sheet').textContent = `${v === 'parent' ? 1 : 2} of 2`;
     aggBtn.hidden = v !== 'parent';
+    typeBar.hidden = v !== 'lifespan';
     layout(); rebuild();
   }
 
@@ -200,6 +206,24 @@
   }
   aggBtn.addEventListener('click', () => { state.showAgg = !state.showAgg; renderAggBtn(); layout(); rebuild(); });
   renderAggBtn();
+
+  // Time in orbit: one toggle per object type, each showing how many objects it holds
+  const typeBar = document.getElementById('typefilter');
+  const typeCounts = [0, 0, 0, 0];
+  for (let i = 0; i < N; i++) typeCounts[K[i]]++;
+  const TYPE_PLURALS = ['Debris', 'Rocket bodies', 'Payloads', 'Unknown'];
+  typeBar.innerHTML = '<span class="k">Show</span>' + TYPE_PLURALS.map((label, k) => typeCounts[k]
+    ? `<button type="button" data-k="${k}" aria-pressed="true"><span class="sw" style="background:var(${TYPE_VARS[k]})"></span>` +
+      `${label}<span class="n">${fmtInt(typeCounts[k])}</span></button>` : '').join('');
+  typeBar.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    const k = +b.dataset.k, on = state.hiddenTypes.has(k);
+    on ? state.hiddenTypes.delete(k) : state.hiddenTypes.add(k);
+    b.setAttribute('aria-pressed', String(on));
+    layout(); rebuild();
+  });
+
+  document.getElementById('notes').addEventListener('change', (e) => { state.notes = e.target.checked; draw(); });
   tabs.parent.addEventListener('click', () => setView('parent'));
   tabs.lifespan.addEventListener('click', () => setView('lifespan'));
 
@@ -255,7 +279,7 @@
     spatial = new Map();
     for (let i = 0; i < N; i++) {
       PX[i] = xOf(D[i], main, M);
-      hiddenPt[i] = state.view === 'parent' && !laneShown(laneOf[i]) ? 1 : 0;
+      hiddenPt[i] = (state.view === 'parent' && !laneShown(laneOf[i])) || !typeShown(i) ? 1 : 0;
       if (hiddenPt[i]) continue;
       if (state.view === 'parent') {
         const ln = LANES[laneOf[i]], pad = 4;
@@ -296,7 +320,7 @@
     bins = new Array(BIN_STARTS.length).fill(0);
     let b = 0;
     for (let i = 0; i < N; i++) {
-      if (!inFamily(i)) continue;
+      if (!inFamily(i) || !typeShown(i)) continue;
       while (b + 1 < BIN_STARTS.length && BIN_STARTS[b + 1] <= D[i]) b++;
       bins[b]++;
     }
@@ -542,8 +566,8 @@
     else drawYTicks(main, M, Y_TICKS.map(([v, l]) => [yLife(v), l]));
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(base, 0, 0); ctx.restore();
     if (state.playhead < X_MAX) drawRain();
-    if (state.view === 'parent') drawLaneNotes();
-    else if (state.playhead >= X_MAX) drawLifeNotes();
+    if (state.notes && state.view === 'parent') drawLaneNotes();
+    else if (state.notes && state.playhead >= X_MAX) drawLifeNotes();
     drawEvents(now);
 
     if (state.playhead < X_MAX) {
@@ -560,7 +584,7 @@
     drawHist();
 
     let shown = 0;
-    for (let i = 0; i < revealed; i++) if (inFamily(i)) shown++;
+    for (let i = 0; i < revealed; i++) if (inFamily(i) && typeShown(i)) shown++;
     document.getElementById('date').textContent = state.playhead >= X_MAX ? 'Today' : fmtDate(state.playhead);
     document.getElementById('now-count').textContent = `${fmtInt(shown)} down`;
   }
@@ -581,7 +605,8 @@
       ctx.fillRect(x0, y, Math.max(1, x1 - x0 - 0.5), hist.h - H.b - y);
     }
     // label the peak month with what caused it
-    if (state.family < 0 && PEAK.day <= state.playhead) {
+    // the peak note describes the whole catalogue, so it only shows when nothing is filtered out
+    if (state.notes && state.family < 0 && !(state.view === 'lifespan' && state.hiddenTypes.size) && PEAK.day <= state.playhead) {
       ctx.font = FONT(13.5, 400, 'italic'); ctx.fillStyle = C.text2;
       ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
       const x = xOf(PEAK.day, hist, H) - 8;
