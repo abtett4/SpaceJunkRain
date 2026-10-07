@@ -496,12 +496,45 @@
     { x: '1961-06-01', y: 3, align: 'left', text: 'upper stages that fall within days of launch' },
     { x: '2019-09-01', y: 5.2 * YEAR, align: 'right', text: 'Starlink retirements, about 5 years after launch —' },
   ];
+  // notes that point at one launch's streak: its dots are inked dark so the curve can be found,
+  // and a leader runs from the note to a dot partway along it (q = position by reentry order)
+  const STREAK_NOTES = [
+    { key: '1998-067', k: 2, q: 0.55, dx: -26, dy: -44, align: 'right', text: [
+      'satellites released from the ISS (dark dots) are logged under its 1998 launch, so their time in orbit reads years too long',
+      'released from the ISS (dark dots), but dated from its 1998 launch, so they look older than they are',
+      'ISS-released satellites (dark dots): dated from 1998, so too old',
+      'released from the ISS; dated 1998'] },
+    { key: '1965-082', k: 0, q: 0.3, dx: 26, dy: -46, align: 'left', text: [
+      'Titan 3C Transtage debris (dark dots): one 1965 launch date, so every fragment falls on one curve',
+      'Titan 3C debris (dark dots): one launch date, one curve',
+      'Titan 3C debris: one curve'] },
+  ].map((n) => {
+    const fi = families.findIndex((f) => f.key === n.key), members = [];
+    for (let i = 0; i < N; i++) if (F[i] === fi && K[i] === n.k) members.push(i);
+    return { ...n, members };
+  }).filter((n) => n.members.length);
+
   function drawLifeNotes() {
     const ctx = main.ctx;
     ctx.font = FONT(13.5, 400, 'italic'); ctx.fillStyle = C.text; ctx.textBaseline = 'middle';
     for (const n of LIFE_NOTES) {
       ctx.textAlign = n.align;
       haloText(ctx, n.text, xOf(dateToDay(n.x), main, M), yLife(n.y));
+    }
+    for (const n of STREAK_NOTES) {
+      if (state.hiddenTypes.has(n.k)) continue;
+      ctx.fillStyle = C.text; ctx.globalAlpha = 0.85;
+      for (const i of n.members) { ctx.beginPath(); ctx.arc(PX[i], PY[i], 1.9, 0, 6.2832); ctx.fill(); }
+      ctx.globalAlpha = 1;
+      const a = n.members[Math.floor(n.q * (n.members.length - 1))];
+      const tx = PX[a] + n.dx, ty = PY[a] + n.dy;
+      const room = n.align === 'right' ? tx - M.l - 4 : main.w - M.r - tx - 4;
+      const text = n.text.find((t) => ctx.measureText(t).width < room);
+      if (!text) continue;
+      ctx.strokeStyle = C.text; ctx.lineWidth = 0.75;
+      ctx.beginPath(); ctx.moveTo(PX[a], PY[a]); ctx.lineTo(tx, ty); ctx.stroke(); ctx.lineWidth = 1;
+      ctx.textAlign = n.align;
+      haloText(ctx, text, tx + (n.align === 'right' ? -4 : 4), ty);
     }
   }
 
