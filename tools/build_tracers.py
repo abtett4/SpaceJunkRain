@@ -1,4 +1,4 @@
-"""Join one validated offline trajectory to the existing timeline; export web assets."""
+"""Join offline orbital inputs to the existing timeline; export one event or a small sample."""
 import argparse
 import datetime as dt
 import hashlib
@@ -69,7 +69,8 @@ def build_fallback_manifest(norad_id, rows, catalog, sources):
         try:
             geometry = representative_loop(row, identifier, norad_id, epoch)
             age = (cutoff - stamp(epoch)).total_seconds() / 86400
-            reason = f"Reference elements are {age:.1f} days before the reported event. This loop reuses their shape and tilt, without propagation to reentry."
+            age_text = f"{age * 24:.1f} hours" if age < 2 else f"{age:.1f} days"
+            reason = f"Reference elements are {age_text} before the reported event. This loop reuses their shape and tilt, without propagation to reentry."
         except ValueError as exc:
             reason = str(exc)
     # Missing fields remain null. The reference orbit is never labeled near-event evidence.
@@ -241,17 +242,35 @@ def main():
     choice = ap.add_mutually_exclusive_group(required=True)
     choice.add_argument("--trajectory", type=pathlib.Path, help="validated propagated trajectory")
     choice.add_argument("--norad-id", type=int, help="build a representative/symbolic fallback from cached inputs")
-    ap.add_argument("--gp-history", required=True, type=pathlib.Path)
+    choice.add_argument("--sample", type=pathlib.Path, help="small mixed sample specification (offline)")
+    ap.add_argument("--gp-history", type=pathlib.Path)
     ap.add_argument("--catalog", type=pathlib.Path, default=ROOT / "web/data/decays.json")
     ap.add_argument("--output-dir", type=pathlib.Path, default=ROOT / "data/processed/browser")
     args = ap.parse_args()
+    if bool(args.sample) == bool(args.gp_history):
+        ap.error("Single-object exports require --gp-history; --sample specifies its own inputs.")
     output = args.output_dir.resolve()
     raw = (ROOT / "data/raw").resolve()
     if output == raw or raw in output.parents:
         raise ValueError("Processed output cannot be written into data/raw.")
-    rows, gp_source = load_gp_snapshot(args.gp_history)
     catalog_bytes = args.catalog.read_bytes()
     catalog = json.loads(catalog_bytes)
+    if args.sample:
+        from mixed_sample import build_sample
+        spec = json.loads(args.sample.read_text())
+        doc, assets = build_sample(spec, catalog, {
+            "sha256": hashlib.sha256(catalog_bytes).hexdigest(),
+            "source": catalog["meta"]["source"], "generated": catalog["meta"]["generated"],
+        })
+        output.mkdir(parents=True, exist_ok=True)
+        for name, data in assets.items():
+            target = output / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+        (output / "tracers.json").write_text(json.dumps(doc, indent=2, allow_nan=False) + "\n")
+        print(f"{len(doc['events'])} events -> {output / 'tracers.json'}\nCoverage: {doc['sample']['coverage']}")
+        return
+    rows, gp_source = load_gp_snapshot(args.gp_history)
     if args.trajectory:
         payload = args.trajectory.read_bytes()
         trajectory = json.loads(payload)

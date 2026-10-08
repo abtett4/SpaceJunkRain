@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "sample": {
+    "id": "april-2018-passage",
+    "title": "An eight-day passage",
+    "intervalUtc": ["2018-04-02T00:00:00Z", "2018-04-10T00:00:00Z"],
+    "playbackRate": 7200,
+    "defaultLeadSeconds": 86400,
+    "surfacePulseSeconds": 14400
+  },
+  "inputs": [
+    {"noradId": 37820, "manifest": "web/data/tracers.json"},
+    {"noradId": 38249, "gpHistory": "data/raw/gp_history/38249/4b6487b22413de33/response.json"},
+    {"noradId": 31309, "gpHistory": "data/raw/gp_history/31309/af648d7eb2c9e617/response.json"},
+    {"noradId": 41486, "gpHistory": "data/raw/gp_history/41486/2a644570559e0037/response.json"},
+    {"noradId": 41568, "gpHistory": "data/raw/gp_history/41568/42a1e99dbed8bb83/response.json"},
+    {"noradId": 41569, "catalogOnly": true},
+    {"noradId": 41565, "catalogOnly": true},
+    {"noradId": 24965, "gpHistory": "data/raw/gp_history/24965/93b3840ac9193578/response.json"},
+    {"noradId": 43268, "catalogOnly": true},
+    {"noradId": 43269, "catalogOnly": true},
+    {"noradId": 26926, "catalogOnly": true},
+    {"noradId": 31777, "gpHistory": "data/raw/gp_history/31777/70ffac43a56627af/response.json"}
+  ]
+}
