@@ -1,0 +1,229 @@
+{
+  "schemaVersion": 1,
+  "events": [
+    {
+      "schemaVersion": 1,
+      "eventId": "37820:reentry:2018-04-02",
+      "eventKind": "reentry",
+      "object": {
+        "noradId": 37820,
+        "objectId": "2011-053A",
+        "name": "TIANGONG 1",
+        "launchFamily": "2011-053"
+      },
+      "representation": {
+        "kind": "individual",
+        "noradIds": [
+          37820
+        ],
+        "representedObjectCount": 1
+      },
+      "eventTime": {
+        "date": "2018-04-02",
+        "precision": "day",
+        "intervalUtc": [
+          "2018-04-02T00:00:00Z",
+          "2018-04-03T00:00:00Z"
+        ],
+        "intervalMeaning": "Reported UTC calendar day [start,end); not a confidence interval.",
+        "basis": "reported",
+        "source": "decay"
+      },
+      "attributes": {
+        "structure": {
+          "value": null,
+          "basis": "unknown",
+          "note": "Catalog object class alone does not establish physical intactness."
+        },
+        "debrisOrigin": {
+          "value": null,
+          "basis": "unknown",
+          "note": "No sourced collision or fragmentation link in these inputs."
+        },
+        "parentNoradIds": {
+          "value": null,
+          "basis": "unknown",
+          "note": "No established parent-object link."
+        },
+        "breakupEventId": {
+          "value": null,
+          "basis": "unknown",
+          "note": "No sourced breakup association."
+        },
+        "physicalSize": {
+          "value": null,
+          "basis": "unknown",
+          "note": "No sourced dimensions or mass; radar size is a separate proxy."
+        },
+        "orbitRegimeLifetime": {
+          "value": null,
+          "basis": "unknown",
+          "note": "A terminal orbit does not establish lifetime regime."
+        },
+        "eventLocation": {
+          "value": null,
+          "basis": "unknown",
+          "note": "These inputs do not constrain reentry geography to a point or region."
+        },
+        "owner": {
+          "value": null,
+          "basis": "unknown",
+          "note": "Catalog country is not institutional ownership."
+        },
+        "operator": {
+          "value": null,
+          "basis": "unknown",
+          "note": "Not established by selected records."
+        },
+        "missionType": {
+          "value": null,
+          "basis": "unknown",
+          "note": "Requires a sourced mission lookup."
+        },
+        "functionalStatus": {
+          "value": null,
+          "basis": "unknown",
+          "note": "No event-time operational state established."
+        },
+        "reentryControl": {
+          "value": null,
+          "basis": "unknown",
+          "note": "No sourced controlled/uncontrolled determination."
+        },
+        "objectType": {
+          "value": "PAYLOAD",
+          "basis": "reported",
+          "source": "gpHistory:OBJECT_TYPE"
+        },
+        "radarSize": {
+          "value": "LARGE",
+          "basis": "proxy",
+          "source": "gpHistory:RCS_SIZE",
+          "note": "Radar size class, not diameter or mass."
+        },
+        "catalogCountry": {
+          "value": "PRC",
+          "basis": "reported",
+          "source": "gpHistory:COUNTRY_CODE"
+        },
+        "orbitNearEvent": {
+          "epochUtc": "2018-04-01T16:07:05.931552Z",
+          "frame": "TEME",
+          "basis": "reported",
+          "source": "gpHistory",
+          "meaning": "Mean-element descriptors at source epoch, not measured reentry conditions.",
+          "inclinationDeg": 42.7393,
+          "raanDeg": 196.1141,
+          "perigeeKm": 144.505,
+          "apogeeKm": 152.315,
+          "eccentricity": 0.0005983,
+          "periodMinutes": 87.455
+        },
+        "launchSite": {
+          "code": {
+            "value": "JSC",
+            "basis": "reported",
+            "source": "gpHistory:SITE"
+          },
+          "coordinates": {
+            "value": null,
+            "basis": "unknown",
+            "note": "Site lookup not yet added."
+          }
+        },
+        "orbitRegimeNearEvent": {
+          "value": "LEO",
+          "basis": "derived",
+          "source": "gpHistory",
+          "rule": "positive-perigee-apogee-below-2000km-v1"
+        }
+      },
+      "presentation": {
+        "mode": "illustrative-replay-of-propagated-orbit",
+        "displayAnchorUtc": "2018-04-02T15:35:52Z",
+        "anchorBasis": "illustrative",
+        "anchorPolicy": {
+          "policy": "sha256-utc-day-v1",
+          "seed": "SpaceJunkRain"
+        },
+        "startTime": "2018-04-02T13:35:52Z",
+        "endTime": "2018-04-02T15:35:52Z",
+        "geometryAsset": "trajectories/37820.json",
+        "geometryFrame": "TEME",
+        "geometryUnits": "km",
+        "geometrySourceIntervalUtc": [
+          "2018-04-01T22:00:00Z",
+          "2018-04-02T00:00:00Z"
+        ],
+        "timeMapping": "Source samples replayed at 1:1 simulation duration, ending at the display anchor.",
+        "locationClaim": "none",
+        "geographicEndpoint": null,
+        "style": {
+          "color": "#70e1bc",
+          "trailSeconds": 1200,
+          "markerRadiusEarth": 0.012
+        },
+        "styleMeaning": "Fixed prototype style and exaggerated marker size; no physical size/brightness claim."
+      },
+      "bounds": {
+        "eventTime": [
+          "2018-04-02T00:00:00Z",
+          "2018-04-03T00:00:00Z"
+        ],
+        "sourceElementAgeAtReportedDecayHours": [
+          7.88168568,
+          31.88168568
+        ],
+        "sampledRadiusMinusReferenceKm": [
+          130.70800198037796,
+          141.65839296367358
+        ],
+        "referenceRadiusKm": 6378.135,
+        "meaning": "Reported time support and model sample range, not physical error bounds."
+      },
+      "sources": {
+        "gpHistory": {
+          "path": "data/raw/gp_history/37820/6c2ffa38f41e5d8e/response.json",
+          "query": "/basicspacedata/query/class/gp_history/NORAD_CAT_ID/37820/EPOCH/2018-03-30T00:00:00--2018-04-03T00:00:00/orderby/EPOCH asc/format/json",
+          "sha256": "11d6b5bda4e7d54ed447d9e89805515c2e4e535812a62225ccde859b27ac20c7",
+          "retrievedAt": "2026-10-07T21:12:12Z",
+          "source": "USSPACECOM via Space-Track.org",
+          "rowCount": 18
+        },
+        "decay": {
+          "path": "data/raw/decay/37820/f0e22da9e3871b49/response.json",
+          "query": "/basicspacedata/query/class/decay/NORAD_CAT_ID/37820/MSG_TYPE/Historical/orderby/PRECEDENCE asc/format/json",
+          "sha256": "46a26d8580c02491d547f88e294ead65ff91b7d4f97e389692ff467b2480ea5a",
+          "retrievedAt": "2026-10-07T21:11:49Z",
+          "source": "USSPACECOM via Space-Track.org",
+          "rowCount": 2
+        }
+      },
+      "geometryProvenance": {
+        "gpId": "119038425",
+        "elementSha256": "bd5871383dc6484db7b2f57093b0debb32abd039e9639128dcbe81bf467cbf76",
+        "trajectorySha256": "ac8707db8f7434ea07ecaf957fa341333d04fb552f890c1bb071351f2bc1d918",
+        "assetSha256": "27ed259001ddd5becda3412ff0f160af30109dad8292f47d22e97e6b1472459a"
+      },
+      "diagnostics": {
+        "at": "2018-04-02T00:00:00Z",
+        "epochNeighborhoodSeconds": 3600,
+        "alternatives": [
+          {
+            "gpId": "119038430",
+            "epoch": "2018-04-01T16:07:05.505600Z",
+            "creationDate": "2018-04-01T21:12:21Z",
+            "separationKm": 56.365807166458694
+          },
+          {
+            "gpId": "119049572",
+            "epoch": "2018-04-01T16:07:05.602368Z",
+            "creationDate": "2018-04-01T22:52:34Z",
+            "separationKm": 145.3661886008241
+          }
+        ],
+        "interpretation": "Differences between model inputs, not a calibrated error bound."
+      }
+    }
+  ]
+}
