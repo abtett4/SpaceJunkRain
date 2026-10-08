@@ -160,7 +160,10 @@
       "trailSeconds": 1200,
       "markerRadiusEarth": 0.012
     },
-    "styleMeaning": "Fixed prototype style and exaggerated marker size; no physical size/brightness claim."
+    "styleMeaning": "Fixed prototype style and exaggerated marker size; no physical size/brightness claim.",
+    "representativeOrbitAsset": "../../web/data/trajectories/37820-representative.json",
+    "maxDisplaySeconds": 172800,
+    "longWindowPolicy": "Beyond the prepared sample duration, the entire selected window uses the representative loop. Original SGP4 samples are never stretched or looped."
   },
   "bounds": {
     "eventTime": [
@@ -200,7 +203,8 @@
     "gpId": "119038425",
     "elementSha256": "bd5871383dc6484db7b2f57093b0debb32abd039e9639128dcbe81bf467cbf76",
     "trajectorySha256": "ac8707db8f7434ea07ecaf957fa341333d04fb552f890c1bb071351f2bc1d918",
-    "assetSha256": "27ed259001ddd5becda3412ff0f160af30109dad8292f47d22e97e6b1472459a"
+    "assetSha256": "27ed259001ddd5becda3412ff0f160af30109dad8292f47d22e97e6b1472459a",
+    "representativeAssetSha256": "923c7459028ab69ad7e2fbfbb834340d38c58aa50f9a25ea9d2cbe923ff60dc4"
   },
   "diagnostics": {
     "at": "2018-04-02T00:00:00Z",
