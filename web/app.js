@@ -112,7 +112,7 @@
   // ---- state -------------------------------------------------------------
   const state = {
     view: 'parent', playhead: X_MAX, playing: false, secPerYear: 3.1470588, family: -1, hover: null,
-    showAgg: false, notes: true, hiddenTypes: new Set(),
+    showAgg: false, notes: true, hiddenTypes: new Set(), yScale: 'log',
   };
   // the type filter belongs to the Time in orbit sheet; the By source sheet always shows every type
   const typeShown = (i) => state.view !== 'lifespan' || !state.hiddenTypes.has(K[i]);
@@ -178,7 +178,7 @@
     },
     lifespan: {
       title: 'How long each object stayed up',
-      note: `Each dot is one object: when it came down (across) and how long it had been in orbit (up, log scale). ` +
+      note: `Each dot is one object: when it came down (across) and how long it had been in orbit (up, <span id="scale-word">log scale</span>). ` +
         `${key('--series-1', 'Debris')}, ${key('--series-2', 'rocket bodies')} and ${key('--series-3', 'payloads')}. ` +
         `Debris from one breakup shares a launch date, so each breakup traces its own rising curve.`,
     },
@@ -189,6 +189,7 @@
     for (const [k, b] of Object.entries(tabs)) b.setAttribute('aria-selected', String(k === v));
     document.getElementById('chart-title').textContent = VIEWS[v].title;
     document.getElementById('chart-note').innerHTML = VIEWS[v].note;
+    const sw = document.getElementById('scale-word'); if (sw) sw.textContent = `${state.yScale} scale`;
     document.getElementById('tb-sheet').textContent = `${v === 'parent' ? 1 : 2} of 2`;
     aggBtn.hidden = v !== 'parent';
     typeBar.hidden = v !== 'lifespan';
@@ -215,7 +216,18 @@
   typeBar.innerHTML = '<span class="k">Show</span>' + TYPE_PLURALS.map((label, k) => typeCounts[k]
     ? `<button type="button" data-k="${k}" aria-pressed="true"><span class="sw" style="background:var(${TYPE_VARS[k]})"></span>` +
       `${label}<span class="n">${fmtInt(typeCounts[k])}</span></button>` : '').join('');
+  // Log / Linear switch for the time-in-orbit axis, in the same row
+  typeBar.insertAdjacentHTML('beforeend', '<span class="scale" role="group" aria-label="Time in orbit scale">' +
+    '<span class="k">Scale</span><button type="button" data-scale="log" aria-pressed="true">Log</button>' +
+    '<button type="button" data-scale="linear" aria-pressed="false">Linear</button></span>');
   typeBar.addEventListener('click', (e) => {
+    const sc = e.target.closest('button[data-scale]');
+    if (sc) {
+      state.yScale = sc.dataset.scale;
+      typeBar.querySelectorAll('button[data-scale]').forEach((b) => b.setAttribute('aria-pressed', String(b === sc)));
+      const w = document.getElementById('scale-word'); if (w) w.textContent = `${state.yScale} scale`;
+      layout(); rebuild(); return;
+    }
     const b = e.target.closest('button'); if (!b) return;
     const k = +b.dataset.k, on = state.hiddenTypes.has(k);
     on ? state.hiddenTypes.delete(k) : state.hiddenTypes.add(k);
@@ -247,8 +259,10 @@
   }
   const xOf = (day, cv, m) => m.l + (day - X_MIN) / (X_MAX - X_MIN) * (cv.w - m.l - m.r);
   const dayOf = (x, cv, m) => X_MIN + (x - m.l) / (cv.w - m.l - m.r) * (X_MAX - X_MIN);
+  // log spreads days-to-decades evenly; linear turns each breakup into a straight 45° line
   const yLife = (span) => {
-    const v = Math.log(Math.min(Y_MAX, Math.max(Y_MIN, span)) / Y_MIN) / Math.log(Y_MAX / Y_MIN);
+    const s = Math.min(Y_MAX, Math.max(state.yScale === 'log' ? Y_MIN : 0, span));
+    const v = state.yScale === 'log' ? Math.log(s / Y_MIN) / Math.log(Y_MAX / Y_MIN) : s / Y_MAX;
     return main.h - M.b - v * (main.h - M.t - M.b);
   };
   const radius = (i) => state.view === 'parent' ? (LANES[laneOf[i]].agg ? 1.4 : 1.8) : ([1.6, 2.4, 3.2][R[i]] || 2);
@@ -342,7 +356,10 @@
   }
 
   // ---- drawing -------------------------------------------------------------
-  const Y_TICKS = [[1, '1 day'], [7, '1 week'], [30.44, '1 month'], [YEAR, '1 year'], [10 * YEAR, '10 years'], [50 * YEAR, '50 years']];
+  const Y_TICKS = {
+    log: [[1, '1 day'], [7, '1 week'], [30.44, '1 month'], [YEAR, '1 year'], [10 * YEAR, '10 years'], [50 * YEAR, '50 years']],
+    linear: [0, 10, 20, 30, 40, 50, 60].map((y) => [y * YEAR, y ? `${y} years` : '0']),
+  };
   const FONT = (px, w = 400, style = 'normal') => `${style} ${w} ${px}px ${SERIF}`;
 
   // graph paper: faint yearly rules, firmer decade rules, drafting ticks on the time axis
@@ -493,7 +510,7 @@
   }
 
   const LIFE_NOTES = [
-    { x: '1961-06-01', y: 3, align: 'left', text: 'upper stages that fall within days of launch' },
+    { x: '1961-06-01', y: 3, align: 'left', text: 'upper stages that fall within days of launch', logOnly: true },
     { x: '2019-09-01', y: 5.2 * YEAR, align: 'right', text: 'Starlink retirements, about 5 years after launch —' },
   ];
   // notes that point at one launch's streak: its dots are inked dark so the curve can be found,
@@ -532,8 +549,11 @@
     const ctx = main.ctx;
     ctx.font = FONT(13.5, 400, 'italic'); ctx.fillStyle = C.text; ctx.textBaseline = 'middle';
     for (const n of LIFE_NOTES) {
+      if (n.logOnly && state.yScale !== 'log') continue; // on a linear axis it would sit on the baseline
+      const x = xOf(dateToDay(n.x), main, M), w = ctx.measureText(n.text).width;
+      if (n.align === 'right' ? x - w < M.l : x + w > main.w - M.r) continue; // no room at this width
       ctx.textAlign = n.align;
-      haloText(ctx, n.text, xOf(dateToDay(n.x), main, M), yLife(n.y));
+      haloText(ctx, n.text, x, yLife(n.y));
     }
     for (const n of STREAK_NOTES) {
       if (state.hiddenTypes.has(n.k)) continue;
@@ -610,7 +630,7 @@
     ctx.clearRect(0, 0, main.w, main.h);
     drawXAxis(main, M, state.view === 'parent');
     if (state.view === 'parent') drawLanes();
-    else drawYTicks(main, M, Y_TICKS.map(([v, l]) => [yLife(v), l]));
+    else drawYTicks(main, M, Y_TICKS[state.yScale].map(([v, l]) => [yLife(v), l]));
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(base, 0, 0); ctx.restore();
     if (state.playhead < X_MAX) drawRain();
     if (state.notes && state.view === 'parent') drawLaneNotes();
