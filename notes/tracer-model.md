@@ -161,7 +161,7 @@ unchanged.
 User requirement: the final application must expose a configuration menu controlling
 how long tracers appear **before a reentry** and **after a launch**, plus other tracer
 attributes. Phase 1 is complete for the Tiangong-1 reentry preview. **Configure tracer**
-exposes reentry lead time, trail history, width, marker size, and color. The launch-follow
+exposes reentry lead time, trail history, width, and marker size. The launch-follow
 control will be added alongside the first launch tracer in phase 4.
 
 Keep three independent temporal controls:
@@ -179,8 +179,10 @@ stretch two hours of source samples into a longer purported reconstruction. Reco
 geometry mode and time mapping independently of the selected display duration. Browser
 settings changes should not trigger Space-Track requests or heavy propagation.
 
-Initial appearance controls should cover trail width, marker size and color. Later
-controls may include opacity/fade, color-by-attribute mappings, launch/reentry visibility,
+Initial appearance controls cover trail width and marker size. Color is derived from
+event presentation data, with amber as a placeholder until its object/event-data mapping
+is decided; users do not choose individual tracer colors. Later controls may include
+opacity/fade, launch/reentry visibility,
 object-class filters and representation-mode filters. Unknown attributes must remain a
 selectable, recognizable category. Start with global settings, persist them locally,
 and provide Reset defaults; per-object overrides can wait.
@@ -188,9 +190,12 @@ and provide Reset defaults; per-object overrides can wait.
 The implemented reentry window spans 30 seconds to the available two hours, in 30-second
 steps. Trail history ranges from zero (head only) to two hours and is also clipped to
 the selected visibility window. The marker and trail each allow 0.5–3× their default
-size, with five color choices. Defaults remain two hours before the event, 20 minutes
-of trail, 1× width/size, and mint. These settings are stored under the versioned local
-key `sjr-tracer-settings-v1`; reset removes only that key. Invalid or unsupported saved
+size. Defaults are two hours before the event, 20 minutes of trail, and large 3× width/size.
+The trail tapers to zero width and opacity at its oldest end. Preferences use payload
+version 2 under the existing local key `sjr-tracer-settings-v1`; reset removes only that
+key. Reading version 1 retains its timing choices, drops its color preference and adopts
+the large size defaults. Subsequent edits save version 2 and retain user size adjustments.
+Invalid or unsupported saved
 values fall back to defaults or are bounded by available geometry. Blocked storage
 leaves the controls usable for the current visit.
 
@@ -205,12 +210,13 @@ Validation covers clipping and interpolation, unchanged source samples and endpo
 clock independence, invalid settings, persistence, reset, and unavailable storage.
 Browser checks also cover changes while playing and paused, backward scrubbing,
 the shared endpoint, saved preferences after reload, and Reset defaults. The original
-raw data, diagnostic output, and exported event/geometry assets are unchanged.
+raw data, diagnostic output, and geometry are unchanged. The event's presentation color
+is now amber, matching the exporter and portable example.
 
 Recommended sequence:
 
 1. **Configurable Tiangong-1 preview — complete.** The collapsible panel supports
-   reentry lead time, trail history, width, marker size, color, saved preferences and
+   reentry lead time, trail history, width, marker size, saved preferences and
    reset, bounded by the existing two-hour segment. Launch-follow remains reserved
    for the launch example.
 2. **Explicit geometry fallbacks.** Implement representative orbits for partial/stale

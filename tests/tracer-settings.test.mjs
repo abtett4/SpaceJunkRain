@@ -79,17 +79,25 @@ test('preferences round-trip and resetting removes only the tracer key', () => {
     removeItem: key => data.delete(key) };
   const values = normalizeSettings({ reentryLeadSeconds: 1800, trailSeconds: 300, widthScale: 2,
     markerScale: 1.5, color: '#ffd166' }, 7200);
+  assert.equal('color' in values, false, 'color cannot be overridden by preferences');
   assert.equal(writeSettings(storage, values), true);
+  assert.equal(JSON.parse(data.get(SETTINGS_KEY)).version, 2);
   assert.deepEqual(readSettings(storage, 7200), values);
   assert.equal(writeSettings(storage, values, true), true);
   assert.equal(data.has(SETTINGS_KEY), false);
   assert.equal(data.get('sjr-theme'), 'dark');
   assert.deepEqual(readSettings(storage, 7200), normalizeSettings(null, 7200));
+  data.set(SETTINGS_KEY, JSON.stringify({ version: 1, values: {
+    reentryLeadSeconds: 1800, trailSeconds: 630, widthScale: 2, markerScale: 2.25, color: '#70e1bc',
+  } }));
+  assert.deepEqual(readSettings(storage, 7200), {
+    reentryLeadSeconds: 1800, trailSeconds: 630, widthScale: 3, markerScale: 3,
+  }, 'old preferences keep timing, adopt large sizes and discard color');
 });
 
 test('corrupt, future-version or unavailable preferences fall back safely', () => {
   const defaults = normalizeSettings(null, 7200);
-  for (const content of ['{', 'null', '7', '{"version":2,"values":{"color":"#ffd166"}}']) {
+  for (const content of ['{', 'null', '7', '{"version":3,"values":{"widthScale":0.5}}']) {
     assert.deepEqual(readSettings({ getItem: () => content }, 7200), defaults);
   }
   const blocked = { getItem: () => { throw Error('blocked'); }, setItem: () => { throw Error('blocked'); } };
@@ -101,6 +109,6 @@ test('corrupt, future-version or unavailable preferences fall back safely', () =
 test('saved values are bounded by available geometry and supported styles', () => {
   const values = normalizeSettings({ reentryLeadSeconds: 999999, trailSeconds: -100,
     widthScale: Infinity, markerScale: 99, color: 'not-a-color' }, 1800);
-  assert.deepEqual(values, { reentryLeadSeconds: 1800, trailSeconds: 0, widthScale: 1,
-    markerScale: 3, color: '#70e1bc' });
+  assert.deepEqual(values, { reentryLeadSeconds: 1800, trailSeconds: 0, widthScale: 3,
+    markerScale: 3 });
 });

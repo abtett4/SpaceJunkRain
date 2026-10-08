@@ -2,7 +2,7 @@
 export const toScene = ([x, y, z], radiusKm) => [x / radiusKm, -z / radiusKm, y / radiusKm];
 
 export class Tracer {
-  constructor({ positions, startTime, endTime, radiusKm, color = '#70e1bc',
+  constructor({ positions, startTime, endTime, radiusKm, color = '#ffd166',
     objectType = 'UNKNOWN', trailSeconds = 1200, markerRadiusEarth = 0.012, lineWidthEarth = 0.008 }) {
     this.startMs = Date.parse(startTime);
     this.endMs = Date.parse(endTime);

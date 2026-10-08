@@ -29,11 +29,14 @@ drag, pinch, scroll, arrow keys, and +/− zoom. No browser credentials or propa
 needed: the preview uses the checked-in derived data and a local p5.js module.
 
 Open **Configure tracer** to set the time shown before reentry (30 seconds to 2 hours),
-trail history (head only to 2 hours), trail width, marker size, and color. Preferences
+trail history (head only to 2 hours), trail width, and marker size. Preferences
 are saved in this browser; **Reset defaults** restores the two-hour window, 20-minute
-history, default width/size, and mint color. If browser storage is unavailable, the
+history, and large (3×) width/size. If browser storage is unavailable, the
 controls still work for the current visit. The trail tapers to zero width and opacity
 at its oldest end, reaching the selected width and full opacity at the marker.
+Color comes from event presentation data, with amber as the current default; its future
+object/event-data mapping is still to be decided. Color is not a browser preference.
+Earlier saved preferences retain their timing choices and adopt the large size defaults.
 
 A shorter window clips the final portion of the prepared orbit. It does not stretch
 the samples, change the event anchor, or move the shared clock. Trail history is clipped

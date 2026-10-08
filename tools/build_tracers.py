@@ -108,7 +108,7 @@ def build_manifest(trajectory, trajectory_sha, gp_rows, catalog):
             "geometrySourceIntervalUtc": [trace[0][0], trace[-1][0]],
             "timeMapping": "Source samples replayed at 1:1 simulation duration, ending at the display anchor.",
             "locationClaim": "none", "geographicEndpoint": None,
-            "style": {"color": "#70e1bc", "trailSeconds": 1200, "markerRadiusEarth": 0.012},
+            "style": {"color": "#ffd166", "trailSeconds": 1200, "markerRadiusEarth": 0.012},
             "styleMeaning": "Fixed prototype style and exaggerated marker size; no physical size/brightness claim.",
         },
         "bounds": {"eventTime": t["decay"]["intervalUtc"],

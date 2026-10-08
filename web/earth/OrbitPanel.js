@@ -7,7 +7,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay) {
   try {
     const manifestUrl = new URL('data/tracers.json', document.baseURI);
     const fetchJson = async (url) => {
-      const response = await fetch(url);
+      const response = await fetch(url, { cache: 'no-cache' });
       if (!response.ok) throw new Error(`Could not load ${url.pathname} (${response.status}).`);
       return response.json();
     };
@@ -67,7 +67,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay) {
     unsubscribe = clock.subscribe(update);
     controls = mountTracerControls(tracer.availableSeconds, (settings) => {
       tracer.configure({ visibleSeconds: settings.reentryLeadSeconds, trailSeconds: settings.trailSeconds,
-        color: settings.color, lineWidthEarth: 0.008 * settings.widthScale,
+        lineWidthEarth: 0.008 * settings.widthScale,
         markerRadiusEarth: presentation.style.markerRadiusEarth * settings.markerScale });
       slider.max = (endMs - tracer.startMs) / 1000;
       replay.textContent = `▶ Replay orbit · ${Number((settings.reentryLeadSeconds / 300).toFixed(1))} seconds`;

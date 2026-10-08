@@ -76,22 +76,12 @@
               <input id="tracer-history" type="range" min="0" max="7200" step="30" value="1200" aria-describedby="tracer-history-note">
             </div>
             <div class="tracer-setting">
-              <label for="tracer-width">Trail width <output id="tracer-width-value" for="tracer-width">1×</output></label>
-              <input id="tracer-width" type="range" min="0.5" max="3" step="0.25" value="1">
+              <label for="tracer-width">Trail width <output id="tracer-width-value" for="tracer-width">3×</output></label>
+              <input id="tracer-width" type="range" min="0.5" max="3" step="0.25" value="3">
             </div>
             <div class="tracer-setting">
-              <label for="tracer-size">Marker size <output id="tracer-size-value" for="tracer-size">1×</output></label>
-              <input id="tracer-size" type="range" min="0.5" max="3" step="0.25" value="1">
-            </div>
-            <div class="tracer-setting">
-              <label for="tracer-color">Tracer color</label>
-              <select id="tracer-color">
-                <option value="#70e1bc">Mint</option>
-                <option value="#ffd166">Amber</option>
-                <option value="#ff8d8d">Coral</option>
-                <option value="#8bc4ff">Blue</option>
-                <option value="#c2a5ff">Lavender</option>
-              </select>
+              <label for="tracer-size">Marker size <output id="tracer-size-value" for="tracer-size">3×</output></label>
+              <input id="tracer-size" type="range" min="0.5" max="3" step="0.25" value="3">
             </div>
             <div class="tracer-settings-actions">
               <button id="tracer-reset" type="button">Reset defaults</button>
@@ -100,6 +90,7 @@
           </div>
           <p id="tracer-window-limit" class="note">Up to 2 h of prepared orbit is available.</p>
           <p id="tracer-history-note" class="note">Trail history is the recent path left behind the marker, limited to the selected window. The trail thins and fades toward its oldest end; Trail width sets its width at the marker. Width and size are visual choices.</p>
+          <p class="note">Amber is the current default. Color will reflect object or event data once that mapping is defined.</p>
           <p class="note">Changes keep the clock in place. Choose Replay to preview the selected window. The existing Speed control sets playback speed; Replay starts at 5 simulated minutes per second.</p>
         </fieldset>
       </details>

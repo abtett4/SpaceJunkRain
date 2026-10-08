@@ -159,7 +159,7 @@
         "locationClaim": "none",
         "geographicEndpoint": null,
         "style": {
-          "color": "#70e1bc",
+          "color": "#ffd166",
           "trailSeconds": 1200,
           "markerRadiusEarth": 0.012
         },
