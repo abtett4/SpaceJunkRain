@@ -1,0 +1,4 @@
+# Optional orbital tools; the existing timeline build remains standard-library only.
+# Reproduced with Python 3.14. Latest matplotlib pin requires Python >=3.11.
+sgp4==2.27
+matplotlib==3.11.2

@@ -115,7 +115,7 @@ export function createOrbitSheet(db) {
 
     drawUnder(app) { app.drawYTicks(app.main, app.M, Y_TICKS[yScale].map(([v, l]) => [yLife(app, v), l])); },
     drawNotes(app) {
-      if (app.state.playhead < db.X_MAX) return; // notes describe the finished picture
+      if (app.state.playhead < db.TIME_END) return; // notes describe the finished picture
       const { main, PX, PY } = app, M = app.M, ctx = main.ctx;
       ctx.font = FONT(13.5, 400, 'italic'); ctx.fillStyle = C.text; ctx.textBaseline = 'middle';
       for (const n of LIFE_NOTES) {
