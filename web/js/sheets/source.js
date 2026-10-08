@@ -55,7 +55,7 @@ export function createSourceSheet(db) {
     if (ln.events.length && D[i] < events[ln.events[0]].t) preEvent[i] = 1;
   }
 
-  let showAgg = false, laneY = [], laneFirstX = [];
+  let showAgg = false, laneY = [], laneFirstX = [], laneLastX = [];
   const laneShown = (li) => !LANES[li].agg || showAgg;
   const laneAt = (y) => LANES.findIndex((ln, li) => laneY[li] != null && y >= laneY[li] && y < laneY[li] + ln.h);
 
@@ -82,6 +82,25 @@ export function createSourceSheet(db) {
     const half = `half down in ${fmtDur(s.half)}`, p90 = `90% in ${fmtDur(s.p90)}`;
     return [`${half}, ${p90}${from}`, `${half}${from}`, `${half}, ${p90}`, half];
   }
+  // Comparison notes: written in the empty stretch of a nearby row (`anchor`, a launch whose
+  // dots end early), so the words sit beside the rows they compare. Shares come from the data;
+  // orbits are the stages' current perigee to apogee in the SATCAT (2026-10-07).
+  const share = (keys, field) => keys.map((k) => families.find((f) => f.key === k)).filter(Boolean)
+    .map((f) => Math.round((field === 'up' ? f.orbit : f.n) / Math.max(1, f.n + f.orbit) * 100));
+  const range = (xs) => (Math.min(...xs) === Math.max(...xs) ? `${xs[0]}%` : `${Math.min(...xs)}–${Math.max(...xs)}%`);
+  const CALLOUTS = [(() => {
+    const high = range(share(['1973-086', '1974-089', '1976-077'], 'up'));  // NOAA 3, 4, 5 stages
+    const low = range(share(['1972-058', '1975-004'], 'down'));            // Landsat 1, 2 stages
+    return {
+      anchor: '1976-072', after: dateToDay('1976-12-24'), text: [
+        `Same Delta stage, opposite fates: the NOAA stages, now ~1,400–1,560 km up, are ${high} still in orbit; ` +
+        `Landsat 1's and 2's, ~550–1,000 km up, are ${low} down`,
+        `Same Delta stage, opposite fates: high NOAA stages ${high} still up, low Landsat ones ${low} down`,
+        `Same stage, opposite fates: high ones linger, low ones fall`,
+        `Same stage, opposite fates`],
+    };
+  })()];
+
   const laneNotes = new Map();
   LANES.forEach((ln, li) => { const n = laneNote(ln); if (n) laneNotes.set(li, n); });
 
@@ -147,8 +166,11 @@ export function createSourceSheet(db) {
         // height inside the row carries no data; it only keeps dots apart
         PY[i] = laneY[laneOf[i]] + pad + hash01(cols.id[i]) * (ln.h - 2 * pad);
       }
-      laneFirstX = LANES.map(() => Infinity);
-      for (let i = 0; i < N; i++) if (PX[i] < laneFirstX[laneOf[i]]) laneFirstX[laneOf[i]] = PX[i];
+      laneFirstX = LANES.map(() => Infinity); laneLastX = LANES.map(() => -Infinity);
+      for (let i = 0; i < N; i++) {
+        if (PX[i] < laneFirstX[laneOf[i]]) laneFirstX[laneOf[i]] = PX[i];
+        if (PX[i] > laneLastX[laneOf[i]]) laneLastX[laneOf[i]] = PX[i];
+      }
     },
     colorOf: (i, app) => !app.inFamily(i) ? C.dim : preEvent[i] ? C.pre : C.groups[LANES[laneOf[i]].group],
     radius: (i) => (LANES[laneOf[i]].agg ? 1.4 : 1.8),
@@ -218,6 +240,14 @@ export function createSourceSheet(db) {
         const text = variants.find((t) => ctx.measureText(t).width < end - 10 - M.l - 8);
         if (text) app.haloText(ctx, text + ' —', end - 8, laneY[li] + ln.h / 2 + 0.5);
       });
+      ctx.textAlign = 'left';
+      for (const c of CALLOUTS) {
+        const li = laneIdx.get(families.findIndex((f) => f.key === c.anchor));
+        if (li == null || !laneShown(li) || state.playhead < c.after) continue;
+        const x = Math.max(laneLastX[li], app.xOf(c.after, main, M)) + 20;
+        const text = c.text.find((t) => ctx.measureText(t).width < main.w - M.r - x - 8);
+        if (text) app.haloText(ctx, text, x, laneY[li] + LANES[li].h / 2 + 0.5);
+      }
     },
 
     // the event's symbol, repeated on each of its rows
