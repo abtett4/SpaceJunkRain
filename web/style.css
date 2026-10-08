@@ -162,6 +162,7 @@ button.primary:hover { background: var(--grid); }
 .typefilter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 0 0 10px; font-size: 15px; }
 .typefilter .k { color: var(--text-secondary); font-variant: small-caps; letter-spacing: .05em; margin-right: 2px; }
 .typefilter .scale { display: inline-flex; align-items: center; margin-left: auto; }
+.typefilter .scale.left { margin-left: 0; }
 .typefilter .scale button { border-radius: 0; margin-left: -1px; }
 .typefilter .scale button[aria-pressed="true"] { background: var(--grid-major); color: var(--text-primary); border-style: solid; }
 .typefilter .scale button[aria-pressed="false"] { border-style: solid; }

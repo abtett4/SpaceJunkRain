@@ -115,7 +115,7 @@
   // ---- state -------------------------------------------------------------
   const state = {
     view: 'parent', playhead: X_MAX, playing: false, secPerYear: 3.1470588, family: -1, hover: null,
-    showAgg: false, notes: true, hiddenTypes: new Set(), yScale: 'log',
+    showAgg: false, notes: true, hiddenTypes: new Set(), yScale: 'log', rowOrder: 'size',
   };
   // the type filter belongs to the Time in orbit sheet; the By source sheet always shows every type
   const typeShown = (i) => state.view !== 'lifespan' || !state.hiddenTypes.has(K[i]);
@@ -177,7 +177,8 @@
         `${key('--series-2', 'vermilion')} other breakups and shed parts, ` +
         `${key('--series-3', 'green')} intact rocket stages and satellites; ` +
         `${key('--pre', 'grey')} pieces fell before their source broke up. Symbols mark the event (${glyphs}); ` +
-        `the bar at right is the share of each source that has come down.`,
+        `the bar at right is the share of each source that has come down. ` +
+        `<span id="row-order-note"></span>`,
     },
     lifespan: {
       title: 'How long each object stayed up',
@@ -193,9 +194,11 @@
     document.getElementById('chart-title').textContent = VIEWS[v].title;
     document.getElementById('chart-note').innerHTML = VIEWS[v].note;
     const sw = document.getElementById('scale-word'); if (sw) sw.textContent = `${state.yScale} scale`;
+    if (v === 'parent') setRowOrder(state.rowOrder); // the caption was just re-rendered
     document.getElementById('tb-sheet').textContent = `${v === 'parent' ? 1 : 2} of 2`;
     aggBtn.hidden = v !== 'parent';
     typeBar.hidden = v !== 'lifespan';
+    rowBar.hidden = v !== 'parent';
     layout(); rebuild();
   }
 
@@ -236,6 +239,23 @@
     on ? state.hiddenTypes.delete(k) : state.hiddenTypes.add(k);
     b.setAttribute('aria-pressed', String(on));
     layout(); rebuild();
+  });
+
+  // sheet 1: how dots are placed up and down inside each row
+  const rowBar = document.getElementById('rowbar');
+  const ROW_NOTE = {
+    size: 'Within each row, dots are stacked by radar size: large at the top, then medium and small, ' +
+      'with unknown size at the bottom (most reentries before 1990 have no size on record).',
+    spread: 'Within each row, dots are spread up and down only so they don’t overlap.',
+  };
+  function setRowOrder(o) {
+    state.rowOrder = o;
+    rowBar.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.order === o)));
+    const n = document.getElementById('row-order-note'); if (n) n.textContent = ROW_NOTE[o];
+  }
+  rowBar.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-order]'); if (!b) return;
+    setRowOrder(b.dataset.order); layout(); rebuild();
   });
 
   document.getElementById('notes').addEventListener('change', (e) => { state.notes = e.target.checked; draw(); });
@@ -323,6 +343,7 @@
   const narrow = () => wrap.clientWidth < 700;
 
   // the four "Everything else" rows stay folded away until the viewer opens them
+  const SIZE_BAND = [3, 2, 1, 0]; // indexed by radar size + 1: unknown, small, medium, large
   const laneShown = (li) => !LANES[li].agg || state.showAgg;
   const hiddenPt = new Uint8Array(N);
 
@@ -351,7 +372,11 @@
       if (hiddenPt[i]) continue;
       if (state.view === 'parent') {
         const ln = LANES[laneOf[i]], pad = 4;
-        PY[i] = laneY[laneOf[i]] + pad + hash01(cols.id[i]) * (ln.h - 2 * pad);
+        // 'size': four bands, large at top, then medium, small, and unknown size at the bottom;
+        // 'spread': one band. Either way the height within a band only keeps dots apart.
+        const bands = state.rowOrder === 'size' ? 4 : 1, bandH = (ln.h - 2 * pad) / bands;
+        const band = bands === 1 ? 0 : SIZE_BAND[R[i] + 1];
+        PY[i] = laneY[laneOf[i]] + pad + (band + hash01(cols.id[i])) * bandH;
       } else {
         PY[i] = yLife(D[i] - L[i]);
       }
