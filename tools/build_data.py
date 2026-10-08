@@ -3,8 +3,8 @@
     python tools/build_data.py                  # data/raw/satcat.json (+ decay.json)
     python tools/build_data.py --legacy DIR     # the 2019 collision*.json files
 
-Output: web/data/decays.json. Every decayed object keeps its exact decay
-time, in days since 1957-01-01 UTC. No smoothing, no resampling.
+Output: web/data/decays.json. Reported timestamps are retained; date-only decays
+receive stable random display times within their UTC day. Precision is explicit.
 """
 import argparse
 import collections
@@ -13,6 +13,8 @@ import json
 import pathlib
 import re
 import sys
+
+from event_time import apply_event_times
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 RAW = ROOT / "data" / "raw"
@@ -24,21 +26,26 @@ RCS = ["SMALL", "MEDIUM", "LARGE"]
 DESIG = re.compile(r"^(\d{4}-\d{3})")
 
 
-STAMP = re.compile(r"^(\d{4})-(\d\d)-(\d\d)(?:[ T](\d{1,2}):(\d\d)(?::(\d\d))?)?")
+def source_timestamp(value):
+    if not value or not value.strip():
+        return None
+    text = re.sub(r"[ T](\d):", lambda m: "T0" + m.group(1) + ":", value.strip())
+    t = dt.datetime.fromisoformat(text.replace("Z", "+00:00"))
+    return t.replace(tzinfo=dt.timezone.utc) if t.tzinfo is None else t.astimezone(dt.timezone.utc)
 
 
 def to_day(s):
-    """'2009-02-10', '2009-02-10 0:00:00', '2026-09-13T21:13:00Z' -> fractional days since EPOCH.
-    Space-track writes date-only decays as midnight; those sit at midday instead,
-    since the time within the day is unknown."""
-    m = STAMP.match((s or "").strip())
-    if not m:
+    """Normalize source timestamps before assigning event display times.
+
+    Midnight is conservatively day-only. Noon is an intermediate convention for
+    catalog dates; apply_event_times replaces it for day-only reentry events.
+    """
+    t = source_timestamp(s)
+    if t is None:
         return None
-    y, mo, d, hh, mm, ss = (int(g) if g else 0 for g in m.groups())
-    t = dt.datetime(y, mo, d, hh, mm, ss, tzinfo=dt.timezone.utc)
-    if (hh, mm, ss) == (0, 0, 0):
+    if t.time() == dt.time(0):
         t += dt.timedelta(hours=12)
-    return round((t - EPOCH).total_seconds() / 86400, 4)
+    return (t - EPOCH).total_seconds() / 86400
 
 
 def family_key(rec):
@@ -122,7 +129,14 @@ def load_satcat(args, decay_rows):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--legacy", help="folder of 2019 collision*.json files")
+    ap.add_argument("--retime-existing", action="store_true",
+                    help="upgrade the current compact catalog without fetching/rebuilding raw data")
     args = ap.parse_args()
+    if args.retime_existing:
+        doc = apply_event_times(json.loads(OUT.read_text(encoding="utf-8")))
+        OUT.write_text(json.dumps(doc, separators=(",", ":")) + "\n", encoding="utf-8")
+        print(f"Applied {doc['meta']['presentationTime']['policy']} to {len(doc['cols']['id'])} events.")
+        return
 
     decay_rows = {} if args.legacy else load_decay_rows()
     rows, source, approx = load_satcat(args, decay_rows)
@@ -133,18 +147,22 @@ def main():
         by_id[int(r["NORAD_CAT_ID"])] = r  # dedupe, last wins
     rows = list(by_id.values())
 
+    precision_by_id = {}
     decayed, on_orbit = [], collections.Counter()
     for nid, r in by_id.items():
-        t = to_day(r.get("DECAY"))
+        source_stamp = r.get("DECAY")
+        t = to_day(source_stamp)
         precise = to_day(epochs.get(nid))
         # take the decay-message epoch when it agrees with SATCAT (or SATCAT has none)
         if precise is not None and (t is None or abs(precise - t) <= 2):
             t = precise
+            source_stamp = epochs[nid]
         otype = (r.get("OBJECT_TYPE") or "UNKNOWN").upper()
         otype = otype if otype in TYPES else "UNKNOWN"
         if t is None:
             on_orbit[otype] += 1
             continue
+        precision_by_id[nid] = int(source_timestamp(source_stamp).time() != dt.time(0))
         decayed.append((t, r, otype))
     decayed.sort(key=lambda x: x[0])
 
@@ -181,7 +199,7 @@ def main():
         })
 
     names, name_index = [], {}
-    cols = {k: [] for k in ("d", "l", "f", "k", "r", "id", "nm")}
+    cols = {k: [] for k in ("d", "l", "f", "k", "r", "id", "nm", "p")}
     for t, r, otype in decayed:
         nm = object_name(r)
         if nm not in name_index:
@@ -189,6 +207,7 @@ def main():
             names.append(nm)
         rcs = (r.get("RCS_SIZE") or "").upper()
         cols["d"].append(t)
+        cols["p"].append(precision_by_id[int(r["NORAD_CAT_ID"])])
         cols["l"].append(to_day(r.get("LAUNCH")))
         cols["f"].append(fam_index[family_key(r)])
         cols["k"].append(TYPES.index(otype))
@@ -215,11 +234,12 @@ def main():
         "rcs": RCS,
         "decayed": len(decayed),
         "onOrbit": None if approx else {"total": sum(on_orbit.values()), **{t: on_orbit[t] for t in TYPES}},
-        "preciseEpochs": sum(1 for t, *_ in decayed if t % 1 != 0.5),
+        "preciseEpochs": sum(cols["p"]),
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps({"meta": meta, "families": families, "names": names,
-                               "cols": cols, "events": events}, separators=(",", ":")),
+    doc = apply_event_times({"meta": meta, "families": families, "names": names,
+                             "cols": cols, "events": events})
+    OUT.write_text(json.dumps(doc, separators=(",", ":")),
                    encoding="utf-8")
     orbit = f"{meta['onOrbit']['total']:,}" if meta["onOrbit"] else "unknown (no SATCAT)"
     print(f"{len(decayed):,} decays, {len(families):,} families, "
