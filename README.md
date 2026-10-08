@@ -87,6 +87,7 @@ node tests/clock-tracer.test.mjs
 node tests/tracer-settings.test.mjs
 node tests/representative-tracer.test.mjs
 node tests/surface-pulse.test.mjs
+node tests/event-sequence.test.mjs
 ```
 
 ## Phase 2: explicit fallbacks
@@ -140,8 +141,65 @@ valid reference inclination, positive ordered perigee/apogee, and eccentricity b
 missing node/anomaly does not block a motif. If the reference period is absent, a two-body
 period is derived and labeled. Unsupported or incomplete geometry becomes symbolic;
 corrupt snapshots, wrong object IDs and timeline mismatches fail explicitly. No new
-Space-Track requests are made. The exporter still writes one event per run; a bulk merger
-and broader catalog selection belong to phase 3.
+Space-Track requests are made by this offline exporter. Phase 3 adds an explicit small
+sample specification to the same exporter; broader catalog acquisition remains future work.
+
+## Phase 3: a small historical passage
+
+The default Earth preview now plays **all 12 catalogued reentries from April 2–9, 2018**:
+six payloads, one rocket body and five debris objects. **Replay passage** takes 96 seconds
+at two simulated hours per second. Reported days keep their original spacing, including
+quiet intervals. Times within date-only days retain the existing stable assigned times.
+This is a visual sequence on the shared clock; the colleague's audio layer remains a
+later integration.
+
+Six objects have orbital inputs: the existing Tiangong-1 SGP4 asset plus five newly fetched
+three-day GP_HISTORY snapshots. The sample defaults to 24 hours before each orbital event,
+so all six use reference loops at that setting. At two hours or less Tiangong-1 returns to
+its prepared SGP4 replay. Six objects use illustrative surface pulses: five histories have
+not been queried for this small sample, and the Fengyun-1C debris query returned no rows.
+Those two coverage states remain distinct in the data and inspector. Missing data is not
+evidence that no orbital history exists.
+
+**Event sequence** shows one dot per event in payload/rocket/debris lanes. Click a dot to
+pause, inspect and jump near that event without hiding the others. Expand **Event details
+and provenance** to choose any object and read its source epoch, mode, unknown fields and
+provenance. Active objects and the sample count follow the same clock as the full historical
+charts. Pause/Resume and scrubbing work across the collection; playback stops at April 10
+00:00 UTC. The existing Speed menu also has a slower passage setting.
+
+The sample's missing-orbit pulse is a **four-hour simulation-time motif**, taking two
+seconds at the preset speed. It ends at the assigned event anchor, has a stable random
+surface point, and carries no orbital path or factual reentry location. Single-event
+pulse timing remains unchanged. Keys and labels stay outside the globe. Sample settings
+are saved separately from single-event settings; the default marker and trail remain
+large and amber, with width/opacity taper.
+
+Rebuild offline from the explicit specification (all paths in it are repository-relative):
+
+```bash
+python tools/build_tracers.py --sample data/samples/april-2018.json \
+  --output-dir web/data/samples/april-2018
+```
+
+The derived assets are included for browser use. To reproduce the newly
+added inputs with your own Space-Track credentials, fetch these small windows once using
+the existing immutable-cache tool (the Tiangong-1 setup is documented above):
+
+```bash
+python tools/spacetrack_fetch.py gp_history --norad-id 38249 --start 2018-03-31T00:00:00Z --end 2018-04-03T00:00:00Z
+python tools/spacetrack_fetch.py gp_history --norad-id 31309 --start 2018-03-31T00:00:00Z --end 2018-04-03T00:00:00Z
+python tools/spacetrack_fetch.py gp_history --norad-id 41486 --start 2018-04-02T00:00:00Z --end 2018-04-05T00:00:00Z
+python tools/spacetrack_fetch.py gp_history --norad-id 41568 --start 2018-04-02T00:00:00Z --end 2018-04-05T00:00:00Z
+python tools/spacetrack_fetch.py gp_history --norad-id 24965 --start 2018-04-04T00:00:00Z --end 2018-04-07T00:00:00Z
+python tools/spacetrack_fetch.py gp_history --norad-id 31777 --start 2018-04-06T00:00:00Z --end 2018-04-09T00:00:00Z
+```
+
+The builder requires complete interval membership, unique NORAD IDs, matching timeline
+anchors/classes and intact cached/imported hashes. Corrupt or missing required assets fail
+explicitly. Unknown fields stay null; no browser data acquisition is introduced. The
+original raw inputs and Tiangong geometry are preserved. Scope and scientific limits are
+recorded in [the tracer model notes](notes/tracer-model.md#phase-3-small-mixed-passage).
 
 ## One-object orbital prototype
 

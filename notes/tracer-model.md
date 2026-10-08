@@ -325,10 +325,9 @@ Recommended sequence:
    now handle stale/partial and empty input cases, demonstrated with cached NORAD 38023
    inputs. Windows up to 48 hours use an explicit fixed-period looping policy; original
    SGP4 samples are never stretched or looped.
-3. **Small mixed event sample.** Export and select multiple events with debris, rocket
-   body and payload examples across different data-coverage cases. Preserve NORAD joins,
-   field-level provenance and unknowns. Generalize the single-event manifest exporter and
-   viewer before bulk acquisition or optimization.
+3. **Small mixed event sample — complete.** Twelve events from April 2–9, 2018 share
+   one scene and the existing clock. Six have orbital inputs and six are surface pulses,
+   with missing-query and not-yet-queried inputs distinguished. Details below.
 4. **One launch example.** Add a sourced launch-site lookup, site pulse and first-known
    orbital arc. Distinguish parental launch from fragment creation/deployment; any connecting
    arc is illustrative rather than a reconstructed powered ascent. Test launch-follow time.
@@ -340,3 +339,74 @@ Recommended sequence:
 6. **Broader coverage after profiling.** Measure the small batch, then introduce time-window
    loading and caching only where needed. Report missing geometry/metadata coverage explicitly
    while expanding the locally cached catalog.
+
+## Phase 3: small mixed passage
+
+`data/samples/april-2018.json` specifies **every catalog reentry in
+[2018-04-02 00:00, 2018-04-10 00:00) UTC**. This is a complete eight-day slice of the
+existing catalog, not a statistical sample of all historical debris or all atmospheric
+entries. Membership is checked against the normalized catalog; none of its 12 events
+are omitted or duplicated. There are six payloads, one rocket body and five debris objects.
+Reported dates and stable assigned times are unchanged; no gaps are removed to change the
+rhythm. The viewer loads this small set together before playback.
+
+| NORAD | Name | Orbital input in this sample |
+|---|---|---|
+| 37820 | TIANGONG 1 | Existing SGP4 replay and separate reference loop |
+| 38249 | PSLV R/B | New cached reference elements |
+| 31309 | ARIANE 5 DEB (SYLDA) | New cached reference elements |
+| 41486 | FLOCK 2E 3 | New cached reference elements |
+| 41568 | FLOCK 2EP 6 | New cached reference elements |
+| 41569 | FLOCK 2EP 8 | Catalog only; history not yet queried |
+| 41565 | FLOCK 2E 7 | Catalog only; history not yet queried |
+| 24965 | IRIDIUM 19 | New cached reference elements |
+| 43268 | DRAGON CRS-14 DEB | Catalog only; history not yet queried |
+| 43269 | DRAGON CRS-14 DEB | Catalog only; history not yet queried |
+| 26926 | ATLAS 14E DEB | Catalog only; history not yet queried |
+| 31777 | FENGYUN 1C DEB | Empty three-day GP_HISTORY query |
+
+Six narrow, three-day requests were made in one authenticated session, spaced three
+seconds apart, using the existing acquisition/validation/cache functions. The five
+nonempty queries returned 16, 18, 21, 20 and 21 rows respectively. Their newest pre-day
+epochs support reference motifs only in this increment; they have **not** undergone the
+SGP4 diagnostic workflow. No new SGP4 accuracy claim is made. The empty response is cached
+as evidence of that query's coverage. Catalog-only entries explicitly record
+`sources.gpHistory.status: not-queried`; they are not disguised as unsuccessful queries.
+
+The existing exporter now accepts `--sample` and delegates collection assembly to
+`mixed_sample.py`. It verifies complete interval membership, unique IDs, imported asset
+hashes, and catalog identity/class/time joins before writing. Derived event assets use
+the same event schema; the enclosing manifest adds sample bounds, counts, coverage and
+presentation defaults. Original Tiangong assets are copied byte-for-byte into the sample
+bundle. Sample inputs are repository-relative and raw snapshots remain immutable.
+
+`EventSequence.js` loads and validates both single events and the collection, configures
+each representation, and samples all of them from the existing clock. `OrbitPanel.js`
+adds a small sequence timeline, active-event list, completed-event count and inspector.
+EarthScene keeps its data-agnostic tracers/pulses; it has no new acquisition knowledge.
+The three object-class lanes use amber marks; color is still not a configurable property.
+The globe contains no text labels. Other events remain in the scene when one is inspected.
+
+The default 24-hour lead window allows overlap. Tiangong-1 therefore uses its reference
+loop by default; choosing at most two hours restores its prepared SGP4 samples. Other
+orbital inputs use their individually sourced height/inclination, fixed reference period
+and illustrative phase. As in phase 2, their node/periapsis directions and placement are
+illustrative, with no geographical endpoint or atmospheric descent. Source epochs and
+unknowns remain available per object. The screen shows a visual ensemble, not a
+simultaneously reconstructed Earth-fixed orbital state.
+
+At **7200×** playback the eight days take **96 seconds**. The sample uses one 14,400-second
+surface pulse per symbolic event, ending at its event anchor (two real seconds at the
+preset speed). Duration is explicit presentation metadata; shorter windows clip it and
+longer windows cannot repeat it. Pause/seek/speed changes still use one clock. Pulses on
+the far hemisphere are correctly hidden, so the active count includes events whose marks
+may be occluded. The full historical charts retain their existing counts and filters;
+Earth membership is this complete slice and its inspector does not act as a chart filter.
+Audio scheduling, launches, unified filters and Earth-fixed imagery remain later phases.
+
+Sample preferences use `sjr-sample-tracer-settings-v1`, separate from the single-event
+key; Reset restores the sample's 24-hour lead without overwriting individual-preview
+preferences. Browser testing covers playback, pause/resume, ending cleanly, backward
+seeks, sample/single switches, settings and per-event inspection. Automated tests cover
+membership, joins, coverage honesty, imported geometry checksums, mixed overlapping
+states and preference separation. No raw data is required by the new automated tests.

@@ -683,7 +683,7 @@ import { mountOrbitPanel } from './earth/OrbitPanel.js';
   function setPlaying(p) {
     if (p) {
       if (clock.nowMs >= clock.maxMs) { state.playhead = X_MIN; eventFlash.clear(); }
-      clock.play();
+      clock.play(clock.untilMs > clock.nowMs ? clock.untilMs : clock.maxMs);
     } else clock.pause();
   }
   clock.subscribe(({ previousMs, playing, reason }) => {
@@ -847,10 +847,10 @@ import { mountOrbitPanel } from './earth/OrbitPanel.js';
   readColors();
   setView('parent');
   window.addEventListener('pagehide', () => clock.pause());
-  mountOrbitPanel(clock, data, (startMs, endMs) => {
+  mountOrbitPanel(clock, data, (startMs, endMs, rate = 300) => {
     clock.pause();
-    document.getElementById('speed').value = '105192';
-    clock.setRate(300); // five simulated minutes per second; a two-hour trace takes 24 seconds
+    document.getElementById('speed').value = String(YEAR * 86400 / rate);
+    clock.setRate(rate);
     clock.seek(startMs);
     clock.play(endMs);
   });
