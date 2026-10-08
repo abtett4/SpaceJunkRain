@@ -19,6 +19,41 @@ function sphereMesh() {
   return g;
 }
 
+// A camera-facing ribbon gives continuous width and opacity between source samples.
+// Both taper along the visible path, from zero at the oldest point to full at the head.
+function drawTaperedTrail(p, points, eye, width, color) {
+  if (points.length < 2) return;
+  const distances = [0];
+  for (let i = 1; i < points.length; i++) {
+    distances.push(distances[i - 1] + Math.hypot(...points[i].map((v, j) => v - points[i - 1][j])));
+  }
+  const length = distances.at(-1);
+  if (length === 0) return;
+  const tint = p.color(color);
+  let previousSide = [1, 0, 0];
+  p.noStroke();
+  p.beginShape(p.TRIANGLE_STRIP);
+  points.forEach((point, i) => {
+    const a = points[Math.max(0, i - 1)], b = points[Math.min(points.length - 1, i + 1)];
+    const tangent = b.map((v, j) => v - a[j]);
+    const view = eye.map((v, j) => v - point[j]);
+    const cross = [tangent[1]*view[2]-tangent[2]*view[1],
+      tangent[2]*view[0]-tangent[0]*view[2], tangent[0]*view[1]-tangent[1]*view[0]];
+    const norm = Math.hypot(...cross);
+    let side = norm > 1e-10 ? cross.map(v => v / norm) : previousSide;
+    // Keep the ribbon's two edges consistent when viewed nearly end-on.
+    if (i && side.reduce((sum, v, j) => sum + v * previousSide[j], 0) < 0) side = side.map(v => -v);
+    previousSide = side;
+    const progress = distances[i] / length;
+    const halfWidth = width * progress / 2;
+    tint.setAlpha(255 * progress * progress);
+    p.fill(tint);
+    p.vertex(...point.map((v, j) => v - side[j] * halfWidth));
+    p.vertex(...point.map((v, j) => v + side[j] * halfWidth));
+  });
+  p.endShape();
+}
+
 export class EarthScene {
   constructor(element) {
     this.tracers = [];
@@ -75,10 +110,7 @@ export class EarthScene {
     for (const tracer of this.tracers) {
       const sample = tracer.sample(this.timeMs);
       if (!sample) continue;
-      p.noFill(); p.stroke(tracer.color); p.strokeWeight(tracer.lineWidthEarth);
-      if (sample.tail.length > 1) {
-        p.beginShape(); sample.tail.forEach((v) => p.vertex(...v)); p.endShape();
-      }
+      drawTaperedTrail(p, sample.tail, camera.eye, tracer.lineWidthEarth, tracer.color);
       p.push(); p.translate(...sample.head); p.noStroke(); p.fill(tracer.color);
       p.sphere(tracer.markerRadiusEarth, 12, 8); p.pop();
     }

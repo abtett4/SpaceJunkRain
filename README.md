@@ -32,7 +32,8 @@ Open **Configure tracer** to set the time shown before reentry (30 seconds to 2 
 trail history (head only to 2 hours), trail width, marker size, and color. Preferences
 are saved in this browser; **Reset defaults** restores the two-hour window, 20-minute
 history, default width/size, and mint color. If browser storage is unavailable, the
-controls still work for the current visit.
+controls still work for the current visit. The trail tapers to zero width and opacity
+at its oldest end, reaching the selected width and full opacity at the marker.
 
 A shorter window clips the final portion of the prepared orbit. It does not stretch
 the samples, change the event anchor, or move the shared clock. Trail history is clipped
