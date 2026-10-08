@@ -7,6 +7,7 @@ import { createApp } from './chart.js';
 import { fillPage } from './page.js';
 import { createSourceSheet } from './sheets/source.js';
 import { createOrbitSheet } from './sheets/orbit.js';
+import { createEarthSheet } from './sheets/earth.js';
 
 // canvas text needs the web font loaded first; don't wait long if it's offline
 try {
@@ -23,6 +24,7 @@ fillPage(db, app.PEAK);
 // sheets are numbered in the order they're added; each needs a tab with data-sheet="<id>"
 app.addSheet(createSourceSheet(db));
 app.addSheet(createOrbitSheet(db));
+app.addSheet(createEarthSheet(db));
 
 initThemeSwitch(document.getElementById('theme'), () => app.rebuild());
 app.start('source');

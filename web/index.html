@@ -33,6 +33,7 @@
     <div class="tabs" role="tablist" aria-label="Chart view">
       <button role="tab" data-sheet="source" aria-selected="true">By source</button>
       <button role="tab" data-sheet="orbit" aria-selected="false">Time in orbit</button>
+      <button role="tab" data-sheet="earth" aria-selected="false">Earth view</button>
     </div>
     <h2 id="chart-title"></h2>
     <p class="note" id="chart-note"></p>
@@ -47,6 +48,9 @@
           <option value="3.1470588" selected>3.1 s per year</option>
           <option value="10">10 s per year</option>
           <option value="30">30 s per year</option>
+          <option value="105192">5 min per second · orbit detail</option>
+          <option value="17532">30 min per second · passage detail</option>
+          <option value="4383">2 hours per second · passage</option>
         </select>
       </label>
       <label>Highlight
@@ -61,6 +65,107 @@
     </div>
     <div class="typefilter" id="typefilter" role="group" aria-label="Object types shown" data-sheet-only="orbit" hidden></div>
 
+    <section class="orbit-panel" aria-labelledby="orbit-title" data-sheet-only="earth" hidden>
+      <div class="orbit-heading">
+        <div><h2 id="orbit-title">An eight-day passage</h2><p id="orbit-name">A small mixed sample on one shared clock</p></div>
+        <div class="orbit-playback"><button id="orbit-pause" type="button" disabled>▶ Resume</button>
+          <button id="orbit-replay" type="button" disabled>▶ Replay passage</button></div>
+      </div>
+      <div class="orbit-example"><label for="orbit-example">Preview input</label>
+        <select id="orbit-example">
+          <option value="data/samples/april-2018/tracers.json">Mixed passage · April 2–9, 2018</option>
+          <option value="data/tracers.json">Tiangong-1 · recent orbital history</option>
+          <option value="data/fallbacks/stale/tracers.json">Iridium 33 debris · stale reference orbit</option>
+          <option value="data/fallbacks/empty/tracers.json">Same debris event · empty near-event query</option>
+        </select>
+      </div>
+      <details class="tracer-config" id="tracer-config">
+        <summary>Configure tracer · event timing &amp; trail history</summary>
+        <fieldset id="tracer-fields" disabled>
+          <legend>Tracer appearance and timing</legend>
+          <div class="tracer-settings-grid">
+            <div class="tracer-setting">
+              <label for="tracer-window">Show before each reentry <output id="tracer-window-value" for="tracer-window">2 h</output></label>
+              <input id="tracer-window" type="range" min="30" max="7200" step="30" value="7200" aria-describedby="tracer-window-limit">
+            </div>
+            <div class="tracer-setting">
+              <label for="tracer-history">Visible trail history <output id="tracer-history-value" for="tracer-history">20 min</output></label>
+              <input id="tracer-history" type="range" min="0" max="7200" step="30" value="1200" aria-describedby="tracer-history-note">
+            </div>
+            <div class="tracer-setting">
+              <label for="tracer-width">Trail width <output id="tracer-width-value" for="tracer-width">3×</output></label>
+              <input id="tracer-width" type="range" min="0.5" max="3" step="0.25" value="3">
+            </div>
+            <div class="tracer-setting">
+              <label for="tracer-size">Marker size <output id="tracer-size-value" for="tracer-size">3×</output></label>
+              <input id="tracer-size" type="range" min="0.5" max="3" step="0.25" value="3">
+            </div>
+            <div class="tracer-settings-actions">
+              <button id="tracer-reset" type="button">Reset defaults</button>
+              <span id="tracer-preferences-note" role="status">Preferences are saved on this browser when available.</span>
+            </div>
+          </div>
+          <p id="tracer-window-limit" class="note">Up to 2 h of prepared orbit is available.</p>
+          <p id="tracer-history-note" class="note">Trail history stays inside the selected window; representative trails show at most one revolution. The trail thins and fades toward its oldest end. Width and size are visual choices.</p>
+          <p class="note">Amber is the current default. Color will reflect object or event data once that mapping is defined.</p>
+          <p class="note">Changes keep the clock in place. Replay passage starts at 2 simulated hours per second; single-event Replay starts at 5 simulated minutes per second. The page's Speed control changes playback speed. Sample and single-event preferences are saved separately.</p>
+        </fieldset>
+      </details>
+      <div class="orbit-grid">
+        <div class="orbit-viewport">
+          <div id="earth-scene"></div>
+        </div>
+        <div class="orbit-caption">
+          <p id="orbit-status" role="status">Loading orbital preview…</p>
+          <div id="sample-summary" hidden>
+            <p id="sample-coverage" class="note"></p>
+            <p id="sample-progress"></p>
+            <ul id="sample-active" aria-label="Active sample events"></ul>
+            <p id="sample-quiet" class="note"></p>
+            <p id="sample-next" class="note"></p>
+          </div>
+          <div id="orbit-trace-key" class="orbit-key" role="group" aria-label="Orbital representation key" hidden>
+            <span class="orbit-key-trace" aria-hidden="true"></span>
+            <div><strong>Orbital tracers</strong><p>Reference geometry or prepared SGP4 replay · no reentry path claim</p></div>
+          </div>
+          <div id="symbolic-event" class="orbit-key" role="group" aria-label="Representation key" hidden>
+            <span class="orbit-key-pulse" aria-hidden="true"></span>
+            <div><strong>No orbital data representation</strong>
+              <p>Surface pulse · illustrative location, no reentry position claim</p>
+              <p id="symbolic-state"></p>
+            </div>
+          </div>
+          <details id="orbit-inspector" open>
+          <summary>Event details and provenance</summary>
+          <div id="orbit-object-choice" hidden><label for="orbit-object">Inspect event</label>
+            <select id="orbit-object"></select>
+            <button id="orbit-jump" type="button">Jump to event</button>
+          </div>
+          <p id="orbit-object-name"></p>
+          <p id="orbit-object-mode"></p>
+          <p id="orbit-attributes"></p>
+          <p id="orbit-evidence" class="note"></p>
+          <p><strong>Event anchor</strong><br><span id="orbit-anchor">April 2, 2018 · time of day unknown</span></p>
+          <p id="orbit-explanation">Choose a preview input to inspect its representation and limitations.</p>
+          <p class="note">Marker size is exaggerated. Orbit descriptors refer to the source epoch; physical size, mission, owner and lifetime orbit remain unassigned.</p>
+          <a id="orbit-provenance" href="data/tracers.json">Event attributes and provenance (JSON)</a>
+          </details>
+        </div>
+      </div>
+      <div id="sample-score" hidden>
+        <p class="sample-score-title">Event sequence <span class="note">· click a dot to preview an event</span></p>
+        <div id="sample-lanes"></div>
+        <div id="sample-dates" aria-hidden="true"></div>
+        <p class="note">Every dot is one event. Days are reported; times within each day are assigned for display. The full catalog timeline below follows the same clock.</p>
+      </div>
+      <div class="orbit-scrubber">
+        <label for="orbit-scrub">Event replay · moves the shared clock</label>
+        <input id="orbit-scrub" type="range" min="0" max="7200" step="1" value="0" disabled>
+        <p id="tracer-window-times"></p>
+        <p><strong>Display clock:</strong> <span id="orbit-clock">—</span><br><span id="orbit-sample">Drag the globe to rotate. Scroll or use + / − to zoom.</span></p>
+      </div>
+    </section>
+
     <div class="canvas-wrap" id="main-wrap"><canvas id="main" aria-label="Reentries chart"></canvas></div>
     <button type="button" class="disclosure" id="agg-toggle" aria-expanded="false" aria-controls="main-wrap" data-sheet-only="source" hidden></button>
     <h2 class="second">Reentries per month</h2>
@@ -74,7 +179,7 @@
       <div><span class="k">Data</span>USSPACECOM via <a href="https://www.space-track.org">Space-Track.org</a></div>
       <div><span class="k">Retrieved</span><span id="tb-date"></span></div>
       <div><span class="k">Scale</span>1 dot = 1 object</div>
-      <div><span class="k">Drawn by</span>A. Tett</div>
+      <div><span class="k">Drawn by</span>A. Tett · Earth view T. Griffith</div>
     </div>
   </section>
 
@@ -92,7 +197,7 @@
     <h3>About the data</h3>
     <p id="credit"></p>
     <ul>
-      <li>Decay dates come from the SATCAT and Space-Track's historical decay messages, which record each one to the day only. Each dot sits on its real day; nothing is smoothed or resampled. Within a row, dots are spread up and down only so they don't overlap.</li>
+      <li>Decay dates come from the SATCAT and Space-Track's historical decay messages, which record each one to the day only. Each dot sits on its reported day. When only the date is known, a reproducible random time within that UTC day drives the timeline and orbit replay; it is not an estimated reentry time. Within a row, dots are spread up and down only so they don't overlap.</li>
       <li>A "source" is everything from one launch (its international designator, e.g. 1999-025). Debris usually keeps its parent's designator, so a breakup shows up as a burst within one source.</li>
       <li>Reentries bunch up around solar maxima: a more active Sun heats and expands the upper atmosphere, so drag pulls objects down faster. NASA's history of the problem records the 1978–80 and 1989–91 maxima doing exactly this, from Skylab's early fall to the quick decay of the Solwind debris (<a href="https://ntrs.nasa.gov/citations/19990041784" target="_blank" rel="noopener">Portree &amp; Loftus, <em>Orbital Debris: A Chronology</em>, NASA/TP-1999-208856, 1999</a>).</li>
       <li>"Still in orbit" counts every tracked object, working satellites included. Only tracked objects appear here, roughly softball-sized and up in low orbit. Collision dates and altitudes are hand-curated.</li>

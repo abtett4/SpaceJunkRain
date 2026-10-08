@@ -36,6 +36,8 @@ web/js/util.js           dates, formatting, names, constants (no DOM, no state)
 web/js/theme.js          canvas colours from the CSS tokens; paper / blueprint switch
 web/js/page.js           headline, summary cards, credits, shared data tables
 web/js/tips.js           the tooltip for one object
+web/js/SimulationClock.js  the one clock every view follows (Tyler Griffith)
+web/js/earth/            the Earth view's globe, tracers and panel (Tyler Griffith)
 web/js/sheets/*.js       one file per sheet: everything specific to that view
 notes/                   design principles, roadmap
 2023/, explode-6.scd     the original 2019 SuperCollider piece
@@ -73,8 +75,10 @@ The sheet object (only the first group is required):
 | `hoverAt(app, x, y)`, `pointerDown(app, x, y)` | your own hover targets and clicks; return `null`/`false` to let the core handle them |
 | `drawEventMark(app, e, x)`, `eventHitY(app, e, y)` | extra collision-marker drawing, and where it can be hovered |
 | `topAxis`, `eventLines` (`'always'` or `'hover'`), `rainDrop`, `alpha` | small display options |
+| `canvas: false` | the sheet brings its own picture (like the Earth view): the main chart is hidden, the monthly chart stays |
 
-Helpers on `app`: `xOf(day, cv, M)`, `dayOf`, `M`, `main` (the canvas), `state` (playhead,
+Helpers on `app`: `xOf(day, cv, M)`, `dayOf`, `M`, `main` (the canvas), `clock` (the shared
+`SimulationClock`; subscribe to it to stay in step), `replay(startMs, endMs, rate)`, `state` (playhead,
 highlighted family, notes), `haloText`, `clipText`, `drawYTicks`, `relayout()` after anything
 changes positions, `rebuild()` after anything changes colours, `draw()` for a repaint.
 Dates are fractional days since 1957-01-01 UTC; `util.js` converts them.

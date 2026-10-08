@@ -16,6 +16,7 @@ export async function loadData(url = 'data/decays.json') {
     K: Int8Array.from(cols.k),                                       // type: 0 debris, 1 rocket body, 2 payload, 3 unknown
     R: Int8Array.from(cols.r),                                       // radar size: 0 small, 1 medium, 2 large, -1 unknown
     X_MIN: dateToDay('1957-01-01'),
-    X_MAX: Math.max(todayDay, N ? D[N - 1] : 0, ...events.map((e) => e.t)) + 60,
+    TIME_END: Math.max(todayDay, N ? D[N - 1] : 0, ...events.map((e) => e.t)), // last simulated moment
+    get X_MAX() { return this.TIME_END + 60; },                                 // + chart padding, not time
   };
 }

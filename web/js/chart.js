@@ -7,16 +7,26 @@ import {
   evDate, pretty, upperBound,
 } from './util.js';
 import { C, readColors } from './theme.js';
+import { SimulationClock } from './SimulationClock.js';
 
 const CELL = 12;        // hover-search grid, px
 const MIN_SPAN = 1.5 * YEAR;
 
 export function createApp(db) {
-  const { N, D, F, events, families, X_MIN, X_MAX } = db;
+  const { N, D, F, events, families, X_MIN, X_MAX, TIME_END } = db;
   const $ = (id) => document.getElementById(id);
 
+  // One clock for every view (and, later, the sound): Tyler Griffith's SimulationClock.
+  // The playhead, play state and speed are views onto it.
+  const toMs = (day) => EPOCH_MS + day * DAY_MS, toDay = (ms) => (ms - EPOCH_MS) / DAY_MS;
+  const clock = new SimulationClock({ minMs: toMs(X_MIN), maxMs: toMs(TIME_END), rate: YEAR * 86400 / 3.1470588 });
   const state = {
-    view: null, playhead: X_MAX, playing: false, secPerYear: 3.1470588,
+    get playhead() { return toDay(clock.nowMs); },
+    set playhead(day) { clock.seek(toMs(day)); },
+    get playing() { return clock.playing; },
+    get secPerYear() { return YEAR * 86400 / clock.rate; },
+    set secPerYear(seconds) { clock.setRate(YEAR * 86400 / seconds); },
+    view: null,
     family: -1,   // highlighted launch, or -1
     hover: null,  // { point } | { event } | { bin } | anything a sheet returns from hoverAt
     notes: true,
@@ -252,9 +262,19 @@ export function createApp(db) {
   }
 
   function draw(now = performance.now()) {
-    revealed = upperBound(D, state.playhead);
-    if (!base.width || !base.height) return; // not laid out yet (hidden tab)
+    revealed = upperBound(D, state.playhead + 1e-9);
     const s = sheet();
+    if (s.canvas !== false) drawMain(now, s);
+    drawHist();
+
+    let shown = 0;
+    for (let i = 0; i < revealed; i++) if (counted(i)) shown++;
+    $('date').textContent = state.playhead >= TIME_END ? 'Today' : fmtDate(state.playhead);
+    $('now-count').textContent = `${fmtInt(shown)} down`;
+  }
+
+  function drawMain(now, s) {
+    if (!base.width || !base.height) return; // not laid out yet (hidden tab)
     if (revealed < drawnTo) { bctx.clearRect(0, 0, main.w, main.h); drawnTo = 0; }
     if (revealed > drawnTo) { paintPoints(drawnTo, revealed); drawnTo = revealed; }
 
@@ -264,10 +284,10 @@ export function createApp(db) {
     s.drawUnder?.(app);                    // row labels, y ticks: anything behind the dots
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(base, 0, 0); ctx.restore();
     clipPlot(ctx, main, M);
-    if (state.playhead < X_MAX) drawRain();
+    if (state.playhead < TIME_END) drawRain();
     if (state.notes) s.drawNotes?.(app);   // notes on the plotting field
     drawEvents(now);
-    if (state.playhead < X_MAX) {
+    if (state.playhead < TIME_END) {
       const x = Math.round(xOf(state.playhead, main, M)) + 0.5;
       ctx.strokeStyle = C.text;
       ctx.beginPath(); ctx.moveTo(x, M.t - 6); ctx.lineTo(x, main.h - M.b); ctx.stroke();
@@ -279,12 +299,6 @@ export function createApp(db) {
       ctx.lineWidth = 1;
     }
     ctx.restore();
-    drawHist();
-
-    let shown = 0;
-    for (let i = 0; i < revealed; i++) if (counted(i)) shown++;
-    $('date').textContent = state.playhead >= X_MAX ? 'Today' : fmtDate(state.playhead);
-    $('now-count').textContent = `${fmtInt(shown)} down`;
   }
 
   // ---- zoom ------------------------------------------------------------------
@@ -309,7 +323,7 @@ export function createApp(db) {
     const z = e.target.closest('button')?.dataset.z; if (!z) return;
     const span = zoom.hi - zoom.lo;
     // the playhead is the natural centre when it's on screen; otherwise the middle of the view
-    const c = state.playhead < X_MAX && state.playhead > zoom.lo && state.playhead < zoom.hi
+    const c = state.playhead < TIME_END && state.playhead > zoom.lo && state.playhead < zoom.hi
       ? state.playhead : (zoom.lo + zoom.hi) / 2;
     if (z === 'in') zoomBy(0.5, c);
     else if (z === 'out') zoomBy(2, c);
@@ -335,36 +349,41 @@ export function createApp(db) {
   }
 
   // ---- playback ----------------------------------------------------------------
-  const playBtn = $('play'), pulse = $('pulse');
-  let lastT = 0, lastYear = -1;
+  const playBtn = $('play'), pulse = $('pulse'), speedSel = $('speed');
+  let lastYear = -1;
   function setPlaying(p) {
-    state.playing = p;
-    playBtn.textContent = p ? '❚❚ Pause' : '▶ Animate';
-    playBtn.setAttribute('aria-label', p ? 'Pause' : 'Animate');
     if (p) {
-      if (state.playhead >= X_MAX) { state.playhead = X_MIN; eventFlash.clear(); }
-      lastT = performance.now();
-      requestAnimationFrame(tick);
-    }
+      if (clock.nowMs >= clock.maxMs) { state.playhead = X_MIN; eventFlash.clear(); }
+      clock.play(clock.untilMs > clock.nowMs ? clock.untilMs : clock.maxMs);
+    } else clock.pause();
   }
-  function tick(now) {
-    if (!state.playing) return;
-    const prev = state.playhead;
-    state.playhead = Math.min(X_MAX, prev + (now - lastT) / 1000 / state.secPerYear * YEAR);
-    lastT = now;
-    events.forEach((e, i) => { if (e.t > prev && e.t <= state.playhead) eventFlash.set(i, now); });
-    const year = yearOf(state.playhead);
-    if (year !== lastYear) { // a visual beat once a year
-      lastYear = year;
-      pulse.classList.add('on');
-      requestAnimationFrame(() => requestAnimationFrame(() => pulse.classList.remove('on')));
-    }
-    draw(now);
-    if (state.playhead >= X_MAX) { setPlaying(false); draw(); return; }
-    requestAnimationFrame(tick);
-  }
+  // every view redraws from the clock, whoever moved it (Animate, scrubbing, the Earth view)
+  clock.subscribe(({ previousMs, playing, reason }) => {
+    playBtn.textContent = playing ? '❚❚ Pause' : '▶ Animate';
+    playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Animate');
+    if (reason === 'advance') {
+      const prev = toDay(previousMs), now = performance.now();
+      events.forEach((e, i) => { if (e.t > prev && e.t <= state.playhead) eventFlash.set(i, now); });
+      const year = yearOf(state.playhead);
+      if (year !== lastYear) { // a visual beat once a year
+        lastYear = year;
+        pulse.classList.add('on');
+        requestAnimationFrame(() => requestAnimationFrame(() => pulse.classList.remove('on')));
+      }
+    } else if (reason === 'seek') eventFlash.clear();
+    if (state.view) draw();
+  });
   playBtn.addEventListener('click', () => setPlaying(!state.playing));
-  $('speed').addEventListener('change', (e) => { state.secPerYear = +e.target.value; });
+  speedSel.addEventListener('change', (e) => { state.secPerYear = +e.target.value; });
+  window.addEventListener('pagehide', () => clock.pause());
+  // play a stretch of time at a given rate (simulated ms per real ms), e.g. an Earth-view passage
+  function replay(startMs, endMs, rate) {
+    clock.pause();
+    speedSel.value = String(YEAR * 86400 / rate);
+    clock.setRate(rate);
+    clock.seek(startMs);
+    clock.play(endMs);
+  }
   $('notes').addEventListener('change', (e) => { state.notes = e.target.checked; draw(); });
 
   // ---- tooltips, hover and scrubbing --------------------------------------------
@@ -411,8 +430,7 @@ export function createApp(db) {
   let dragging = null;
   function scrubTo(cv, m, clientX) {
     const x = clientX - cv.c.getBoundingClientRect().left;
-    state.playhead = Math.max(X_MIN, Math.min(X_MAX, dayOf(x, cv, m)));
-    draw();
+    state.playhead = Math.max(X_MIN, Math.min(TIME_END, dayOf(x, cv, m))); // the clock redraws
   }
   for (const [cv, getM] of [[main, () => M], [hist, () => H]]) {
     cv.c.addEventListener('pointerdown', (ev) => {
@@ -458,12 +476,14 @@ export function createApp(db) {
   // data-sheet-only="<id>"; switching sheets shows only that sheet's controls.
   function addSheet(s) { sheets.set(s.id, s); s.attach?.(app); }
   function setView(id) {
+    if (!sheets.has(id)) return; // a tab whose sheet isn't registered does nothing
     const prev = sheet();
     if (prev && prev.id !== id) prev.leave?.(app);
     state.view = id;
     const s = sheet(), order = [...sheets.keys()];
     document.querySelectorAll('[data-sheet]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.sheet === id)));
     document.querySelectorAll('[data-sheet-only]').forEach((el) => { el.hidden = el.dataset.sheetOnly !== id; });
+    wrap.hidden = s.canvas === false; // e.g. the Earth view, which brings its own picture
     $('chart-title').textContent = s.title;
     $('chart-note').innerHTML = s.caption(app);
     $('tb-sheet').textContent = `${order.indexOf(id) + 1} of ${order.length}`;
@@ -486,7 +506,7 @@ export function createApp(db) {
   }
 
   const app = {
-    db, state, zoom, main, hist, wrap, PX, PY, hiddenPt, PEAK,
+    db, state, clock, zoom, main, hist, wrap, PX, PY, hiddenPt, PEAK, replay,
     get M() { return M; },
     get revealed() { return revealed; },
     xOf, dayOf, clipPlot, narrow, inFamily, haloText, clipText, drawXAxis, drawYTicks, showTip, hideTip,

@@ -12,12 +12,17 @@ Successor to the 2019 SuperCollider piece (ATLS 4519, Gerald Robinson & Alan Tet
 3. `python tools/build_data.py` writes `web/data/decays.json`.
 4. `python -m http.server 8174 --directory web`, then open http://localhost:8174.
 
-Two views: **By source** (one row per major breakup, debris on its reentry day, share down on the
+Three views: **By source** (one row per major breakup, debris on its reentry day, share down on the
 right) and **Time in orbit** (decay date vs. lifespan, log scale). A row appears for any launch
-with 150+ reentered debris pieces, plus every launch linked in `data/events.json`.
+with 150+ reentered debris pieces, plus every launch linked in `data/events.json`. **Earth view**
+(sheet 3, by Tyler Griffith) replays sample reentries as orbital tracers on a globe, on the same clock as
+the timeline; see [notes/orbital-tracers.md](notes/orbital-tracers.md).
 
 No third-party packages; Python 3.8+ standard library only, and plain ES modules in `web/js/`
 (no build step). Pushing to `main` redeploys the site from `web/` (see `.github/workflows/pages.yml`).
+
+The optional orbital tools (`tools/propagate.py` and friends) have separate dependencies in
+`requirements-orbit.txt`; the site and the timeline build don't need them.
 
 **Want to help?** See [CONTRIBUTING.md](CONTRIBUTING.md): setup, code layout, adding a sheet or a dataset,
 and the checklist for pull requests.
@@ -30,7 +35,7 @@ to redistribute this basic SSA data, and to publish analysis based on it, on con
 appropriate citation. Keep this citation with any copy of `web/data/decays.json` or work built on it.
 
 - One row per object from SATCAT. Where a historical decay message carries a precise epoch that
-  agrees with SATCAT (within 2 days), that epoch wins. Date-only decays sit at 12:00 UTC.
+  agrees with SATCAT (within 2 days), that epoch wins. Date-only decays receive stable random display times within their UTC day, with source precision retained in `cols.p`.
 - Families are launch designators (`1993-036` = everything from the Cosmos 2251 launch).
 - `data/events.json` is the hand-edited collision table: kind = bump | crash | explosion | fragmentation.
 - Raw downloads (`data/raw/`, `data/decay.json`) stay out of git for size; each person fetches their own.
