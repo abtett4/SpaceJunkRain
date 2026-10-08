@@ -16,8 +16,11 @@ Two views: **By source** (one row per major breakup, debris on its reentry day, 
 right) and **Time in orbit** (decay date vs. lifespan, log scale). A row appears for any launch
 with 150+ reentered debris pieces, plus every launch linked in `data/events.json`.
 
-No third-party packages; Python 3.8+ standard library only. Pushing to `main` redeploys the site
-from `web/` (see `.github/workflows/pages.yml`).
+No third-party packages; Python 3.8+ standard library only, and plain ES modules in `web/js/`
+(no build step). Pushing to `main` redeploys the site from `web/` (see `.github/workflows/pages.yml`).
+
+**Want to help?** See [CONTRIBUTING.md](CONTRIBUTING.md): setup, code layout, adding a sheet or a dataset,
+and the checklist for pull requests.
 
 ## Data and citation
 
