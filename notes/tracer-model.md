@@ -72,13 +72,24 @@ Distinguish three types rather than manufacturing a confidence interval:
 - **Model domain:** element epoch/age, frame, propagation interval, valid samples, and
   diagnostics. Alternate-element spread is a sensitivity check, not an error radius.
 - **Visual freedom:** documented choices within a display policy, such as placing an
-  event at noon within its known day, choosing phase on a representative orbit, shortening
+  event at a stable random time within its known day, choosing phase on a representative orbit, shortening
   a trail, or exaggerating marker width. These are not physical measurements.
 
-Initial display time for date-only events remains **12:00 UTC**, matching the existing
-timeline. This anchor is a presentation convention. It must fall inside the reported
-day `[00:00, next 00:00)`. A future deterministic distribution within that day is possible,
-but would be applied once to the shared event so Earth, timeline, and sound stay aligned.
+Date-only reentries now receive a **reproducible random time within their UTC day**.
+`tools/event_time.py` hashes `sha256-utc-day-v1:SpaceJunkRain:<eventId>`, takes the first
+eight digest bytes as an unsigned big-endian integer, then takes modulo 86400 seconds.
+The resulting anchor lies in `[00:00, next 00:00)`. It is illustrative, not a reentry
+estimate or evidence of within-day ordering. The seed and policy are versioned; neither
+input order, browser refresh, nor adding other objects changes an existing assignment.
+Reported times are retained. `cols.p` records day-only versus reported-time precision;
+`meta.preciseEpochs` counts source precision, never assigned random times.
+
+`build_data.py` applies this policy before publishing, sorting all columns together.
+`--retime-existing` upgrades the current processed catalog without changing or downloading
+raw data. It refuses ambiguous legacy files that lack per-event precision flags. Launch
+tracers are not implemented yet; their eventual event IDs can use the same timing helper.
+The existing launch-date column still describes catalog/parent-launch chronology, not a
+separate launch animation. Curated collision annotations retain their source dates.
 
 An unknown location has no invented small numeric bound. A day alone does not identify
 one longitude or a point on the orbit. If only inclination is supported, render a tilted
@@ -108,23 +119,38 @@ Reentry presentation can fade or brighten an orbital arc on the reported day. A 
 geographic impact pin or an invented descent-to-ground is unnecessary. Any future stylized
 descent would belong to the illustrative layer, with location claims kept separate.
 
-## Concrete Tiangong-1 example and next implementation
+## Implemented Tiangong-1 preview
 
-`data/examples/tracer-37820-reentry.json` is a populated **design example**, not a new
-production dataset or a currently consumed renderer API. It uses the existing trajectory
-and cached source records, retaining their hashes. It demonstrates every requested
-attribute slot, including explicit unknowns for physical dimensions, owner/operator,
-mission type, exact reentry location, physical structure, and lifetime regime.
+`tools/build_tracers.py` joins one processed trajectory and checksum-verified GP snapshot
+to `web/data/decays.json` by NORAD ID. It rejects mismatched source hashes, geometry frames,
+time order, timeline dates or precision. `web/data/tracers.json` is the consumed event
+manifest; `web/data/trajectories/37820.json` is its compact geometry asset. The snapshot
+in `data/examples/tracer-37820-reentry.json` mirrors that event with a relative asset path.
+Unknown attributes remain explicit; the adapter performs no speculative mission or owner
+classification. Its default output directory is `data/processed/browser`; pass
+`--output-dir web/data` to regenerate the checked-in browser assets.
 
-Its reported event day is April 2, 2018; proposed display anchor is noon UTC. The original
-two-hour trajectory keeps its actual sample times. Replaying that geometry at the display
-anchor is an illustrative presentation mapping, not a new orbit calculation. Source plane
-and altitude descriptors retain their April 1 epoch. The 145 km model sensitivity remains
-available in diagnostics without preventing a useful tracer.
+Tiangong-1's display anchor is **2018-04-02 15:35:52 UTC**. The two-hour geometry replays
+from 13:35:52 through 15:35:52 that day, while retaining the source samples from April 1
+at 22:00 through April 2 at 00:00 UTC. This mapping is a presentation choice. It does not
+propagate the object to 15:35:52 or assert its position at reentry. Source plane and height
+descriptors retain their April 1 epoch. Alternate element sets' 145 km sensitivity is
+available in diagnostics without becoming a calibrated error radius.
 
-Next, add a small preprocessing adapter that emits this manifest alongside each existing
-trajectory, joined by NORAD ID. Normalize the chosen event anchor once. A renderer should
-consume the manifest, the geometry asset, and shared simulation time. The representative
-and symbolic fallbacks should be added incrementally; they are specified here, not yet
-implemented. The existing numerical diagnostic remains available without silently
-relaxing its meaning or changing its source data.
+The existing `web/app.js` owns one `SimulationClock`. Both chart scrubbing and the orbit
+slider seek it. `OrbitPanel` adapts the event to `EarthScene.addTracer()`; the scene only
+accepts positions, timing and style, with no Space-Track or catalog knowledge. Replay
+uses 300 simulated seconds per real second and stops at the shared event anchor. The
+Earth view interpolates the 30-second samples; it performs no SGP4 propagation.
+
+The plain sphere and camera were adapted from Cosmic Clock. Coordinates remain inertial
+TEME, mapped to scene axes `[x, -z, y] / 6378.135`, a length- and handedness-preserving
+rotation. North is screen-up in the default orientation. The equator is shown; there are
+no longitude lines, surface imagery, geographic endpoint or atmospheric descent. Sphere
+lighting and marker width are presentation choices. The scene redraws on clock, camera,
+or size changes, without a separate simulation timer.
+
+Representative-orbit and symbolic fallbacks, launch tracers, other objects, and audio
+remain subsequent increments. One object is exported on each adapter run; this is not a
+bulk manifest merger. The existing numerical diagnostic and immutable raw caches remain
+unchanged.

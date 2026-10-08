@@ -214,3 +214,22 @@ tbody tr:last-child td { border-bottom: 1px solid var(--rule); }
   .tile { border-left: 0; padding-left: 0; border-top: 1px solid var(--grid-major); }
   .tile:first-child { border-top: 0; }
 }
+
+/* One-object orbital preview, inside the existing timeline page. */
+.orbit-panel { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin: 22px 0; padding: 20px 0; }
+.orbit-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.orbit-heading h2, .orbit-heading p { margin: 0 0 4px; }
+.orbit-grid { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(240px, 1fr); gap: 24px; }
+#earth-scene { min-height: 380px; background: #081b2c; overflow: hidden; }
+#earth-scene canvas { display: block; touch-action: none; width: 100%; }
+#earth-scene canvas:focus-visible { outline: 3px solid var(--series-3); outline-offset: -3px; }
+.orbit-caption { align-self: center; font-size: 16px; }
+.orbit-caption p { margin: 0 0 14px; }
+#orbit-status { font-weight: 600; }
+.orbit-scrubber { margin-top: 14px; }
+.orbit-scrubber input { width: 100%; accent-color: var(--series-3); }
+.orbit-scrubber p { font-variant-numeric: tabular-nums; font-size: 14px; margin: 4px 0 0; }
+@media (max-width: 700px) {
+  .orbit-grid { grid-template-columns: 1fr; gap: 16px; }
+  .orbit-heading { flex-direction: column; align-items: flex-start; }
+}

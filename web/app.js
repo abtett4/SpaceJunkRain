@@ -1,4 +1,7 @@
 // Space Junk Rain - every decay sits on its real day; nothing is smoothed.
+import { SimulationClock } from './SimulationClock.js';
+import { mountOrbitPanel } from './earth/OrbitPanel.js';
+
 (async function () {
   const EPOCH_MS = Date.UTC(1957, 0, 1);
   const DAY_MS = 86400000;
@@ -32,7 +35,8 @@
 
   const todayDay = (Date.now() - EPOCH_MS) / DAY_MS;
   const X_MIN = dateToDay('1957-01-01');
-  const X_MAX = Math.max(todayDay, N ? D[N - 1] : 0, ...events.map((e) => e.t)) + 60;
+  const TIME_END = Math.max(todayDay, N ? D[N - 1] : 0, ...events.map((e) => e.t));
+  const X_MAX = TIME_END + 60; // chart padding is not simulation time
 
   // ---- helpers -----------------------------------------------------------
   function dateToDay(s) { return (Date.parse(s.length <= 10 ? s + 'T00:00:00Z' : s) - EPOCH_MS) / DAY_MS; }
@@ -110,8 +114,15 @@
   }
 
   // ---- state -------------------------------------------------------------
+  const clock = new SimulationClock({ minMs: EPOCH_MS + X_MIN * DAY_MS,
+    maxMs: EPOCH_MS + TIME_END * DAY_MS, rate: YEAR * 86400 / 3.1470588 });
   const state = {
-    view: 'parent', playhead: X_MAX, playing: false, secPerYear: 3.1470588, family: -1, hover: null,
+    get playhead() { return (clock.nowMs - EPOCH_MS) / DAY_MS; },
+    set playhead(day) { clock.seek(EPOCH_MS + day * DAY_MS); },
+    get playing() { return clock.playing; },
+    get secPerYear() { return YEAR * 86400 / clock.rate; },
+    set secPerYear(seconds) { clock.setRate(YEAR * 86400 / seconds); },
+    view: 'parent', family: -1, hover: null,
     showAgg: false, notes: true, hiddenTypes: new Set(),
   };
   // the type filter belongs to the Time in orbit sheet; the By source sheet always shows every type
@@ -601,7 +612,7 @@
   }
 
   function draw(now = performance.now()) {
-    revealed = upperBound(D, state.playhead);
+    revealed = upperBound(D, state.playhead + 1e-9);
     if (!base.width || !base.height) return;
     if (revealed < drawnTo) { bctx.clearRect(0, 0, main.w, main.h); drawnTo = 0; }
     if (revealed > drawnTo) { paintPoints(drawnTo, revealed); drawnTo = revealed; }
@@ -612,12 +623,12 @@
     if (state.view === 'parent') drawLanes();
     else drawYTicks(main, M, Y_TICKS.map(([v, l]) => [yLife(v), l]));
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(base, 0, 0); ctx.restore();
-    if (state.playhead < X_MAX) drawRain();
+    if (state.playhead < TIME_END) drawRain();
     if (state.notes && state.view === 'parent') drawLaneNotes();
-    else if (state.notes && state.playhead >= X_MAX) drawLifeNotes();
+    else if (state.notes && state.playhead >= TIME_END) drawLifeNotes();
     drawEvents(now);
 
-    if (state.playhead < X_MAX) {
+    if (state.playhead < TIME_END) {
       const x = Math.round(xOf(state.playhead, main, M)) + 0.5;
       ctx.strokeStyle = C.text;
       ctx.beginPath(); ctx.moveTo(x, M.t - 6); ctx.lineTo(x, main.h - M.b); ctx.stroke();
@@ -632,7 +643,7 @@
 
     let shown = 0;
     for (let i = 0; i < revealed; i++) if (inFamily(i) && typeShown(i)) shown++;
-    document.getElementById('date').textContent = state.playhead >= X_MAX ? 'Today' : fmtDate(state.playhead);
+    document.getElementById('date').textContent = state.playhead >= TIME_END ? 'Today' : fmtDate(state.playhead);
     document.getElementById('now-count').textContent = `${fmtInt(shown)} down`;
   }
 
@@ -669,33 +680,28 @@
 
   // ---- playback ------------------------------------------------------------
   const playBtn = document.getElementById('play'), pulse = document.getElementById('pulse');
-  let lastT = 0;
   function setPlaying(p) {
-    state.playing = p;
-    playBtn.textContent = p ? '❚❚ Pause' : '▶ Animate';
-    playBtn.setAttribute('aria-label', p ? 'Pause' : 'Animate');
     if (p) {
-      if (state.playhead >= X_MAX) { state.playhead = X_MIN; eventFlash.clear(); }
-      lastT = performance.now();
-      requestAnimationFrame(tick);
-    }
+      if (clock.nowMs >= clock.maxMs) { state.playhead = X_MIN; eventFlash.clear(); }
+      clock.play();
+    } else clock.pause();
   }
-  function tick(now) {
-    if (!state.playing) return;
-    const prev = state.playhead;
-    state.playhead = Math.min(X_MAX, prev + (now - lastT) / 1000 / state.secPerYear * YEAR);
-    lastT = now;
-    events.forEach((e, i) => { if (e.t > prev && e.t <= state.playhead) eventFlash.set(i, now); });
-    const year = yearOf(state.playhead);
-    if (year !== lastYear) {
-      lastYear = year;
-      pulse.classList.add('on');
-      requestAnimationFrame(() => requestAnimationFrame(() => pulse.classList.remove('on')));
-    }
-    draw(now);
-    if (state.playhead >= X_MAX) { setPlaying(false); draw(); return; }
-    requestAnimationFrame(tick);
-  }
+  clock.subscribe(({ previousMs, playing, reason }) => {
+    playBtn.textContent = playing ? '❚❚ Pause' : '▶ Animate';
+    playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Animate');
+    if (reason === 'advance') {
+      const prev = (previousMs - EPOCH_MS) / DAY_MS;
+      const now = performance.now();
+      events.forEach((e, i) => { if (e.t > prev && e.t <= state.playhead) eventFlash.set(i, now); });
+      const year = yearOf(state.playhead);
+      if (year !== lastYear) {
+        lastYear = year;
+        pulse.classList.add('on');
+        requestAnimationFrame(() => requestAnimationFrame(() => pulse.classList.remove('on')));
+      }
+    } else if (reason === 'seek') eventFlash.clear();
+    draw();
+  });
   playBtn.addEventListener('click', () => setPlaying(!state.playing));
 
   // ---- hover & scrub -------------------------------------------------------
@@ -840,6 +846,14 @@
 
   readColors();
   setView('parent');
+  window.addEventListener('pagehide', () => clock.pause());
+  mountOrbitPanel(clock, data, (startMs, endMs) => {
+    clock.pause();
+    document.getElementById('speed').value = '105192';
+    clock.setRate(300); // five simulated minutes per second; a two-hour trace takes 24 seconds
+    clock.seek(startMs);
+    clock.play(endMs);
+  });
   document.fonts.addEventListener('loadingdone', () => rebuild());
   let lastW = 0;
   new ResizeObserver(() => { if (wrap.clientWidth !== lastW) { lastW = wrap.clientWidth; layout(); rebuild(); } }).observe(wrap);

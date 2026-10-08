@@ -47,6 +47,7 @@
           <option value="3.1470588" selected>3.1 s per year</option>
           <option value="10">10 s per year</option>
           <option value="30">30 s per year</option>
+          <option value="105192">5 min per second · orbit detail</option>
         </select>
       </label>
       <label>Highlight
@@ -55,6 +56,29 @@
       <label class="check"><input type="checkbox" id="notes" checked> Notes</label>
     </div>
     <div class="typefilter" id="typefilter" role="group" aria-label="Object types shown" hidden></div>
+
+    <section class="orbit-panel" aria-labelledby="orbit-title">
+      <div class="orbit-heading">
+        <div><h2 id="orbit-title">One orbit, one shared clock</h2><p id="orbit-name">Tiangong-1 · first tracer prototype</p></div>
+        <button id="orbit-replay" type="button" disabled>▶ Replay orbit · 24 seconds</button>
+      </div>
+      <div class="orbit-grid">
+        <div id="earth-scene"></div>
+        <div class="orbit-caption">
+          <p id="orbit-status" role="status">Loading orbital preview…</p>
+          <p id="orbit-attributes"></p>
+          <p><strong>Event anchor</strong><br><span id="orbit-anchor">April 2, 2018 · time of day unknown</span></p>
+          <p>This arc replays a calculated last-known orbit. Its plane and height come from historical orbital elements; its assigned time is illustrative. The globe shows the equator, with no claimed reentry location.</p>
+          <p class="note">Marker size is exaggerated. Orbit descriptors refer to the source epoch; physical size, mission, owner and lifetime orbit remain unassigned.</p>
+          <a href="data/tracers.json">Event attributes and provenance (JSON)</a>
+        </div>
+      </div>
+      <div class="orbit-scrubber">
+        <label for="orbit-scrub">Orbit replay · moves the shared clock</label>
+        <input id="orbit-scrub" type="range" min="0" max="7200" step="1" value="0" disabled>
+        <p><strong>Display clock:</strong> <span id="orbit-clock">—</span><br><span id="orbit-sample">Drag the globe to rotate. Scroll or use + / − to zoom.</span></p>
+      </div>
+    </section>
 
     <div class="canvas-wrap" id="main-wrap"><canvas id="main" aria-label="Reentries chart"></canvas></div>
     <button type="button" class="disclosure" id="agg-toggle" aria-expanded="false" aria-controls="main-wrap" hidden></button>
@@ -87,7 +111,7 @@
     <h3>About the data</h3>
     <p id="credit"></p>
     <ul>
-      <li>Decay dates come from the SATCAT and Space-Track's historical decay messages, which record each one to the day only. Each dot sits on its real day; nothing is smoothed or resampled. Within a row, dots are spread up and down only so they don't overlap.</li>
+      <li>Decay dates come from the SATCAT and Space-Track's historical decay messages, which record each one to the day only. Each dot sits on its reported day. When only the date is known, a reproducible random time within that UTC day drives the timeline and orbit replay; it is not an estimated reentry time. Within a row, dots are spread up and down only so they don't overlap.</li>
       <li>A "source" is everything from one launch (its international designator, e.g. 1999-025). Debris usually keeps its parent's designator, so a breakup shows up as a burst within one source.</li>
       <li>"Still in orbit" counts every tracked object, working satellites included. Only tracked objects appear here, roughly softball-sized and up in low orbit. Collision dates and altitudes are hand-curated.</li>
     </ul>
@@ -96,6 +120,6 @@
 
   <div class="tooltip" id="tip" role="tooltip" hidden></div>
 </main>
-<script src="app.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>

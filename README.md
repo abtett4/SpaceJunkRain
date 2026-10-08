@@ -20,14 +20,52 @@ The timeline tools need no third-party packages; Python 3.8+ standard library on
 orbital tools below have separate dependencies. Pushing to `main` redeploys the site
 from `web/` (see `.github/workflows/pages.yml`).
 
-## Tracer visualization model
+## Tracer visualization model and one-object Earth preview
 
-Tracers prioritize useful object/event attributes and visually plausible geometry, with
-explicit distinctions between reported data, estimates, and display choices. Date-only
-events and missing attributes remain eligible for visualization. See the
-[tracer model and approximation policy](notes/tracer-model.md) and the
-[populated Tiangong-1 design example](data/examples/tracer-37820-reentry.json).
-These specify the next adapter; representative/symbolic fallback rendering is not yet implemented.
+The existing page now includes a Tiangong-1 orbital tracer. Choose **Replay orbit** to
+watch its two-hour sample segment in 24 seconds. The timeline and Earth share one clock;
+pausing or scrubbing either control changes the same simulation time. The globe supports
+drag, pinch, scroll, arrow keys, and +/− zoom. No browser credentials or propagation are
+needed: the preview uses the checked-in derived data and a local p5.js module.
+
+Date-only reentries receive stable random display times within their reported UTC day.
+Tiangong-1 is assigned **2018-04-02T15:35:52Z**. This is an animation anchor, not an
+estimated reentry time. The original SGP4 sample timestamps remain separate and visible.
+The plain inertial globe makes no reentry-location or ground-impact claim.
+
+After producing the diagnostic trajectory described below, regenerate the preview offline:
+
+```bash
+python tools/build_data.py --retime-existing
+python tools/build_tracers.py \
+  --trajectory data/processed/trajectories/37820.json \
+  --gp-history data/raw/gp_history/37820/6c2ffa38f41e5d8e/response.json \
+  --output-dir web/data
+```
+
+The adapter verifies source provenance and the timeline join. Its default output goes to
+`data/processed/browser/`; the explicit output argument above refreshes the distributable
+assets. It exports one object per run, not a bulk catalog. Retiming is idempotent and
+preserves source dates, object attributes and column alignment. `cols.p` uses 0 for a
+reported day and 1 for a reported timestamp. `cols.d` now holds presentation time in days
+since the existing epoch. Do not treat its fractional part as observed timing precision.
+
+See [the tracer model](notes/tracer-model.md), [the consumed manifest](web/data/tracers.json),
+and [the portable example](data/examples/tracer-37820-reentry.json) for attributes and
+provenance. Missing size, owner, mission, location and lifetime-orbit information stays
+explicitly unknown. Launch, representative-orbit and symbolic fallbacks are next steps.
+
+`web/earth/` adapts Cosmic Clock's sphere mesh and camera only; Cosmic Clock itself is
+unchanged. [Renderer credits](web/vendor/README.md) document the local p5 dependency.
+The site remains static, with no new web build step. JavaScript modules require HTTP
+serving, as do the existing JSON requests.
+
+Validate the pipeline and clock/geometry contracts:
+
+```bash
+.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
+node tests/clock-tracer.test.mjs
+```
 
 ## One-object orbital prototype
 
@@ -86,8 +124,9 @@ coordinates would require a separate frame conversion before rendering geographi
 
 The retrieved DECAY records only support a calendar day, so this trajectory stops at the
 **start** of April 2 UTC. Midnight is not promoted to an exact decay time. No ground
-intersection or atmospheric descent is synthesized. The existing timeline dataset and
-browser remain unchanged; Earth/clock/audio integration is a later step.
+intersection or atmospheric descent is synthesized. The browser replay described above
+uses these unchanged samples with a separate illustrative time mapping; audio remains a
+later step.
 
 Without orbital dependencies, `python -m unittest discover -s tests -v` still runs the
 acquisition checks and explicitly skips the orbital checks.
@@ -100,7 +139,7 @@ to redistribute this basic SSA data, and to publish analysis based on it, on con
 appropriate citation. Keep this citation with any copy of `web/data/decays.json` or work built on it.
 
 - One row per object from SATCAT. Where a historical decay message carries a precise epoch that
-  agrees with SATCAT (within 2 days), that epoch wins. Date-only decays sit at 12:00 UTC.
+  agrees with SATCAT (within 2 days), that epoch wins. Date-only decays receive stable random display times within their UTC day, with source precision retained in `cols.p`.
 - Families are launch designators (`1993-036` = everything from the Cosmos 2251 launch).
 - `data/events.json` is the hand-edited collision table: kind = bump | crash | explosion | fragmentation.
 - Raw downloads (`data/raw/`, `data/decay.json`) stay out of git for size; each person fetches their own.
