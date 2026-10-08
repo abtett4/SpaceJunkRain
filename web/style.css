@@ -152,6 +152,12 @@ button.primary:hover { background: var(--grid); }
 .pulse.on { opacity: 1; transform: scale(1.5); transition: none; }
 
 .controls label.check { gap: 5px; cursor: pointer; }
+.zoom { display: inline-flex; align-items: center; }
+.zoom .k { color: var(--text-secondary); font-variant: small-caps; letter-spacing: .05em; margin-right: 6px; }
+.zoom button { min-width: 30px; padding: 2px 7px 3px; border-radius: 0; margin-left: -1px; }
+.zoom button:hover { background: var(--grid); }
+.zoom button:disabled { color: var(--muted); opacity: .5; cursor: default; }
+.zoom .range { color: var(--muted); font-style: italic; margin-left: 8px; font-variant-numeric: lining-nums; }
 .controls input[type="checkbox"] { accent-color: var(--text-primary); width: 14px; height: 14px; margin: 0; }
 .typefilter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 0 0 10px; font-size: 15px; }
 .typefilter .k { color: var(--text-secondary); font-variant: small-caps; letter-spacing: .05em; margin-right: 2px; }

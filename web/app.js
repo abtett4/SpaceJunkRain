@@ -33,6 +33,9 @@
   const todayDay = (Date.now() - EPOCH_MS) / DAY_MS;
   const X_MIN = dateToDay('1957-01-01');
   const X_MAX = Math.max(todayDay, N ? D[N - 1] : 0, ...events.map((e) => e.t)) + 60;
+  // the visible stretch of the time axis; zooming narrows it, the playhead still spans X_MIN..X_MAX
+  const zoom = { lo: X_MIN, hi: X_MAX };
+  const MIN_SPAN = 1.5 * 365.25;
 
   // ---- helpers -----------------------------------------------------------
   function dateToDay(s) { return (Date.parse(s.length <= 10 ? s + 'T00:00:00Z' : s) - EPOCH_MS) / DAY_MS; }
@@ -236,6 +239,55 @@
   });
 
   document.getElementById('notes').addEventListener('change', (e) => { state.notes = e.target.checked; draw(); });
+
+  // ---- zoom: narrows the time axis on both charts --------------------------
+  const zoomBar = document.querySelector('.zoom'), zoomRange = document.getElementById('zoom-range');
+  function setZoom(lo, hi) {
+    const full = X_MAX - X_MIN, span = Math.min(full, Math.max(MIN_SPAN, hi - lo));
+    lo = Math.min(Math.max(X_MIN, lo), X_MAX - span);
+    zoom.lo = lo; zoom.hi = lo + span;
+    const whole = span >= full - 1;
+    zoomRange.textContent = whole ? '' : span < 5 * YEAR
+      ? `${fmtMonth(zoom.lo)} – ${fmtMonth(zoom.hi)}` : `${yearOf(zoom.lo)}–${yearOf(zoom.hi)}`;
+    zoomBar.querySelector('[data-z="out"]').disabled = whole;
+    zoomBar.querySelector('[data-z="full"]').disabled = whole;
+    zoomBar.querySelector('[data-z="in"]').disabled = span <= MIN_SPAN + 1;
+    zoomBar.querySelector('[data-z="left"]').disabled = zoom.lo <= X_MIN + 1;
+    zoomBar.querySelector('[data-z="right"]').disabled = zoom.hi >= X_MAX - 1;
+    layout(); rebuild();
+  }
+  // zoom by factor f, keeping the day `at` fixed on screen
+  const zoomBy = (f, at) => setZoom(at - (at - zoom.lo) * f, at + (zoom.hi - at) * f);
+  zoomBar.addEventListener('click', (e) => {
+    const z = e.target.closest('button')?.dataset.z; if (!z) return;
+    const span = zoom.hi - zoom.lo;
+    // the playhead is the natural centre when it's on screen; otherwise the middle of the view
+    const c = state.playhead < X_MAX && state.playhead > zoom.lo && state.playhead < zoom.hi
+      ? state.playhead : (zoom.lo + zoom.hi) / 2;
+    if (z === 'in') zoomBy(0.5, c);
+    else if (z === 'out') zoomBy(2, c);
+    else if (z === 'left') setZoom(zoom.lo - span / 3, zoom.hi - span / 3);
+    else if (z === 'right') setZoom(zoom.lo + span / 3, zoom.hi + span / 3);
+    else setZoom(X_MIN, X_MAX);
+  });
+  // pinch or ctrl + wheel zooms at the cursor; sideways swipe or shift + wheel pans;
+  // a plain vertical wheel is left alone so the page still scrolls
+  function wireZoomWheel() { // called at boot, once the canvases exist
+    for (const [cv, getM] of [[main, () => M], [hist, () => H]]) {
+      cv.c.addEventListener('wheel', (e) => {
+        const m = getM(), x = e.clientX - cv.c.getBoundingClientRect().left;
+        const span = zoom.hi - zoom.lo, plotW = cv.w - m.l - m.r;
+        if (e.ctrlKey) {
+          e.preventDefault();
+          zoomBy(Math.exp(e.deltaY * 0.01), Math.min(zoom.hi, Math.max(zoom.lo, dayOf(x, cv, m))));
+        } else if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+          e.preventDefault();
+          const d = (e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX) / plotW * span;
+          setZoom(zoom.lo + d, zoom.hi + d);
+        }
+      }, { passive: false });
+    }
+  }
   tabs.parent.addEventListener('click', () => setView('parent'));
   tabs.lifespan.addEventListener('click', () => setView('lifespan'));
 
@@ -257,8 +309,10 @@
     cv.c.width = Math.round(r.width * cv.dpr); cv.c.height = Math.round(r.height * cv.dpr);
     cv.ctx.setTransform(cv.dpr, 0, 0, cv.dpr, 0, 0);
   }
-  const xOf = (day, cv, m) => m.l + (day - X_MIN) / (X_MAX - X_MIN) * (cv.w - m.l - m.r);
-  const dayOf = (x, cv, m) => X_MIN + (x - m.l) / (cv.w - m.l - m.r) * (X_MAX - X_MIN);
+  const xOf = (day, cv, m) => m.l + (day - zoom.lo) / (zoom.hi - zoom.lo) * (cv.w - m.l - m.r);
+  const dayOf = (x, cv, m) => zoom.lo + (x - m.l) / (cv.w - m.l - m.r) * (zoom.hi - zoom.lo);
+  // drawing is clipped to the plot so zoomed-out-of-view marks don't spill into the label gutters
+  function clipPlot(ctx, cv, m) { ctx.save(); ctx.beginPath(); ctx.rect(m.l - 1, 0, cv.w - m.l - m.r + 2, cv.h); ctx.clip(); }
   // log spreads days-to-decades evenly; linear turns each breakup into a straight 45° line
   const yLife = (span) => {
     const s = Math.min(Y_MAX, Math.max(state.yScale === 'log' ? Y_MIN : 0, span));
@@ -301,6 +355,7 @@
       } else {
         PY[i] = yLife(D[i] - L[i]);
       }
+      if (PX[i] < M.l - 2 || PX[i] > main.w - M.r + 2) continue; // off the zoomed axis: no hover
       const key = ((PX[i] / CELL) | 0) + ',' + ((PY[i] / CELL) | 0);
       (spatial.get(key) || spatial.set(key, []).get(key)).push(i);
     }
@@ -310,6 +365,7 @@
   }
 
   function paintPoints(from, to) {
+    clipPlot(bctx, main, M);
     bctx.globalAlpha = state.view === 'parent' ? 0.7 : 0.8;
     for (let i = from; i < to; i++) {
       if (hiddenPt[i]) continue;
@@ -317,6 +373,7 @@
       bctx.beginPath(); bctx.arc(PX[i], PY[i], radius(i), 0, 6.2832); bctx.fill();
     }
     bctx.globalAlpha = 1;
+    bctx.restore();
   }
   function rebuild() { readColors(); bctx.clearRect(0, 0, main.w, main.h); drawnTo = 0; buildHistogram(); draw(); }
 
@@ -368,10 +425,12 @@
     const ctx = cv.ctx, base = cv.h - m.b + 0.5, head = m.t - 0.5;
     ctx.font = FONT(13); ctx.lineWidth = 1;
     ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillStyle = C.muted;
-    for (let y = 1957; y <= 2030; y++) {
+    // label every 10, 5, 2 or 1 years depending on how far in the axis is zoomed
+    const span = (zoom.hi - zoom.lo) / YEAR, step = span > 35 ? 10 : span > 14 ? 5 : span > 6 ? 2 : 1;
+    for (let y = yearOf(zoom.lo); y <= yearOf(zoom.hi) + 1; y++) {
       const x = Math.round(xOf(dateToDay(`${y}-01-01`), cv, m)) + 0.5;
       if (x < m.l || x > cv.w - m.r) continue;
-      const decade = y % 10 === 0;
+      const decade = y % step === 0;
       ctx.strokeStyle = decade ? C.gridMajor : C.grid;
       ctx.beginPath(); ctx.moveTo(x, m.t); ctx.lineTo(x, cv.h - m.b); ctx.stroke();
       ctx.strokeStyle = C.axis;
@@ -418,11 +477,14 @@
       if (hl || hov) { ctx.fillStyle = C.gridMajor; ctx.globalAlpha = 0.45; ctx.fillRect(0, top, main.w, ln.h); ctx.globalAlpha = 1; }
       // lifeline from launch to today, with a launch tick
       if (!ln.agg && families[ln.fam].launch != null) {
-        const x0 = Math.max(M.l, xOf(families[ln.fam].launch, main, M));
-        ctx.strokeStyle = C.axis; ctx.lineWidth = 0.75;
-        ctx.beginPath(); ctx.moveTo(x0, mid + 0.5); ctx.lineTo(plotR, mid + 0.5); ctx.stroke();
-        ctx.lineWidth = 1.25; ctx.beginPath(); ctx.moveTo(x0, mid - 3.5); ctx.lineTo(x0, mid + 4.5); ctx.stroke();
-        ctx.lineWidth = 1;
+        // when zoomed, the line is cut at the plot edges and the launch tick only shows if in view
+        const lx = xOf(families[ln.fam].launch, main, M), x0 = Math.max(M.l, lx);
+        if (x0 <= plotR) {
+          ctx.strokeStyle = C.axis; ctx.lineWidth = 0.75;
+          ctx.beginPath(); ctx.moveTo(x0, mid + 0.5); ctx.lineTo(plotR, mid + 0.5); ctx.stroke();
+          if (lx >= M.l) { ctx.lineWidth = 1.25; ctx.beginPath(); ctx.moveTo(x0, mid - 3.5); ctx.lineTo(x0, mid + 4.5); ctx.stroke(); }
+          ctx.lineWidth = 1;
+        }
       }
       // labels
       ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
@@ -504,6 +566,7 @@
       const from = ln.agg ? dateToDay('2019-06-01') : ln.events.length ? events[ln.events[0]].t : 0;
       if (state.playhead < from) return; // a note appears once its story has happened
       const end = ln.agg ? xOf(from, main, M) : Math.min(xOf(families[ln.fam].launch, main, M), laneFirstX[li]);
+      if (end - 8 > main.w - M.r) return; // row starts beyond the zoomed view
       const text = variants.find((t) => ctx.measureText(t).width < end - 10 - M.l - 8);
       if (text) haloText(ctx, text + ' —', end - 8, laneY[li] + ln.h / 2 + 0.5);
     });
@@ -632,6 +695,7 @@
     if (state.view === 'parent') drawLanes();
     else drawYTicks(main, M, Y_TICKS[state.yScale].map(([v, l]) => [yLife(v), l]));
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(base, 0, 0); ctx.restore();
+    clipPlot(ctx, main, M);
     if (state.playhead < X_MAX) drawRain();
     if (state.notes && state.view === 'parent') drawLaneNotes();
     else if (state.notes && state.playhead >= X_MAX) drawLifeNotes();
@@ -648,6 +712,7 @@
       ctx.beginPath(); ctx.arc(PX[h.point], PY[h.point], radius(h.point) + 3, 0, 6.2832); ctx.stroke();
       ctx.lineWidth = 1;
     }
+    ctx.restore();
     drawHist();
 
     let shown = 0;
@@ -664,6 +729,7 @@
     H.l = M.l; H.r = M.r; // share the main chart's x scale
     drawYTicks(hist, H, [[yv(binMax), fmtInt(binMax)], [yv(binMax / 2), fmtInt(Math.round(binMax / 2))]]);
     drawXAxis(hist, H);
+    clipPlot(ctx, hist, H);
     ctx.fillStyle = state.family >= 0 ? C.groups[LANES[laneIdx.get(state.family)].group] : C.hist;
     for (let b = 0; b < bins.length; b++) {
       if (!bins[b] || BIN_STARTS[b] > state.playhead) continue;
@@ -677,7 +743,7 @@
       ctx.font = FONT(13.5, 400, 'italic'); ctx.fillStyle = C.text2;
       ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
       const x = xOf(PEAK.day, hist, H) - 8;
-      const text = [PEAK.text, PEAK.short].find((t) => x - ctx.measureText(t).width > H.l + 6);
+      const text = x > hist.w - H.r ? null : [PEAK.text, PEAK.short].find((t) => x - ctx.measureText(t).width > H.l + 6);
       if (text) haloText(ctx, text, x, yv(bins[PEAK.bin]) + 6);
     }
     const h = state.hover;
@@ -685,6 +751,7 @@
       const x = Math.round(xOf(BIN_STARTS[h.bin], hist, H)) + 0.5;
       ctx.strokeStyle = C.text; ctx.beginPath(); ctx.moveTo(x, H.t); ctx.lineTo(x, hist.h - H.b); ctx.stroke();
     }
+    ctx.restore();
   }
 
   // ---- playback ------------------------------------------------------------
@@ -860,6 +927,8 @@
 
   readColors();
   setView('parent');
+  wireZoomWheel();
+  setZoom(X_MIN, X_MAX); // sets the zoom buttons' enabled states
   document.fonts.addEventListener('loadingdone', () => rebuild());
   let lastW = 0;
   new ResizeObserver(() => { if (wrap.clientWidth !== lastW) { lastW = wrap.clientWidth; layout(); rebuild(); } }).observe(wrap);

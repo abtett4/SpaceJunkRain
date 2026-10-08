@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=2026-10-08">
 </head>
 <body>
 <main class="viz-root">
@@ -52,6 +52,11 @@
       <label>Highlight
         <select id="family"><option value="-1">Nothing</option></select>
       </label>
+      <span class="zoom" role="group" aria-label="Zoom the time axis">
+        <span class="k">Zoom</span>
+        <button type="button" data-z="out" aria-label="Zoom out">−</button><button type="button" data-z="in" aria-label="Zoom in">+</button><button type="button" data-z="left" aria-label="Pan earlier">◀</button><button type="button" data-z="right" aria-label="Pan later">▶</button><button type="button" data-z="full">Full</button>
+        <span class="range" id="zoom-range" aria-live="polite"></span>
+      </span>
       <label class="check"><input type="checkbox" id="notes" checked> Notes</label>
     </div>
     <div class="typefilter" id="typefilter" role="group" aria-label="Object types shown" hidden></div>
@@ -96,6 +101,6 @@
 
   <div class="tooltip" id="tip" role="tooltip" hidden></div>
 </main>
-<script src="app.js"></script>
+<script src="app.js?v=2026-10-08"></script>
 </body>
 </html>
