@@ -221,12 +221,11 @@ tbody tr:last-child td { border-bottom: 1px solid var(--rule); }
 .orbit-heading h2, .orbit-heading p { margin: 0 0 4px; }
 .orbit-example { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 14px; }
 .orbit-example select { max-width: 100%; }
-.orbit-viewport { position: relative; }
-#symbolic-event { position: absolute; inset: 0; background: #081b2c; color: #d9e8ef; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
-#symbolic-event[hidden], #symbolic-pulse[hidden] { display: none; }
-#symbolic-event p { margin: 8px 0; font-size: 14px; }
-.symbolic-mark { height: 150px; display: grid; place-items: center; }
-#symbolic-pulse { display: block; width: 28px; height: 28px; border: 2px solid #ffd166; border-radius: 50%; }
+.orbit-viewport { position: relative; align-self: start; }
+#symbolic-event { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border); font-size: 14px; }
+#symbolic-event[hidden] { display: none; }
+#symbolic-event p { margin: 3px 0 0; font-size: 13px; color: var(--text-secondary); }
+.orbit-key-pulse { flex: 0 0 18px; height: 18px; border: 2px solid #ffd166; border-radius: 50%; margin-top: 2px; }
 .orbit-grid { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(240px, 1fr); gap: 24px; }
 #earth-scene { min-height: 380px; background: #081b2c; overflow: hidden; }
 #earth-scene canvas { display: block; touch-action: none; width: 100%; }

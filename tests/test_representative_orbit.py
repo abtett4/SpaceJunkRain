@@ -9,6 +9,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 from representative_orbit import representative_loop, RADIUS_KM
 from build_tracers import build_fallback_manifest
+from symbolic_pulse import surface_pulse
 
 
 class RepresentativeTests(unittest.TestCase):
@@ -79,6 +80,34 @@ class RepresentativeTests(unittest.TestCase):
         self.assertIsNone(event["attributes"]["orbitReference"]["inclinationDeg"])
         self.assertEqual(event["attributes"]["orbitReference"]["basis"], "unknown")
         self.assertEqual(event["attributes"]["objectType"]["value"], "DEBRIS")
+        self.assertEqual(event["presentation"]["surfacePulse"], surface_pulse(event["eventId"]))
+        self.assertIsNone(event["attributes"]["eventLocation"]["value"])
+        self.assertEqual(event["presentation"]["locationClaim"], "none")
+        self.assertIsNone(event["presentation"]["geographicEndpoint"])
+        self.assertNotIn("surfacePulse", orbit["presentation"])
+
+    def test_surface_locations_are_persistent_and_separate_per_event(self):
+        point = surface_pulse("38023:reentry:2024-01-05")
+        self.assertEqual(point, surface_pulse("38023:reentry:2024-01-05"))
+        self.assertNotEqual(point, surface_pulse("37820:reentry:2018-04-02"))
+        self.assertEqual(point["basis"], "illustrative")
+        self.assertEqual(point["durationSeconds"], 600)
+        # Lock policy output so code changes cannot silently relocate existing events.
+        self.assertAlmostEqual(point["latitudeDeg"], 62.2055135654, places=8)
+        self.assertAlmostEqual(point["longitudeDeg"], -136.174374771, places=8)
+
+    def test_surface_sampling_is_equal_area_without_polar_overweighting(self):
+        points = [surface_pulse(f"{i}:reentry:2024-01-05") for i in range(4096)]
+        for point in points:
+            self.assertTrue(-90 <= point["latitudeDeg"] <= 90)
+            self.assertTrue(-180 <= point["longitudeDeg"] <= 180)
+        # Equal-area spherical sampling makes sin(latitude) uniform, not latitude.
+        z = [math.sin(math.radians(p["latitudeDeg"])) for p in points]
+        self.assertAlmostEqual(sum(z) / len(z), 0, delta=0.025)
+        self.assertAlmostEqual(sum(v*v for v in z) / len(z), 1/3, delta=0.025)
+        for quadrant in range(4):
+            count = sum(-180 + 90*quadrant <= p["longitudeDeg"] < -90 + 90*quadrant for p in points)
+            self.assertAlmostEqual(count / len(points), 0.25, delta=0.025)
 
     def test_partial_invalid_geometry_falls_back_without_serializing_nan(self):
         event, geometry = build_fallback_manifest(38023, [{**self.row, "PERIAPSIS": "nan"}], self.catalog, {})

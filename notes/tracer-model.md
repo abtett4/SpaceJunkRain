@@ -43,7 +43,7 @@ replay. The renderer receives the frame and the explicit presentation mapping.
 | Multiplicity | Individual or group; catalog IDs and represented count | One glowing mark need not mean one object, but the mapping and count must be explicit. Group totals must not double-count member events. |
 | Orbit plane near event | Inclination, ascending-node angle, coordinate frame, source epoch | Inclination alone gives a tilt family, not a fully oriented plane. An old node angle is not asserted to be current. |
 | Orbit height / shape near event | Perigee, apogee, eccentricity, period, source epoch; optional propagated samples | Source mean-element quantities and sampled radius above a reference sphere are distinct. Neither is a measured uncertainty interval. |
-| Launch / reentry location | Optional site code, sourced point/region, location kind and bounds | A launch-site pulse can be grounded in a site. Unknown reentry geography remains unknown; no precise marker is required. |
+| Launch / reentry location | Optional site code, sourced point/region, location kind and bounds | A launch-site pulse can be grounded in a site. Unknown reentry geography remains unknown; a symbolic surface pulse stores its illustrative location separately in presentation. |
 | Affiliation | Catalog country/responsible entity, separately owner and operator/institution | The catalog code is attribution, not a complete ownership record. Names and organizations may require enrichment. |
 | Mission type | Optional sourced mission category; parent mission separately for debris | Do not infer a mission from country or assign a fragment an active mission. |
 | Orbit regime | `nearEvent` and separately `lifetime`/`operational` history | A terminal low orbit does not establish the lifetime regime. Preserve coverage and gaps in historical summaries. |
@@ -209,12 +209,47 @@ an accuracy window. For Tiangong-1, windows above the prepared two hours switch 
 by stretching or looping the original SGP4 samples. Returning to two hours restores
 the original replay, so a mode change may change geometry at the same clock instant.
 
-With no usable geometry, a separate screen-space ring pulses on the shared clock. It
-covers the globe rather than attaching an invented location to it. Pause/seek determine
-the pulse deterministically; there is no independent animation timer. Only event
-visibility and marker size apply; trail history and width are disabled in this mode.
-The empty-query example retains object class and the radar-size proxy from the catalog,
-while unavailable orbit/location/country data stays unknown.
+### Missing-orbit surface pulses
+
+With no usable geometry, one amber ring expands and fades on the Earth's surface,
+with **no tracer**. A key beside the globe says **No orbital data representation**
+and **Surface pulse · illustrative location, no reentry position claim**. Labels remain
+outside the visual model. The globe stays interactive;
+selecting this preview or choosing Replay pulse turns the camera toward the assigned
+point without relocating it. Ordinary depth testing hides marks on the far hemisphere.
+
+`tools/symbolic_pulse.py` assigns a stable point from SHA-256 of
+`sha256-equal-area-surface-v1:<eventId>`. Independent hash fractions set uniform longitude
+and uniform sine of latitude, giving equal area on a sphere rather than overpopulating
+the poles. The generated coordinates, policy, illustrative basis and duration are saved
+under `presentation.surfacePulse`; `attributes.eventLocation` remains unknown and
+`geographicEndpoint` remains null. Rebuilds, reloads, settings and camera changes do not
+rerandomize the point. The position is only a display convention on this untextured globe,
+not an Earth-fixed measurement, reentry prediction or a claim of surface impact.
+
+There is **no single physical distribution** justified for these missing-data events.
+Orbital inclination limits the latitude band of an uncontrolled reentry. In the simple
+near-circular orbit model, an object spends more time near its extreme latitudes, as
+[ESA explains for Tiangong-1](https://blogs.esa.int/rocketscience/2018/03/26/tiangong-1-frequently-asked-questions-2/).
+Actual reentry distributions can also depart from simple orbital residence-time models;
+see [NASA's empirical study](https://ntrs.nasa.gov/api/citations/20110016363/downloads/20110016363.pdf).
+Controlled reentries can target particular regions. The empty query supplies neither
+inclination nor control information, so the equal-area placement is a neutral visual
+choice, **not a reentry probability model**. It also does not use catalog country or
+launch site to guess reentry location. A future model using partial orbital metadata
+must explicitly record its constraints and assumptions rather than treat this policy as
+physical evidence.
+
+One pulse fades in and out over **600 simulated seconds ending at the event anchor**;
+this is display timing, not atmospheric descent duration. Replay pulse focuses just that
+interval (two seconds at 300×), while the shared scrubber retains the selected context
+window. A longer window cannot repeat the pulse; a shorter one clips it without changing
+its phase. The pulse vanishes at the anchor, including when playback stops there.
+`SurfacePulse.sample()` depends only on shared-clock time; pause/backward seek reproduce
+the same appearance with no independent timer. Surface rings follow the sphere even at
+the poles. Only visibility and marker size apply; trail history and width are disabled.
+The empty-query example retains object class and radar-size proxy from the catalog,
+while unavailable orbit, actual location and country data stay unknown.
 
 Validation adds analytic circular and inclined-ellipse checks, height limits, deterministic
 phase, missing/invalid inputs, source immutability, identity/anchor checks, seam continuity,

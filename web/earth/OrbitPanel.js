@@ -1,6 +1,7 @@
 // App adapter: one selected event, shared clock, explicit representation mode.
 import { mountTracerControls, formatDuration } from './TracerControls.js';
 import { Tracer } from './Tracer.js';
+import { SurfacePulse } from './SurfacePulse.js';
 
 export function selectMode(seconds, propagatedSeconds, hasRepresentative) {
   return propagatedSeconds && seconds <= propagatedSeconds ? 'propagated'
@@ -10,14 +11,14 @@ export function selectMode(seconds, propagatedSeconds, hasRepresentative) {
 export async function mountOrbitPanel(clock, timeline, onReplay) {
   const el = id => document.getElementById(id);
   const status = el('orbit-status'), slider = el('orbit-scrub'), replay = el('orbit-replay');
-  const picker = el('orbit-example'), symbolic = el('symbolic-event'), pulse = el('symbolic-pulse');
+  const picker = el('orbit-example'), symbolic = el('symbolic-event');
   const dateText = ms => new Date(Math.round(ms)).toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, ' UTC');
   let scene, controls, unsubscribe, state, active, mode, settings, revision = 0;
   const listeners = new AbortController();
   const fail = error => {
     state = active = null;
-    symbolic.hidden = pulse.hidden = true;
-    if (scene) scene.tracers = [];
+    symbolic.hidden = true;
+    if (scene) { scene.tracers = []; scene.pulses = []; scene.setTime(clock.nowMs); }
     controls?.dispose();
     el('tracer-fields').disabled = slider.disabled = replay.disabled = true;
     status.textContent = `Orbit preview unavailable: ${error.message} The timeline is still available.`;
@@ -31,18 +32,15 @@ export async function mountOrbitPanel(clock, timeline, onReplay) {
     el('orbit-clock').textContent = dateText(nowMs);
     const sample = active?.sample(nowMs);
     let message = 'Outside the selected tracer window. Choose Replay to focus the shared clock.';
-    if (visible && mode === 'symbolic') {
-      // Screen-space pulse has no orbital position and no independent animation timer.
-      const phase = ((nowMs - state.endMs) % 900000 + 900000) % 900000 / 900000;
-      pulse.style.transform = `scale(${settings.markerScale * (0.6 + 0.4 * phase)})`;
-      pulse.style.opacity = `${0.25 + 0.75 * (1 - phase)}`;
-      message = 'Symbolic event only · no orbital position or reentry location assigned.';
+    if (mode === 'symbolic') {
+      const lit = Boolean(state.pulse.sample(nowMs));
+      el('symbolic-state').textContent = lit ? 'Pulse active · no tracer'
+        : nowMs >= state.endMs ? 'Pulse complete' : 'Choose Replay pulse to view this event';
+      message = 'No orbital data representation · persistent random display location; actual reentry location unknown.';
     } else if (sample) {
       message = mode === 'propagated' ? `Orbit sample: ${dateText(sample.sourceMs)}`
         : `Illustrative repeating orbit · reference epoch ${state.loop.referenceEpochUtc} · no event-time position claim.`;
     }
-    pulse.hidden = !visible;
-    el('symbolic-state').textContent = visible ? 'Event active in the display window' : 'Outside the display window';
     el('orbit-sample').textContent = message;
     slider.setAttribute('aria-valuetext', visible ? dateText(nowMs) : 'Outside tracer interval');
   };
@@ -53,21 +51,23 @@ export async function mountOrbitPanel(clock, timeline, onReplay) {
     if (active) active.configure({ visibleSeconds: values.reentryLeadSeconds, trailSeconds: values.trailSeconds,
       lineWidthEarth: 0.008 * values.widthScale, markerRadiusEarth: state.event.presentation.style.markerRadiusEarth * values.markerScale });
     scene.tracers = active ? [active] : [];
+    if (mode === 'symbolic') state.pulse.configure({ visibleSeconds: values.reentryLeadSeconds,
+      markerRadiusEarth: state.event.presentation.style.markerRadiusEarth * values.markerScale });
+    scene.pulses = mode === 'symbolic' ? [state.pulse] : [];
     symbolic.hidden = mode !== 'symbolic';
-    el('earth-scene').setAttribute('aria-hidden', mode === 'symbolic' ? 'true' : 'false');
-    el('earth-scene').inert = mode === 'symbolic';
+    if (mode === 'symbolic') symbolic.querySelector('.orbit-key-pulse').style.borderColor = state.pulse.color;
     el('tracer-history').disabled = el('tracer-width').disabled = mode === 'symbolic';
-    pulse.style.borderColor = state.event.presentation.style.color;
     status.textContent = mode === 'propagated' ? 'Last-known orbit replay · reentry location unknown'
       : mode === 'representative' ? 'Representative orbit · illustrative loop, not an event-time reconstruction'
-      : 'Symbolic event · orbital geometry unavailable in this input';
+      : 'Orbital geometry unavailable in this input';
     el('orbit-explanation').textContent = mode === 'propagated'
       ? 'This arc replays the prepared SGP4 samples. Its assigned event time is illustrative; no reentry location is claimed.'
       : mode === 'representative'
         ? 'This repeating ellipse uses historical reference height and inclination. Its node direction and phase are illustrative. It does not model drag, precession, atmospheric descent or the object’s position at reentry.'
-        : 'The pulse marks a known event in the timeline. It is separate from the globe and assigns no orbit, altitude or geographic position. Only marker size and event visibility apply to this view.';
+        : 'One brief pulse marks the event on Earth without a tracer. Its random display point stays the same on every replay and reload. It is sampled evenly by surface area, not from a reentry probability model. The actual reentry location remains unknown.';
     slider.max = values.reentryLeadSeconds;
-    replay.textContent = `▶ Replay · ${formatDuration(values.reentryLeadSeconds / 300)}`;
+    const replaySeconds = mode === 'symbolic' ? (state.endMs - state.pulse.visibleStartMs) / 1000 : values.reentryLeadSeconds;
+    replay.textContent = `▶ Replay${mode === 'symbolic' ? ' pulse' : ''} · ${formatDuration(replaySeconds / 300)}`;
     el('tracer-window-times').textContent = `Display window: ${dateText(state.endMs - values.reentryLeadSeconds * 1000)} to ${dateText(state.endMs)}`;
     update(clock);
   };
@@ -80,8 +80,8 @@ export async function mountOrbitPanel(clock, timeline, onReplay) {
     const ticket = ++revision;
     clock.pause();
     controls?.dispose(); state = active = settings = null;
-    symbolic.hidden = pulse.hidden = true;
-    scene.tracers = []; scene.setTime(clock.nowMs);
+    symbolic.hidden = true;
+    scene.tracers = []; scene.pulses = []; scene.setTime(clock.nowMs);
     el('tracer-fields').disabled = slider.disabled = replay.disabled = true;
     status.textContent = 'Loading preview…';
     try {
@@ -115,9 +115,15 @@ export async function mountOrbitPanel(clock, timeline, onReplay) {
           ...(isLoop ? { loopPeriodSeconds: g.periodSeconds, maxDisplaySeconds: maxSeconds } : {}) });
       };
       if (p.mode !== 'symbolic-event' && !geometry) throw new Error('Required geometry is missing.');
+      if (p.mode === 'symbolic-event' && (p.surfacePulse?.basis !== 'illustrative'
+        || p.surfacePulse.locationPolicy !== 'sha256-equal-area-surface-v1'
+        || p.surfacePulse.timing !== 'single-pulse-ending-at-display-anchor'
+        || p.surfacePulse.durationSeconds > maxSeconds)) throw new Error('Unsupported illustrative pulse policy.');
       state = { event, endMs, loop,
+        pulse: p.mode === 'symbolic-event' ? new SurfacePulse({ ...p.surfacePulse, endTime: p.endTime, color: p.style.color }) : null,
         propagated: p.mode === 'illustrative-replay-of-propagated-orbit' ? makeTracer(geometry, false) : null,
         representative: loop ? makeTracer(loop, true) : null };
+      if (state.pulse) focus(state.pulse.normal);
       const a = event.attributes, orbit = a.orbitReference ?? a.orbitNearEvent;
       const known = n => Number.isFinite(n);
       el('orbit-name').textContent = `${event.object.name} · NORAD ${event.object.noradId}`;
@@ -132,10 +138,14 @@ export async function mountOrbitPanel(clock, timeline, onReplay) {
       el('tracer-window-limit').textContent = state.propagated
         ? 'Up to 2 h uses the original prepared samples. Longer windows switch to an illustrative representative loop; maximum 48 h.'
         : loop ? 'Up to 48 h repeats reference geometry; the old elements are not propagated across the gap to reentry.'
-          : 'Up to 48 h shows a symbolic event pulse, with no orbital or location claim.';
+          : `One pulse during the final ${formatDuration(state.pulse.durationSeconds)} before the event anchor (${formatDuration(state.pulse.durationSeconds / 300)} at Replay speed). A shorter window clips it; a longer one adds context without repeating it. This is display timing, not reentry duration.`;
       slider.disabled = replay.disabled = false;
       controls = mountTracerControls(maxSeconds, applySettings);
     } catch (error) { if (ticket === revision) fail(error); }
+  };
+  const focus = direction => {
+    scene.camera.yaw = Math.atan2(direction[0], direction[2]);
+    scene.camera.pitch = Math.max(-1.4, Math.min(1.4, Math.asin(-direction[1] / Math.hypot(...direction))));
   };
   try {
     const { EarthScene } = await import('./EarthScene.js');
@@ -143,15 +153,14 @@ export async function mountOrbitPanel(clock, timeline, onReplay) {
     unsubscribe = clock.subscribe(update);
     replay.addEventListener('click', () => {
       if (!state) return;
-      const startMs = state.endMs - settings.reentryLeadSeconds * 1000;
+      const startMs = mode === 'symbolic' ? state.pulse.visibleStartMs : state.endMs - settings.reentryLeadSeconds * 1000;
       if (active) {
         const head = active.sample(startMs).head, next = active.sample(Math.min(state.endMs, startMs + 30000)).head;
         const normal = [head[1]*next[2]-head[2]*next[1], head[2]*next[0]-head[0]*next[2], head[0]*next[1]-head[1]*next[0]];
         const length = Math.hypot(...normal);
         const direction = head.map((v, i) => v / Math.hypot(...head) + (length ? 0.6 * normal[i] / length : 0));
-        scene.camera.yaw = Math.atan2(direction[0], direction[2]);
-        scene.camera.pitch = Math.asin(-direction[1] / Math.hypot(...direction));
-      }
+        focus(direction);
+      } else if (state.pulse) focus(state.pulse.normal);
       onReplay(startMs, state.endMs);
     }, { signal: listeners.signal });
     slider.addEventListener('input', () => {

@@ -104,14 +104,15 @@
       <div class="orbit-grid">
         <div class="orbit-viewport">
           <div id="earth-scene"></div>
-          <div id="symbolic-event" hidden>
-            <div class="symbolic-mark"><span id="symbolic-pulse" hidden></span></div>
-            <strong>Symbolic event</strong>
-            <p>No orbital geometry or location assigned</p>
-            <p id="symbolic-state"></p>
-          </div>
         </div>
         <div class="orbit-caption">
+          <div id="symbolic-event" class="orbit-key" role="group" aria-label="Representation key" hidden>
+            <span class="orbit-key-pulse" aria-hidden="true"></span>
+            <div><strong>No orbital data representation</strong>
+              <p>Surface pulse · illustrative location, no reentry position claim</p>
+              <p id="symbolic-state"></p>
+            </div>
+          </div>
           <p id="orbit-status" role="status">Loading orbital preview…</p>
           <p id="orbit-attributes"></p>
           <p id="orbit-evidence" class="note"></p>

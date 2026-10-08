@@ -10,6 +10,7 @@ import sys
 from event_time import EPOCH, POLICY, SEED, display_anchor, event_id, iso
 from spacetrack_fetch import read_snapshot
 from representative_orbit import MAX_DISPLAY_SECONDS, RADIUS_KM, representative_loop
+from symbolic_pulse import surface_pulse
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -106,7 +107,8 @@ def build_fallback_manifest(norad_id, rows, catalog, sources):
             "geometryFrame": "illustrative-equatorial" if geometry else None,
             "geometryUnits": "km" if geometry else None, "geometrySourceIntervalUtc": None,
             "timeMapping": "Repeated reference ellipse with fixed period and illustrative phase at the event anchor."
-                           if geometry else "Screen-space pulse driven by the shared display clock; no orbital position.",
+                           if geometry else "One surface pulse ending at the display anchor; shared clock, no orbital path.",
+            **({"surfacePulse": surface_pulse(identifier)} if geometry is None else {}),
             "locationClaim": "none", "geographicEndpoint": None,
             "style": {"color": "#ffd166", "trailSeconds": 1200, "markerRadiusEarth": 0.012},
         },

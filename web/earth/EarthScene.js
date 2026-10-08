@@ -57,6 +57,7 @@ function drawTaperedTrail(p, points, eye, width, color) {
 export class EarthScene {
   constructor(element) {
     this.tracers = [];
+    this.pulses = [];
     this.timeMs = 0;
     this.ready = new Promise((resolve, reject) => {
       this.p = new P5((p) => {
@@ -65,7 +66,7 @@ export class EarthScene {
             const canvas = p.createCanvas(element.clientWidth, 380, p.WEBGL);
             p.pixelDensity(Math.min(devicePixelRatio || 1, 2));
             canvas.elt.tabIndex = 0;
-            canvas.elt.setAttribute('aria-label', 'Inertial Earth and orbit. Drag or use arrow keys to rotate; plus and minus to zoom.');
+            canvas.elt.setAttribute('aria-label', 'Earth event preview. Drag or use arrow keys to rotate; plus and minus to zoom.');
             this.camera = new CameraController(canvas.elt, () => p.redraw());
             this.camera.yaw = 0.8;
             this.mesh = sphereMesh();
@@ -99,7 +100,7 @@ export class EarthScene {
     p.noStroke(); p.fill('#274e65');
     p.model(this.mesh);
     p.noLights();
-    // Equator only: no Earth-fixed geography or geographical endpoint implied.
+    // Equator only. Surface pulses have illustrative locations; orbits have no geographic endpoint.
     p.noFill(); p.stroke('#547f92'); p.strokeWeight(0.003);
     p.beginShape();
     for (let i = 0; i <= 128; i++) {
@@ -113,6 +114,16 @@ export class EarthScene {
       drawTaperedTrail(p, sample.tail, camera.eye, tracer.lineWidthEarth, tracer.color);
       p.push(); p.translate(...sample.head); p.noStroke(); p.fill(tracer.color);
       p.sphere(tracer.markerRadiusEarth, 12, 8); p.pop();
+    }
+    for (const pulse of this.pulses) {
+      const sample = pulse.sample(this.timeMs);
+      if (!sample) continue;
+      const tint = p.color(pulse.color);
+      tint.setAlpha(255 * sample.opacity);
+      p.noStroke(); p.fill(tint);
+      p.beginShape(p.TRIANGLE_STRIP);
+      for (const point of sample.ring) p.vertex(...point);
+      p.endShape();
     }
   }
   dispose() { this.resize?.disconnect(); this.camera?.dispose(); this.p.remove(); }

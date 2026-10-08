@@ -86,6 +86,7 @@ Validate the pipeline and clock/geometry contracts:
 node tests/clock-tracer.test.mjs
 node tests/tracer-settings.test.mjs
 node tests/representative-tracer.test.mjs
+node tests/surface-pulse.test.mjs
 ```
 
 ## Phase 2: explicit fallbacks
@@ -97,8 +98,9 @@ node tests/representative-tracer.test.mjs
 - **Iridium 33 debris (38023), stale reference:** historical inclination and heights
   produce an illustrative loop. The reference is 2022-11-08, **422.5 days before** the
   reported 2024-01-05 decay day. Those elements are not propagated to the event.
-- **The same debris event, empty near-event query:** a screen-space symbolic pulse with
-  no orbit or geographic position. This demonstrates the actual empty cached query;
+- **The same debris event, empty near-event query:** one brief pulse on Earth's surface,
+  with no tracer, labeled **No orbital data representation**. Its persistent random
+  display point is illustrative; the real reentry location stays unknown. This demonstrates the actual empty cached query;
   it does not imply that no other history exists. The event anchor is identical to the
   stale-reference example, **2024-01-05T22:11:53Z**.
 
@@ -109,6 +111,17 @@ are illustrative. Their assets contain `[elapsed seconds, x, y, z]`, not UTC obs
 samples. They repeat at a fixed reference/derived period, with no drag, precession or
 atmospheric descent. The 48-hour maximum is a presentation limit, not a model-validity
 claim. Details, source hashes and null unknowns remain in each manifest.
+
+Missing-orbit pulses use a stable hash of event ID to choose a point uniformly by
+spherical surface area (uniform longitude and uniform sine of latitude). The exported
+`presentation.surfacePulse` is separate from the unknown factual `attributes.eventLocation`.
+This is a neutral display policy, not a physical reentry distribution. Actual latitude
+patterns depend on orbital inclination and other conditions; see the
+[location policy and sources](notes/tracer-model.md#missing-orbit-surface-pulses).
+One pulse fades in and out during the final ten simulated minutes before the display
+anchor. Replay pulse focuses that interval, taking two seconds at the preset speed.
+Longer windows do not repeat it; shorter windows clip it without shifting its phase.
+Pause and seek reproduce the same appearance. Trail controls do not apply.
 
 Regenerate Tiangong-1 with the existing command above; it also writes a separate
 `37820-representative.json`. Build the two fallback previews entirely offline:

@@ -163,7 +163,16 @@
         "geometryFrame": null,
         "geometryUnits": null,
         "geometrySourceIntervalUtc": null,
-        "timeMapping": "Screen-space pulse driven by the shared display clock; no orbital position.",
+        "timeMapping": "One surface pulse ending at the display anchor; shared clock, no orbital path.",
+        "surfacePulse": {
+          "basis": "illustrative",
+          "locationPolicy": "sha256-equal-area-surface-v1",
+          "latitudeDeg": 62.20551356536427,
+          "longitudeDeg": -136.17437477100367,
+          "durationSeconds": 600,
+          "timing": "single-pulse-ending-at-display-anchor",
+          "note": "Persistent random display point, uniform by spherical surface area. Not a reentry location, orbital constraint, or physical probability model. Duration is a presentation choice, not atmospheric descent time."
+        },
         "locationClaim": "none",
         "geographicEndpoint": null,
         "style": {
