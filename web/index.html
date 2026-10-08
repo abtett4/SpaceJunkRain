@@ -59,8 +59,15 @@
 
     <section class="orbit-panel" aria-labelledby="orbit-title">
       <div class="orbit-heading">
-        <div><h2 id="orbit-title">One orbit, one shared clock</h2><p id="orbit-name">Tiangong-1 · first tracer prototype</p></div>
+        <div><h2 id="orbit-title">One event, one shared clock</h2><p id="orbit-name">Tiangong-1 · first tracer prototype</p></div>
         <button id="orbit-replay" type="button" disabled>▶ Replay orbit · 24 seconds</button>
+      </div>
+      <div class="orbit-example"><label for="orbit-example">Preview input</label>
+        <select id="orbit-example">
+          <option value="data/tracers.json">Tiangong-1 · recent orbital history</option>
+          <option value="data/fallbacks/stale/tracers.json">Iridium 33 debris · stale reference orbit</option>
+          <option value="data/fallbacks/empty/tracers.json">Same debris event · empty near-event query</option>
+        </select>
       </div>
       <details class="tracer-config" id="tracer-config">
         <summary>Configure tracer</summary>
@@ -89,24 +96,33 @@
             </div>
           </div>
           <p id="tracer-window-limit" class="note">Up to 2 h of prepared orbit is available.</p>
-          <p id="tracer-history-note" class="note">Trail history is the recent path left behind the marker, limited to the selected window. The trail thins and fades toward its oldest end; Trail width sets its width at the marker. Width and size are visual choices.</p>
+          <p id="tracer-history-note" class="note">Trail history stays inside the selected window; representative trails show at most one revolution. The trail thins and fades toward its oldest end. Width and size are visual choices.</p>
           <p class="note">Amber is the current default. Color will reflect object or event data once that mapping is defined.</p>
           <p class="note">Changes keep the clock in place. Choose Replay to preview the selected window. The existing Speed control sets playback speed; Replay starts at 5 simulated minutes per second.</p>
         </fieldset>
       </details>
       <div class="orbit-grid">
-        <div id="earth-scene"></div>
+        <div class="orbit-viewport">
+          <div id="earth-scene"></div>
+          <div id="symbolic-event" hidden>
+            <div class="symbolic-mark"><span id="symbolic-pulse" hidden></span></div>
+            <strong>Symbolic event</strong>
+            <p>No orbital geometry or location assigned</p>
+            <p id="symbolic-state"></p>
+          </div>
+        </div>
         <div class="orbit-caption">
           <p id="orbit-status" role="status">Loading orbital preview…</p>
           <p id="orbit-attributes"></p>
+          <p id="orbit-evidence" class="note"></p>
           <p><strong>Event anchor</strong><br><span id="orbit-anchor">April 2, 2018 · time of day unknown</span></p>
-          <p>This arc replays a calculated last-known orbit. Its plane and height come from historical orbital elements; its assigned time is illustrative. The globe shows the equator, with no claimed reentry location.</p>
+          <p id="orbit-explanation">Choose a preview input to inspect its representation and limitations.</p>
           <p class="note">Marker size is exaggerated. Orbit descriptors refer to the source epoch; physical size, mission, owner and lifetime orbit remain unassigned.</p>
-          <a href="data/tracers.json">Event attributes and provenance (JSON)</a>
+          <a id="orbit-provenance" href="data/tracers.json">Event attributes and provenance (JSON)</a>
         </div>
       </div>
       <div class="orbit-scrubber">
-        <label for="orbit-scrub">Orbit replay · moves the shared clock</label>
+        <label for="orbit-scrub">Event replay · moves the shared clock</label>
         <input id="orbit-scrub" type="range" min="0" max="7200" step="1" value="0" disabled>
         <p id="tracer-window-times"></p>
         <p><strong>Display clock:</strong> <span id="orbit-clock">—</span><br><span id="orbit-sample">Drag the globe to rotate. Scroll or use + / − to zoom.</span></p>

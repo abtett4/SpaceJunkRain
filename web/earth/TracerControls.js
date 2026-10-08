@@ -7,8 +7,8 @@ export function normalizeSettings(value, availableSeconds) {
   const number = (key, fallback, min, max) => Number.isFinite(raw[key])
     ? Math.max(min, Math.min(max, raw[key])) : fallback;
   return {
-    reentryLeadSeconds: number('reentryLeadSeconds', availableSeconds, Math.min(30, availableSeconds), availableSeconds),
-    trailSeconds: number('trailSeconds', Math.min(1200, availableSeconds), 0, availableSeconds),
+    reentryLeadSeconds: number('reentryLeadSeconds', Math.min(7200, availableSeconds), Math.min(30, availableSeconds), availableSeconds),
+    trailSeconds: number('trailSeconds', Math.min(1200, availableSeconds), 0, Math.min(7200, availableSeconds)),
     widthScale: number('widthScale', 3, 0.5, 3),
     markerScale: number('markerScale', 3, 0.5, 3),
   };
@@ -56,9 +56,8 @@ export function mountTracerControls(availableSeconds, onChange) {
     markerScale: document.getElementById('tracer-size'),
   };
   inputs.reentryLeadSeconds.min = Math.min(30, availableSeconds);
-  inputs.reentryLeadSeconds.max = inputs.trailSeconds.max = availableSeconds;
-  document.getElementById('tracer-window-limit').textContent =
-    `Up to ${formatDuration(availableSeconds)} of prepared orbit is available. Shorter windows show its final portion; timing and orbital speed stay the same.`;
+  inputs.reentryLeadSeconds.max = availableSeconds;
+  inputs.trailSeconds.max = Math.min(7200, availableSeconds);
   const paint = () => {
     for (const [key, input] of Object.entries(inputs)) {
       input.value = settings[key];

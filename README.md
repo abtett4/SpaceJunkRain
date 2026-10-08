@@ -20,7 +20,7 @@ The timeline tools need no third-party packages; Python 3.8+ standard library on
 orbital tools below have separate dependencies. Pushing to `main` redeploys the site
 from `web/` (see `.github/workflows/pages.yml`).
 
-## Tracer visualization model and one-object Earth preview
+## Tracer visualization model and fallback previews
 
 The existing page now includes a Tiangong-1 orbital tracer. Choose **Replay orbit** to
 watch its default two-hour sample segment in 24 seconds. The timeline and Earth share one clock;
@@ -28,7 +28,7 @@ pausing or scrubbing either control changes the same simulation time. The globe 
 drag, pinch, scroll, arrow keys, and +/− zoom. No browser credentials or propagation are
 needed: the preview uses the checked-in derived data and a local p5.js module.
 
-Open **Configure tracer** to set the time shown before reentry (30 seconds to 2 hours),
+Open **Configure tracer** to set the time shown before reentry (30 seconds to 48 hours),
 trail history (head only to 2 hours), trail width, and marker size. Preferences
 are saved in this browser; **Reset defaults** restores the two-hour window, 20-minute
 history, and large (3×) width/size. If browser storage is unavailable, the
@@ -38,12 +38,14 @@ Color comes from event presentation data, with amber as the current default; its
 object/event-data mapping is still to be decided. Color is not a browser preference.
 Earlier saved preferences retain their timing choices and adopt the large size defaults.
 
-A shorter window clips the final portion of the prepared orbit. It does not stretch
-the samples, change the event anchor, or move the shared clock. Trail history is clipped
-to that window. Replay starts the selected window at 300 simulated seconds per real
+Within Tiangong-1’s prepared two-hour segment, a shorter window clips its final portion.
+Longer windows explicitly switch to a representative orbit for the entire display window;
+the SGP4 samples are never stretched or repeated. Window changes keep the event anchor
+and clock fixed. Trail history is clipped to the window and, for representative orbits,
+to at most one revolution. Replay starts the selected window at 300 simulated seconds per real
 second and stops at the event anchor; the existing Speed control remains independent.
-Width and marker size are visual choices, not physical dimensions. Longer windows and
-the after-launch control will follow when their geometry is available.
+Width and marker size are visual choices, not physical dimensions. The after-launch control
+will follow with the first launch example.
 
 Date-only reentries receive stable random display times within their reported UTC day.
 Tiangong-1 is assigned **2018-04-02T15:35:52Z**. This is an animation anchor, not an
@@ -70,7 +72,7 @@ since the existing epoch. Do not treat its fractional part as observed timing pr
 See [the tracer model](notes/tracer-model.md), [the consumed manifest](web/data/tracers.json),
 and [the portable example](data/examples/tracer-37820-reentry.json) for attributes and
 provenance. Missing size, owner, mission, location and lifetime-orbit information stays
-explicitly unknown. Launch, representative-orbit and symbolic fallbacks are next steps.
+explicitly unknown. Launch tracers and a broader mixed sample are next steps.
 
 `web/earth/` adapts Cosmic Clock's sphere mesh and camera only; Cosmic Clock itself is
 unchanged. [Renderer credits](web/vendor/README.md) document the local p5 dependency.
@@ -83,7 +85,50 @@ Validate the pipeline and clock/geometry contracts:
 .venv/bin/python -m unittest discover -s tests -p 'test_*.py'
 node tests/clock-tracer.test.mjs
 node tests/tracer-settings.test.mjs
+node tests/representative-tracer.test.mjs
 ```
+
+## Phase 2: explicit fallbacks
+
+**Preview input** switches among three single-event inputs on the same page:
+
+- **Tiangong-1:** original SGP4 replay for windows up to two hours; a separately prepared
+  representative loop for longer windows.
+- **Iridium 33 debris (38023), stale reference:** historical inclination and heights
+  produce an illustrative loop. The reference is 2022-11-08, **422.5 days before** the
+  reported 2024-01-05 decay day. Those elements are not propagated to the event.
+- **The same debris event, empty near-event query:** a screen-space symbolic pulse with
+  no orbit or geographic position. This demonstrates the actual empty cached query;
+  it does not imply that no other history exists. The event anchor is identical to the
+  stale-reference example, **2024-01-05T22:11:53Z**.
+
+All modes use the existing shared clock and amber styling. Changing preview input pauses
+without seeking; Replay focuses its event. Representative loops preserve reference
+inclination and perigee/apogee, while node direction, periapsis direction and event phase
+are illustrative. Their assets contain `[elapsed seconds, x, y, z]`, not UTC observation
+samples. They repeat at a fixed reference/derived period, with no drag, precession or
+atmospheric descent. The 48-hour maximum is a presentation limit, not a model-validity
+claim. Details, source hashes and null unknowns remain in each manifest.
+
+Regenerate Tiangong-1 with the existing command above; it also writes a separate
+`37820-representative.json`. Build the two fallback previews entirely offline:
+
+```bash
+python tools/build_tracers.py --norad-id 38023 \
+  --gp-history data/raw/gp_history/38023/46e447ca98a6bd6b/response.json \
+  --output-dir web/data/fallbacks/stale
+python tools/build_tracers.py --norad-id 38023 \
+  --gp-history data/raw/gp_history/38023/7412ba0be6c2bca9/response.json \
+  --output-dir web/data/fallbacks/empty
+```
+
+`tools/representative_orbit.py` is a small standard-library geometric sampler. It requires
+valid reference inclination, positive ordered perigee/apogee, and eccentricity below 0.9;
+missing node/anomaly does not block a motif. If the reference period is absent, a two-body
+period is derived and labeled. Unsupported or incomplete geometry becomes symbolic;
+corrupt snapshots, wrong object IDs and timeline mismatches fail explicitly. No new
+Space-Track requests are made. The exporter still writes one event per run; a bulk merger
+and broader catalog selection belong to phase 3.
 
 ## One-object orbital prototype
 

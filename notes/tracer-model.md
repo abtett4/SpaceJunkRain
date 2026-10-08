@@ -143,17 +143,83 @@ accepts positions, timing and style, with no Space-Track or catalog knowledge. R
 uses 300 simulated seconds per real second and stops at the shared event anchor. The
 Earth view interpolates the 30-second samples; it performs no SGP4 propagation.
 
-The plain sphere and camera were adapted from Cosmic Clock. Coordinates remain inertial
-TEME, mapped to scene axes `[x, -z, y] / 6378.135`, a length- and handedness-preserving
+The plain sphere and camera were adapted from Cosmic Clock. Propagated coordinates remain
+inertial TEME, mapped to scene axes `[x, -z, y] / 6378.135`, a length- and handedness-preserving
 rotation. North is screen-up in the default orientation. The equator is shown; there are
 no longitude lines, surface imagery, geographic endpoint or atmospheric descent. Sphere
 lighting and marker width are presentation choices. The scene redraws on clock, camera,
 or size changes, without a separate simulation timer.
 
-Representative-orbit and symbolic fallbacks, launch tracers, other objects, and audio
-remain subsequent increments. One object is exported on each adapter run; this is not a
-bulk manifest merger. The existing numerical diagnostic and immutable raw caches remain
-unchanged.
+Phase 2 adds representative-orbit and symbolic fallbacks, described below. Launch tracers,
+a broader mixed sample, and audio remain later increments. One object is exported per
+adapter run; this is not a bulk manifest merger. The original numerical diagnostic and
+immutable raw caches remain unchanged.
+
+
+## Phase 2: reference loops and symbolic events
+
+The existing page now has a **Preview input** selector for three bounded demonstrations:
+Tiangong-1's propagated samples; NORAD 38023's stale historical reference; and the same
+38023 event using its empty near-event GP query. These are alternative single-event
+inputs, not additional counted events. Each joins the same timeline by NORAD ID. The
+38023 alternatives share event ID `38023:reentry:2024-01-05` and assigned anchor
+**2024-01-05T22:11:53Z**. Selecting an input pauses without moving the clock; Replay
+focuses its selected event.
+
+`build_tracers.py --norad-id` consumes the normalized catalog and a checksum-verified
+GP_HISTORY snapshot. It selects the latest element epoch strictly before the start of
+the reported event day (or before a reported precise timestamp). In this initial policy,
+if that selected row cannot support a geometric loop, the event becomes symbolic;
+no older row is silently substituted. Empty snapshots are retained as evidence of that
+query's coverage, not a claim that no history exists elsewhere. Identity/hash/clock
+mismatches fail instead of becoming a silent fallback. Raw inputs remain immutable.
+
+The cached 38023 reference is **2022-11-08T12:05:40.667424Z**, GP_ID **217563156**,
+422.5 days before the start of its 2024-01-05 decay day. Its inclination is 86.4116° and
+reported perigee/apogee are 623.269/753.367 km. Those fields live in `orbitReference`;
+`orbitNearEvent`, the near-event regime, and the lifetime regime remain unknown. A
+reference LEO classification is explicitly separate from those unknown regimes.
+
+`representative_orbit.py` constructs an ellipse from positive ordered reference heights
+and inclination. Its eccentricity is derived from those heights, not treated as a new
+observation. Node and periapsis directions are chosen as zero; the event phase uses a
+stable hash of the event ID and `reference-ellipse-v1`. Missing node or anomaly does not
+block a motif. Mean-anomaly sampling and a small Kepler solver provide 512 segments over
+one fixed reference period; if the period is absent, it is derived from height using
+WGS72's Earth parameter and explicitly labeled. The initial domain excludes eccentricity
+≥ 0.9 and geometry whose interpolated chords intersect the reference sphere. Unsupported
+geometry becomes symbolic rather than inventing a height or clamping a trajectory.
+
+These are **illustrative reference ellipses**, not propagation of mean elements across
+an observation gap. Assets use frame `illustrative-equatorial`, units km, and
+`timeSystem: loop-seconds`, with rows `[elapsedSeconds, x, y, z]`. They contain no invented
+UTC sample times or event-time velocity/position estimates. Geometry retains its reference
+epoch and construction policy. No drag, precession, descent or geographic endpoint is
+modeled. The raw mean elements remain unchanged. Formula context:
+[orbital-element geometry](https://orbital-mechanics.space/classical-orbital-elements/orbital-elements-and-the-state-vector.html)
+and [SGP4 mean-element context](https://pypi.org/project/sgp4/).
+
+A representative loop repeats at that fixed period, with phase anchored to the shared
+event time. Changing its visibility window cannot speed it up or move its phase. The
+trail crosses the loop seam along the orbit and is capped at one revolution to avoid
+stacking repeated paths. Width/opacity taper, amber styling and large marker defaults
+remain presentation choices. The 48-hour display maximum is an interface policy, not
+an accuracy window. For Tiangong-1, windows above the prepared two hours switch the
+**whole window** to its separately generated reference loop; no long orbit is claimed
+by stretching or looping the original SGP4 samples. Returning to two hours restores
+the original replay, so a mode change may change geometry at the same clock instant.
+
+With no usable geometry, a separate screen-space ring pulses on the shared clock. It
+covers the globe rather than attaching an invented location to it. Pause/seek determine
+the pulse deterministically; there is no independent animation timer. Only event
+visibility and marker size apply; trail history and width are disabled in this mode.
+The empty-query example retains object class and the radar-size proxy from the catalog,
+while unavailable orbit/location/country data stays unknown.
+
+Validation adds analytic circular and inclined-ellipse checks, height limits, deterministic
+phase, missing/invalid inputs, source immutability, identity/anchor checks, seam continuity,
+loop period/closure, clipping, and explicit mode switching. Browser checks compare all
+three inputs, 48-hour windows, shared-clock scrubbing, and the symbolic display.
 
 
 ## Configuration menu and next milestones
@@ -187,8 +253,8 @@ object-class filters and representation-mode filters. Unknown attributes must re
 selectable, recognizable category. Start with global settings, persist them locally,
 and provide Reset defaults; per-object overrides can wait.
 
-The implemented reentry window spans 30 seconds to the available two hours, in 30-second
-steps. Trail history ranges from zero (head only) to two hours and is also clipped to
+The implemented reentry window spans 30 seconds to 48 hours, in 30-second
+steps; windows beyond prepared SGP4 coverage use the representative mode. Trail history ranges from zero (head only) to two hours and is also clipped to
 the selected visibility window. The marker and trail each allow 0.5–3× their default
 size. Defaults are two hours before the event, 20 minutes of trail, and large 3× width/size.
 The trail tapers to zero width and opacity at its oldest end. Preferences use payload
@@ -210,7 +276,8 @@ Validation covers clipping and interpolation, unchanged source samples and endpo
 clock independence, invalid settings, persistence, reset, and unavailable storage.
 Browser checks also cover changes while playing and paused, backward scrubbing,
 the shared endpoint, saved preferences after reload, and Reset defaults. The original
-raw data, diagnostic output, and geometry are unchanged. The event's presentation color
+raw data, diagnostic output, and original SGP4 geometry are unchanged. Separate reference
+loop assets are added for longer windows and stale inputs. The event's presentation color
 is now amber, matching the exporter and portable example.
 
 Recommended sequence:
@@ -219,10 +286,10 @@ Recommended sequence:
    reentry lead time, trail history, width, marker size, saved preferences and
    reset, bounded by the existing two-hour segment. Launch-follow remains reserved
    for the launch example.
-2. **Explicit geometry fallbacks.** Implement representative orbits for partial/stale
-   element history and symbolic events where geometry is missing. Use the already cached
-   NORAD 38023 case to exercise stale-data handling. Establish the illustrative looping
-   policy that enables longer display windows without inventing long SGP4 reconstructions.
+2. **Explicit geometry fallbacks — complete.** Representative loops and symbolic events
+   now handle stale/partial and empty input cases, demonstrated with cached NORAD 38023
+   inputs. Windows up to 48 hours use an explicit fixed-period looping policy; original
+   SGP4 samples are never stretched or looped.
 3. **Small mixed event sample.** Export and select multiple events with debris, rocket
    body and payload examples across different data-coverage cases. Preserve NORAD joins,
    field-level provenance and unknowns. Generalize the single-event manifest exporter and
