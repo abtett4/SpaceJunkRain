@@ -75,8 +75,10 @@ export class EarthScene {
     for (const tracer of this.tracers) {
       const sample = tracer.sample(this.timeMs);
       if (!sample) continue;
-      p.noFill(); p.stroke(tracer.color); p.strokeWeight(0.008);
-      p.beginShape(); sample.tail.forEach((v) => p.vertex(...v)); p.endShape();
+      p.noFill(); p.stroke(tracer.color); p.strokeWeight(tracer.lineWidthEarth);
+      if (sample.tail.length > 1) {
+        p.beginShape(); sample.tail.forEach((v) => p.vertex(...v)); p.endShape();
+      }
       p.push(); p.translate(...sample.head); p.noStroke(); p.fill(tracer.color);
       p.sphere(tracer.markerRadiusEarth, 12, 8); p.pop();
     }

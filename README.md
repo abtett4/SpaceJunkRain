@@ -23,10 +23,23 @@ from `web/` (see `.github/workflows/pages.yml`).
 ## Tracer visualization model and one-object Earth preview
 
 The existing page now includes a Tiangong-1 orbital tracer. Choose **Replay orbit** to
-watch its two-hour sample segment in 24 seconds. The timeline and Earth share one clock;
+watch its default two-hour sample segment in 24 seconds. The timeline and Earth share one clock;
 pausing or scrubbing either control changes the same simulation time. The globe supports
 drag, pinch, scroll, arrow keys, and +/− zoom. No browser credentials or propagation are
 needed: the preview uses the checked-in derived data and a local p5.js module.
+
+Open **Configure tracer** to set the time shown before reentry (30 seconds to 2 hours),
+trail history (head only to 2 hours), trail width, marker size, and color. Preferences
+are saved in this browser; **Reset defaults** restores the two-hour window, 20-minute
+history, default width/size, and mint color. If browser storage is unavailable, the
+controls still work for the current visit.
+
+A shorter window clips the final portion of the prepared orbit. It does not stretch
+the samples, change the event anchor, or move the shared clock. Trail history is clipped
+to that window. Replay starts the selected window at 300 simulated seconds per real
+second and stops at the event anchor; the existing Speed control remains independent.
+Width and marker size are visual choices, not physical dimensions. Longer windows and
+the after-launch control will follow when their geometry is available.
 
 Date-only reentries receive stable random display times within their reported UTC day.
 Tiangong-1 is assigned **2018-04-02T15:35:52Z**. This is an animation anchor, not an
@@ -65,6 +78,7 @@ Validate the pipeline and clock/geometry contracts:
 ```bash
 .venv/bin/python -m unittest discover -s tests -p 'test_*.py'
 node tests/clock-tracer.test.mjs
+node tests/tracer-settings.test.mjs
 ```
 
 ## One-object orbital prototype

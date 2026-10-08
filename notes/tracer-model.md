@@ -160,7 +160,9 @@ unchanged.
 
 User requirement: the final application must expose a configuration menu controlling
 how long tracers appear **before a reentry** and **after a launch**, plus other tracer
-attributes. This is planned behavior; the current preview does not expose this menu.
+attributes. Phase 1 is complete for the Tiangong-1 reentry preview. **Configure tracer**
+exposes reentry lead time, trail history, width, marker size, and color. The launch-follow
+control will be added alongside the first launch tracer in phase 4.
 
 Keep three independent temporal controls:
 
@@ -183,13 +185,34 @@ object-class filters and representation-mode filters. Unknown attributes must re
 selectable, recognizable category. Start with global settings, persist them locally,
 and provide Reset defaults; per-object overrides can wait.
 
+The implemented reentry window spans 30 seconds to the available two hours, in 30-second
+steps. Trail history ranges from zero (head only) to two hours and is also clipped to
+the selected visibility window. The marker and trail each allow 0.5–3× their default
+size, with five color choices. Defaults remain two hours before the event, 20 minutes
+of trail, 1× width/size, and mint. These settings are stored under the versioned local
+key `sjr-tracer-settings-v1`; reset removes only that key. Invalid or unsupported saved
+values fall back to defaults or are bounded by available geometry. Blocked storage
+leaves the controls usable for the current visit.
+
+The renderer retains the full original geometry and fixed endpoint. Clipping to 30
+minutes therefore shows source samples from **2018-04-01 23:30 through 2018-04-02 00:00
+UTC**, mapped to display time **2018-04-02 15:05:52–15:35:52 UTC**. Interpolated trail
+boundaries prevent hidden pre-window geometry from appearing. Changing preferences
+does not seek or pause the clock; a clock outside the new window simply hides the
+tracer. Replay focuses the selected window and retains the existing 300× rate.
+
+Validation covers clipping and interpolation, unchanged source samples and endpoint,
+clock independence, invalid settings, persistence, reset, and unavailable storage.
+Browser checks also cover changes while playing and paused, backward scrubbing,
+the shared endpoint, saved preferences after reload, and Reset defaults. The original
+raw data, diagnostic output, and exported event/geometry assets are unchanged.
+
 Recommended sequence:
 
-1. **Configurable Tiangong-1 preview.** Add a collapsible configuration panel, reentry
-   lead time, trail history, width, marker size and color. Start with clipping inside the
-   existing two-hour segment. Keep launch-follow configuration in the settings design,
-   exposing its active control when a launch tracer exists. Verify updates while playing
-   and paused, endpoint agreement, backward scrubbing, persistence and reset.
+1. **Configurable Tiangong-1 preview — complete.** The collapsible panel supports
+   reentry lead time, trail history, width, marker size, color, saved preferences and
+   reset, bounded by the existing two-hour segment. Launch-follow remains reserved
+   for the launch example.
 2. **Explicit geometry fallbacks.** Implement representative orbits for partial/stale
    element history and symbolic events where geometry is missing. Use the already cached
    NORAD 38023 case to exercise stale-data handling. Establish the illustrative looping

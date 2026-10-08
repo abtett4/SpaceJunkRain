@@ -62,6 +62,47 @@
         <div><h2 id="orbit-title">One orbit, one shared clock</h2><p id="orbit-name">Tiangong-1 · first tracer prototype</p></div>
         <button id="orbit-replay" type="button" disabled>▶ Replay orbit · 24 seconds</button>
       </div>
+      <details class="tracer-config" id="tracer-config">
+        <summary>Configure tracer</summary>
+        <fieldset id="tracer-fields" disabled>
+          <legend>Tracer appearance and timing</legend>
+          <div class="tracer-settings-grid">
+            <div class="tracer-setting">
+              <label for="tracer-window">Before reentry <output id="tracer-window-value" for="tracer-window">2 h</output></label>
+              <input id="tracer-window" type="range" min="30" max="7200" step="30" value="7200" aria-describedby="tracer-window-limit">
+            </div>
+            <div class="tracer-setting">
+              <label for="tracer-history">Trail history <output id="tracer-history-value" for="tracer-history">20 min</output></label>
+              <input id="tracer-history" type="range" min="0" max="7200" step="30" value="1200" aria-describedby="tracer-history-note">
+            </div>
+            <div class="tracer-setting">
+              <label for="tracer-width">Trail width <output id="tracer-width-value" for="tracer-width">1×</output></label>
+              <input id="tracer-width" type="range" min="0.5" max="3" step="0.25" value="1">
+            </div>
+            <div class="tracer-setting">
+              <label for="tracer-size">Marker size <output id="tracer-size-value" for="tracer-size">1×</output></label>
+              <input id="tracer-size" type="range" min="0.5" max="3" step="0.25" value="1">
+            </div>
+            <div class="tracer-setting">
+              <label for="tracer-color">Tracer color</label>
+              <select id="tracer-color">
+                <option value="#70e1bc">Mint</option>
+                <option value="#ffd166">Amber</option>
+                <option value="#ff8d8d">Coral</option>
+                <option value="#8bc4ff">Blue</option>
+                <option value="#c2a5ff">Lavender</option>
+              </select>
+            </div>
+            <div class="tracer-settings-actions">
+              <button id="tracer-reset" type="button">Reset defaults</button>
+              <span id="tracer-preferences-note" role="status">Preferences are saved on this browser when available.</span>
+            </div>
+          </div>
+          <p id="tracer-window-limit" class="note">Up to 2 h of prepared orbit is available.</p>
+          <p id="tracer-history-note" class="note">Trail history is the recent path left behind the marker, limited to the selected window. Width and size are visual choices.</p>
+          <p class="note">Changes keep the clock in place. Choose Replay to preview the selected window. The existing Speed control sets playback speed; Replay starts at 5 simulated minutes per second.</p>
+        </fieldset>
+      </details>
       <div class="orbit-grid">
         <div id="earth-scene"></div>
         <div class="orbit-caption">
@@ -76,6 +117,7 @@
       <div class="orbit-scrubber">
         <label for="orbit-scrub">Orbit replay · moves the shared clock</label>
         <input id="orbit-scrub" type="range" min="0" max="7200" step="1" value="0" disabled>
+        <p id="tracer-window-times"></p>
         <p><strong>Display clock:</strong> <span id="orbit-clock">—</span><br><span id="orbit-sample">Drag the globe to rotate. Scroll or use + / − to zoom.</span></p>
       </div>
     </section>
