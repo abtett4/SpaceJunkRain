@@ -102,7 +102,9 @@ Dates are fractional days since 1957-01-01 UTC; `util.js` converts them.
 
 `kind` is `bump`, `crash`, `explosion` or `fragmentation` (shown as glancing contact, impact,
 collision, fragmentation). `families` are launch designators whose debris belongs to the event;
-`norad` (catalog numbers) can be used instead. `alt_km` feeds the notes on sheet 1. Every new
+`norad` (catalog numbers) can be used instead. `alt_km` feeds the notes on sheet 1. Optional
+`ref: {text, url}` is the citation shown in the data table, and optional `row` labels the event's
+row on sheet 1 when the catalogue name is ambiguous (eight launches are all "Delta 1"). Every new
 entry needs a source you can point to; mark unverified values in your pull request.
 
 ## 6. Design rules

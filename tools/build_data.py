@@ -211,6 +211,7 @@ def main():
             "date": e["date"], "name": e["name"], "kind": e["kind"], "source": e.get("source"),
             "alt": e.get("alt_km"),
             "ref": e.get("ref"),
+            "row": e.get("row"),
             "families": [fam_index[f] for f in fams if f in fam_index],
         })
 

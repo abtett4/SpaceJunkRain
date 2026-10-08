@@ -24,7 +24,8 @@ export function createSourceSheet(db) {
     const ev = evs.length ? events[evs[0]] : null;
     const fam = families[f];
     return {
-      fam: f, label: pretty(fam.name), events: evs,
+      // an event can name its row when the catalogue name is ambiguous (eight launches are "Delta 1")
+      fam: f, label: evs.map((ei) => events[ei].row).find(Boolean) || pretty(fam.name), events: evs,
       sub: `${fam.key} · ` + (ev ? `${KIND_WORD[ev.kind]} ${yearOf(ev.t)}` : 'breakup debris'),
       origin: ev ? ev.t : fam.launch ?? 0,
       group: ev && (ev.kind === 'crash' || ev.kind === 'explosion') ? 0 : 1, // colour: 0 collision/ASAT, 1 other
