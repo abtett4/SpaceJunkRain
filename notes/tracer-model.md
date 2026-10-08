@@ -154,3 +154,58 @@ Representative-orbit and symbolic fallbacks, launch tracers, other objects, and 
 remain subsequent increments. One object is exported on each adapter run; this is not a
 bulk manifest merger. The existing numerical diagnostic and immutable raw caches remain
 unchanged.
+
+
+## Configuration menu and next milestones
+
+User requirement: the final application must expose a configuration menu controlling
+how long tracers appear **before a reentry** and **after a launch**, plus other tracer
+attributes. This is planned behavior; the current preview does not expose this menu.
+
+Keep three independent temporal controls:
+
+- **Event visibility window:** reentry lead time and launch follow time, measured in
+  simulation time relative to the shared event anchor.
+- **Trail history:** how much of the moving object's recent path remains visible.
+- **Playback speed:** simulation time per real second, still owned by the shared clock.
+
+Changing these controls must not rerandomize event anchors, rewrite source times, alter
+reported orbital elements, or introduce a second clock. A shorter window clips the
+existing replay. A longer requested window must use additional prepared geometry where
+supported, or an explicitly illustrative representative-orbit loop; it must not silently
+stretch two hours of source samples into a longer purported reconstruction. Record the
+geometry mode and time mapping independently of the selected display duration. Browser
+settings changes should not trigger Space-Track requests or heavy propagation.
+
+Initial appearance controls should cover trail width, marker size and color. Later
+controls may include opacity/fade, color-by-attribute mappings, launch/reentry visibility,
+object-class filters and representation-mode filters. Unknown attributes must remain a
+selectable, recognizable category. Start with global settings, persist them locally,
+and provide Reset defaults; per-object overrides can wait.
+
+Recommended sequence:
+
+1. **Configurable Tiangong-1 preview.** Add a collapsible configuration panel, reentry
+   lead time, trail history, width, marker size and color. Start with clipping inside the
+   existing two-hour segment. Keep launch-follow configuration in the settings design,
+   exposing its active control when a launch tracer exists. Verify updates while playing
+   and paused, endpoint agreement, backward scrubbing, persistence and reset.
+2. **Explicit geometry fallbacks.** Implement representative orbits for partial/stale
+   element history and symbolic events where geometry is missing. Use the already cached
+   NORAD 38023 case to exercise stale-data handling. Establish the illustrative looping
+   policy that enables longer display windows without inventing long SGP4 reconstructions.
+3. **Small mixed event sample.** Export and select multiple events with debris, rocket
+   body and payload examples across different data-coverage cases. Preserve NORAD joins,
+   field-level provenance and unknowns. Generalize the single-event manifest exporter and
+   viewer before bulk acquisition or optimization.
+4. **One launch example.** Add a sourced launch-site lookup, site pulse and first-known
+   orbital arc. Distinguish parental launch from fragment creation/deployment; any connecting
+   arc is illustrative rather than a reconstructed powered ascent. Test launch-follow time.
+5. **Unified presentation and audio contract.** Refine Earth presentation with explicit
+   coordinate-frame/time handling before adding geographical imagery. Connect event selection,
+   filters and configuration across views. Define forward-play event crossings, pause, seek
+   and replay behavior with the colleague's audio layer so scrubbing does not accidentally
+   fire a backlog of sound events.
+6. **Broader coverage after profiling.** Measure the small batch, then introduce time-window
+   loading and caching only where needed. Report missing geometry/metadata coverage explicitly
+   while expanding the locally cached catalog.
