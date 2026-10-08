@@ -1,6 +1,8 @@
 {
-  "_readme": "Hand-edited collision table. kind = bump | crash | explosion | fragmentation (the SFX bank). families = launch designators (YYYY-NNN) whose debris belongs to the event; norad = parent catalog numbers, resolved to families at build time. source: 'scd' = from explode-5.scd (2019), 'new' = added 2026, worth double-checking. alt_km = approximate breakup altitude (from memory, verify).",
+  "_readme": "Hand-edited collision table. ref = optional {text, url} citation shown in the data table. kind = bump | crash | explosion | fragmentation (the SFX bank). families = launch designators (YYYY-NNN) whose debris belongs to the event; norad = parent catalog numbers, resolved to families at build time. source: 'scd' = from explode-5.scd (2019), 'new' = added 2026, worth double-checking. alt_km = approximate breakup altitude (from memory, verify).",
   "events": [
+    { "date": "1965-10-15", "name": "Titan 3C Transtage breakup", "kind": "fragmentation", "alt_km": 739, "families": ["1965-082"], "source": "nasa-1999",
+      "ref": { "text": "Portree & Loftus, Orbital Debris: A Chronology, NASA/TP-1999-208856 (1999)", "url": "https://ntrs.nasa.gov/citations/19990041784" } },
     { "date": "1985-09-13", "name": "Solwind P78-1 + ASM-135 ASAT", "kind": "crash", "alt_km": 525, "families": ["1979-017"], "source": "scd" },
     { "date": "1994-01-14", "name": "Mir + Soyuz TM-17", "kind": "bump", "families": [], "source": "scd" },
     { "date": "1997-06-25", "name": "Mir + Progress M-34", "kind": "bump", "families": [], "source": "scd" },

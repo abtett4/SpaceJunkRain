@@ -81,7 +81,7 @@
   <details class="tables">
     <summary>Data tables</summary>
     <h3>Collisions and breakups</h3>
-    <table id="events-table"><thead><tr><th>Date (UTC)</th><th>Event</th><th>Kind</th><th class="num">Reentered</th><th class="num">Still in orbit</th></tr></thead><tbody></tbody></table>
+    <table id="events-table"><thead><tr><th>Date (UTC)</th><th>Event</th><th>Kind</th><th class="num">Reentered</th><th class="num">Still in orbit</th><th>Source</th></tr></thead><tbody></tbody></table>
     <h3>Streaks noted on the Time in orbit chart</h3>
     <table id="streaks-table"><thead><tr><th>Launch</th><th>Source</th><th>Objects</th><th class="num">Reentered</th><th>Reentries</th><th class="num">Time in orbit</th><th>Why it streaks</th></tr></thead><tbody></tbody></table>
     <h3>Largest sources</h3>
@@ -94,6 +94,7 @@
     <ul>
       <li>Decay dates come from the SATCAT and Space-Track's historical decay messages, which record each one to the day only. Each dot sits on its real day; nothing is smoothed or resampled. Within a row, dots are spread up and down only so they don't overlap.</li>
       <li>A "source" is everything from one launch (its international designator, e.g. 1999-025). Debris usually keeps its parent's designator, so a breakup shows up as a burst within one source.</li>
+      <li>Reentries bunch up around solar maxima: a more active Sun heats and expands the upper atmosphere, so drag pulls objects down faster. NASA's history of the problem records the 1978–80 and 1989–91 maxima doing exactly this, from Skylab's early fall to the quick decay of the Solwind debris (<a href="https://ntrs.nasa.gov/citations/19990041784" target="_blank" rel="noopener">Portree &amp; Loftus, <em>Orbital Debris: A Chronology</em>, NASA/TP-1999-208856, 1999</a>).</li>
       <li>"Still in orbit" counts every tracked object, working satellites included. Only tracked objects appear here, roughly softball-sized and up in low orbit. Collision dates and altitudes are hand-curated.</li>
     </ul>
     <p class="credit-small">Builds on <em>Space Junk Rain</em> (2019), a SuperCollider sonification by Gerald Robinson and Alan Tett for ATLS 4519. Design after Edward Tufte, <em>The Visual Display of Quantitative Information</em>.</p>

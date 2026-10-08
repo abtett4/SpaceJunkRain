@@ -20,3 +20,6 @@ satcat.json
 .DS_Store
 __pycache__/
 .claude/
+
+# reference PDFs kept locally; the site links to the published copies
+/*.pdf

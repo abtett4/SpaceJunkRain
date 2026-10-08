@@ -103,6 +103,14 @@ def satcat_from_decay(decay_rows):
     return rows
 
 
+def retrieved_date():
+    """Date (UTC) of the newest raw Space-Track file used, or None for legacy builds."""
+    stamps = [p.stat().st_mtime for p in (find_raw("satcat.json"), find_raw("decay.json")) if p]
+    if not stamps:
+        return None
+    return dt.datetime.fromtimestamp(max(stamps), dt.timezone.utc).date().isoformat()
+
+
 def load_satcat(args, decay_rows):
     if args.legacy:
         rows = []
@@ -202,6 +210,7 @@ def main():
             "t": to_day(e["date"]) if "T" in e["date"] else to_day(e["date"][:10]) - 0.5,
             "date": e["date"], "name": e["name"], "kind": e["kind"], "source": e.get("source"),
             "alt": e.get("alt_km"),
+            "ref": e.get("ref"),
             "families": [fam_index[f] for f in fams if f in fam_index],
         })
 
@@ -210,6 +219,8 @@ def main():
         "legacy": bool(args.legacy),
         "approxLaunch": approx,
         "generated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+        # when the raw Space-Track files were downloaded (the citation date), not when this ran
+        "retrieved": retrieved_date(),
         "epoch": "1957-01-01T00:00:00Z",
         "types": TYPES,
         "rcs": RCS,

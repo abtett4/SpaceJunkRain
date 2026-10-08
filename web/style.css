@@ -209,6 +209,8 @@ table { border-collapse: collapse; width: 100%; margin: 6px 0 16px; font-size: 1
 th, td { text-align: left; padding: 3px 8px; }
 thead th { border-bottom: 1px solid var(--rule); color: var(--muted); font-weight: 400; font-variant: small-caps; letter-spacing: .05em; }
 tbody tr:last-child td { border-bottom: 1px solid var(--rule); }
+td.src { font-size: 14px; color: var(--text-secondary); min-width: 14em; }
+td.src a { color: inherit; }
 .num { text-align: right; font-variant-numeric: lining-nums tabular-nums; }
 
 .notes { margin-top: 26px; color: var(--text-secondary); font-size: 15.5px; max-width: 780px; }
