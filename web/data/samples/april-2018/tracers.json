@@ -8,7 +8,8 @@
       "2018-04-10T00:00:00Z"
     ],
     "playbackRate": 7200,
-    "defaultLeadSeconds": 86400,
+    "defaultLeadSeconds": 14400,
+    "defaultTrailSeconds": 300,
     "surfacePulseSeconds": 14400,
     "eventCount": 12,
     "coverage": {

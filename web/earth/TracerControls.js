@@ -9,7 +9,7 @@ export function normalizeSettings(value, availableSeconds, defaults = {}) {
     ? Math.max(min, Math.min(max, raw[key])) : fallback;
   return {
     reentryLeadSeconds: number('reentryLeadSeconds', Math.min(defaults.reentryLeadSeconds ?? 7200, availableSeconds), Math.min(30, availableSeconds), availableSeconds),
-    trailSeconds: number('trailSeconds', Math.min(1200, availableSeconds), 0, Math.min(7200, availableSeconds)),
+    trailSeconds: number('trailSeconds', Math.min(defaults.trailSeconds ?? 1200, 7200, availableSeconds), 0, Math.min(7200, availableSeconds)),
     widthScale: number('widthScale', 3, 0.5, 3),
     markerScale: number('markerScale', 3, 0.5, 3),
   };

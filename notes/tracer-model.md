@@ -387,7 +387,8 @@ EarthScene keeps its data-agnostic tracers/pulses; it has no new acquisition kno
 The three object-class lanes use amber marks; color is still not a configurable property.
 The globe contains no text labels. Other events remain in the scene when one is inspected.
 
-The default 24-hour lead window allows overlap. Tiangong-1 therefore uses its reference
+The default 4-hour lead window keeps each event brief, with 5 minutes of visible trail.
+Both durations are adjustable in Configure tracer and apply to every event. Tiangong-1 therefore uses its reference
 loop by default; choosing at most two hours restores its prepared SGP4 samples. Other
 orbital inputs use their individually sourced height/inclination, fixed reference period
 and illustrative phase. As in phase 2, their node/periapsis directions and placement are
@@ -405,7 +406,7 @@ Earth membership is this complete slice and its inspector does not act as a char
 Audio scheduling, launches, unified filters and Earth-fixed imagery remain later phases.
 
 Sample preferences use `sjr-sample-tracer-settings-v1`, separate from the single-event
-key; Reset restores the sample's 24-hour lead without overwriting individual-preview
+key; Reset restores the sample's 4-hour lead and 5-minute trail without overwriting individual-preview
 preferences. Browser testing covers playback, pause/resume, ending cleanly, backward
 seeks, sample/single switches, settings and per-event inspection. Automated tests cover
 membership, joins, coverage honesty, imported geometry checksums, mixed overlapping

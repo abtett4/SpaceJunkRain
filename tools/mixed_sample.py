@@ -56,8 +56,10 @@ def build_sample(spec, catalog, catalog_source, root=ROOT):
         raise ValueError("Sample inputs must include every catalog event in the selected interval, exactly once.")
     if sample["playbackRate"] != 7200 or sample["surfacePulseSeconds"] != 14400:
         raise ValueError("This sample policy uses 2 h/second and a 4 h illustrative pulse.")
-    if sample["defaultLeadSeconds"] != 86400:
-        raise ValueError("This sample policy starts with 24 h of reference orbit.")
+    if not 30 <= sample["defaultLeadSeconds"] <= 172800:
+        raise ValueError("Default lead must be between 30 seconds and 48 hours.")
+    if not 0 <= sample.get("defaultTrailSeconds", 1200) <= 7200:
+        raise ValueError("Default trail history must be between zero and 2 hours.")
     assets, events = {}, []
     coverage = {"propagatedInput": 0, "referenceInput": 0, "symbolicInput": 0,
                 "historyNotQueried": 0, "historyQueryEmpty": 0}

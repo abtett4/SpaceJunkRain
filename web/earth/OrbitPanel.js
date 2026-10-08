@@ -192,7 +192,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay) {
         const plural = { PAYLOAD: 'payloads', 'ROCKET BODY': 'rocket bodies', DEBRIS: 'debris objects', UNKNOWN: 'unknown objects' };
         const types = Object.entries(sequence.sample.objectTypes).filter(([,count]) => count).map(([type,count]) => `${count} ${count === 1 ? type.toLowerCase() : plural[type]}`).join(' · ');
         text('sample-coverage', `Every catalog reentry in this interval: ${types}. ${coverage.propagatedInput+coverage.referenceInput} inputs with geometry; ${coverage.historyQueryEmpty} empty history query; ${coverage.historyNotQueried} histories not yet fetched.`);
-        text('tracer-window-limit', 'The passage starts with 24 h before each orbital event. Windows over 2 h use reference loops, including Tiangong-1. Surface pulses last 4 simulated hours (2 s at passage speed); longer windows never repeat them. These are display durations, not reentry durations.');
+        text('tracer-window-limit', `Applies to every event in this passage. Defaults: ${formatDuration(sequence.sample.defaultLeadSeconds)} before each event and ${formatDuration(sequence.sample.defaultTrailSeconds ?? 1200)} of trail history. Windows over 2 h use reference loops, including Tiangong-1. Surface pulses last at most 4 simulated hours (2 s at passage speed); shorter windows clip them. These are display durations, not reentry durations.`);
         scene.camera.yaw = 0.8; scene.camera.pitch = 0.2;
       } else {
         text('tracer-window-limit', selected.propagated ? 'Up to 2 h uses prepared SGP4 samples. Longer windows use an illustrative reference loop; maximum 48 h.'
@@ -202,7 +202,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay) {
       }
       slider.disabled = replay.disabled = pause.disabled = false;
       controls = mountTracerControls(sequence.maxSeconds, applySettings, mixed
-        ? { key: SAMPLE_SETTINGS_KEY, defaults: { reentryLeadSeconds: sequence.sample.defaultLeadSeconds } } : {});
+        ? { key: SAMPLE_SETTINGS_KEY, defaults: { reentryLeadSeconds: sequence.sample.defaultLeadSeconds, trailSeconds: sequence.sample.defaultTrailSeconds } } : {});
       if (mixed) makeScore();
       if (firstLoad && mixed) clock.seek(range()[0]);
       firstLoad = false;

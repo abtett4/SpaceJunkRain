@@ -61,11 +61,14 @@ test('sample preferences have their own defaults and never replace single-event 
   const values = new Map(), storage = { getItem: k => values.get(k), setItem: (k,v) => values.set(k,v), removeItem: k => values.delete(k) };
   writeSettings(storage, { ...settings, reentryLeadSeconds: 7200 });
   const original = values.get(SETTINGS_KEY);
-  const opts = { key: SAMPLE_SETTINGS_KEY, defaults: { reentryLeadSeconds: 86400 } };
-  assert.equal(readSettings(storage, 172800, opts).reentryLeadSeconds, 86400);
+  const sample = manifest().sample;
+  const opts = { key: SAMPLE_SETTINGS_KEY, defaults: { reentryLeadSeconds: sample.defaultLeadSeconds, trailSeconds: sample.defaultTrailSeconds } };
+  assert.equal(readSettings(storage, 172800, opts).reentryLeadSeconds, 14400);
+  assert.equal(readSettings(storage, 172800, opts).trailSeconds, 300);
   writeSettings(storage, { ...settings, reentryLeadSeconds: 43200 }, false, SAMPLE_SETTINGS_KEY);
   assert.equal(readSettings(storage, 172800, opts).reentryLeadSeconds, 43200);
   writeSettings(storage, settings, true, SAMPLE_SETTINGS_KEY);
-  assert.equal(readSettings(storage, 172800, opts).reentryLeadSeconds, 86400);
+  assert.equal(readSettings(storage, 172800, opts).reentryLeadSeconds, 14400);
+  assert.equal(readSettings(storage, 172800, opts).trailSeconds, 300);
   assert.equal(values.get(SETTINGS_KEY), original);
 });

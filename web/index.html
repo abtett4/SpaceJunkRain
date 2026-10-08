@@ -74,16 +74,16 @@
         </select>
       </div>
       <details class="tracer-config" id="tracer-config">
-        <summary>Configure tracer</summary>
+        <summary>Configure tracer · event timing &amp; trail history</summary>
         <fieldset id="tracer-fields" disabled>
           <legend>Tracer appearance and timing</legend>
           <div class="tracer-settings-grid">
             <div class="tracer-setting">
-              <label for="tracer-window">Before reentry <output id="tracer-window-value" for="tracer-window">2 h</output></label>
+              <label for="tracer-window">Show before each reentry <output id="tracer-window-value" for="tracer-window">2 h</output></label>
               <input id="tracer-window" type="range" min="30" max="7200" step="30" value="7200" aria-describedby="tracer-window-limit">
             </div>
             <div class="tracer-setting">
-              <label for="tracer-history">Trail history <output id="tracer-history-value" for="tracer-history">20 min</output></label>
+              <label for="tracer-history">Visible trail history <output id="tracer-history-value" for="tracer-history">20 min</output></label>
               <input id="tracer-history" type="range" min="0" max="7200" step="30" value="1200" aria-describedby="tracer-history-note">
             </div>
             <div class="tracer-setting">

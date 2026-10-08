@@ -154,7 +154,7 @@ This is a visual sequence on the shared clock; the colleague's audio layer remai
 later integration.
 
 Six objects have orbital inputs: the existing Tiangong-1 SGP4 asset plus five newly fetched
-three-day GP_HISTORY snapshots. The sample defaults to 24 hours before each orbital event,
+three-day GP_HISTORY snapshots. The sample defaults to 4 hours before each orbital event with 5 minutes of visible trail,
 so all six use reference loops at that setting. At two hours or less Tiangong-1 returns to
 its prepared SGP4 replay. Six objects use illustrative surface pulses: five histories have
 not been queried for this small sample, and the Fengyun-1C debris query returned no rows.
@@ -166,7 +166,9 @@ pause, inspect and jump near that event without hiding the others. Expand **Even
 and provenance** to choose any object and read its source epoch, mode, unknown fields and
 provenance. Active objects and the sample count follow the same clock as the full historical
 charts. Pause/Resume and scrubbing work across the collection; playback stops at April 10
-00:00 UTC. The existing Speed menu also has a slower passage setting.
+00:00 UTC. The existing Speed menu also has a slower passage setting. In **Configure tracer**,
+**Show before each reentry** changes the event lead-up and **Visible trail history**
+changes the trail length. Both apply to each event and are saved in this browser.
 
 The sample's missing-orbit pulse is a **four-hour simulation-time motif**, taking two
 seconds at the preset speed. It ends at the assigned event anchor, has a stable random
