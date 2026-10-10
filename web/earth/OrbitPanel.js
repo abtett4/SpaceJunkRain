@@ -1,3 +1,4 @@
+import { skipFocusDirection } from './SkipFocus.js';
 import { validateHistoryIndex, loadHistoryChunk } from './HistoryChunks.js';
 // One event or a bounded passage, using the timeline's existing simulation clock.
 import { formatDuration } from './TracerControls.js';
@@ -341,6 +342,10 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     if (scene.imageryError) text('earth-render-status', 'Earth imagery unavailable; showing a plain globe. Geographic inspection still works.');
     disposeGeography = await mountGeographyPanel(scene);
     unsubscribe = clock.subscribe(state => {
+      if (sequence && settings.skipQuietIntervals && state.reason === 'advance' && Number.isFinite(state.skippedToMs)) {
+        const direction = skipFocusDirection(sequence,state.skippedToMs,state.nowMs);
+        if (direction) focus(direction);
+      }
       update(state);
       if (transitioning && ['pause','seek'].includes(state.reason)) {
         transitioning=false; revision++; loadController?.abort(); pause.textContent='▶ Resume';

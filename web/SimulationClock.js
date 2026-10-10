@@ -17,8 +17,8 @@ export class SimulationClock {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   }
-  emit(reason, previousMs = this.nowMs) {
-    const state = { nowMs: this.nowMs, previousMs, playing: this.playing, rate: this.rate, reason };
+  emit(reason, previousMs = this.nowMs, details = {}) {
+    const state = { nowMs: this.nowMs, previousMs, playing: this.playing, rate: this.rate, reason, ...details };
     this.listeners.forEach((fn) => fn(state));
   }
   seek(ms) {
@@ -71,6 +71,7 @@ export class SimulationClock {
     let cursor = this.nowMs;
     for (const [start,end] of plan.windows) {
       if (end <= cursor) continue;
+      if (start > cursor) this.skippedToMs = start;
       cursor = Math.max(cursor,start);
       const available = end-cursor;
       if (budget < available) return cursor+budget;
@@ -83,9 +84,10 @@ export class SimulationClock {
     if (!Number.isFinite(elapsedRealMs) || elapsedRealMs < 0) throw new Error('Invalid elapsed time.');
     if (!this.playing) return;
     const previous = this.nowMs;
+    this.skippedToMs = null;
     this.nowMs = this.playbackTarget(elapsedRealMs * this.rate);
     if (this.nowMs >= this.untilMs) this.playing = false;
-    this.emit('advance', previous);
+    this.emit('advance', previous, { skippedToMs: this.skippedToMs });
   }
   pause() {
     if (this.frame !== null) this.cancelFrame(this.frame);
