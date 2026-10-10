@@ -11,6 +11,27 @@ deserves a visual representation. For example, NORAD 38023 can still receive an
 illustrative or symbolic tracer even though its final known elements are too old for the
 current near-decay propagation test.
 
+## Collaboration responsibilities (updated 2026-10-10)
+
+- Tyler: orbital-history research and preprocessing, bounded orbital representations,
+  reusable Earth rendering, orbital tracers, geographical inspection and launch/reentry
+  visualization. The scope and scientific constraints discussed here remain unchanged.
+- Original collaborator: existing timeline/data visualizations and sound for orbital events.
+- New collaborator: solar-weather visualization around Earth, with color/transparency driven
+  by solar data, plus sound corresponding to solar measurements and their magnitude. The
+  exact measured quantities, units, spatial meaning and mappings remain hers to define.
+- Shared integration: event schema, simulation time, coordinate conventions, layout and
+  playback/seek behavior. Solar observations and orbital events are distinct data streams
+  subscribed to the same clock; neither needs an independent simulation timer.
+
+Keep the base atmosphere as a decorative rendering effect, explicitly separate from a
+future data-driven solar-weather layer. Provide a small scene-layer attachment interface
+with time and Earth transforms; do not implement guessed solar data, solar-to-color mappings
+or either audio system as part of Tyler's Earth upgrade. Preserve space for both audio
+channels and their independent controls in the eventual shared interface.
+
+Nothing is published or sent to collaborators without Tyler's approval.
+
 ## Keep evidence and presentation separate
 
 1. **Event:** what happened, to which object(s), and on which reported day or interval.
@@ -328,17 +349,58 @@ Recommended sequence:
 3. **Small mixed event sample — complete.** Twelve events from April 2–9, 2018 share
    one scene and the existing clock. Six have orbital inputs and six are surface pulses,
    with missing-query and not-yet-queried inputs distinguished. Details below.
-4. **One launch example.** Add a sourced launch-site lookup, site pulse and first-known
-   orbital arc. Distinguish parental launch from fragment creation/deployment; any connecting
-   arc is illustrative rather than a reconstructed powered ascent. Test launch-follow time.
+4. **Earth appearance, geographical inspection, then one launch.** First adapt Cosmic
+   Clock's surface textures, day/night lighting and atmosphere into the existing Earth scene,
+   with explicit coordinate-frame/time handling. Add geographical hover inspection as described
+   below. Then add a sourced launch-site pulse and first-known orbital arc. Distinguish parental
+   launch from fragment creation/deployment; any connecting arc is illustrative rather than a
+   reconstructed powered ascent. Test launch-follow time.
 5. **Unified presentation and audio contract.** Refine Earth presentation with explicit
    coordinate-frame/time handling before adding geographical imagery. Connect event selection,
    filters and configuration across views. Define forward-play event crossings, pause, seek
-   and replay behavior with the colleague's audio layer so scrubbing does not accidentally
+   and replay behavior with both collaborators' audio layers so scrubbing does not accidentally
    fire a backlog of sound events.
 6. **Broader coverage after profiling.** Measure the small batch, then introduce time-window
    loading and caching only where needed. Report missing geometry/metadata coverage explicitly
    while expanding the locally cached catalog.
+
+## Planned Earth appearance and geographical inspection
+
+The next visual milestone is the existing mixed passage on a textured, lit Earth adapted
+from Cosmic Clock, followed by one launch example. This section records the plan; the
+textured Earth and location inspector are not implemented yet.
+
+Reuse the Earth surface/day-night/atmosphere rendering and pointer-to-latitude/longitude
+math from Cosmic Clock. Adapt these components inside SpaceJunkRain after agreeing on
+extraction scope; leave the Cosmic Clock project unchanged. The geographic transform must
+match the rendered Earth, camera, viewport and shared simulation time. Keep source orbital
+frames and illustrative replay mappings explicit. Carry texture credits and identify the
+surface/night-light images as static context, not date-specific historical observations.
+
+Hovering the visible surface should identify the location under the pointer. Requested
+examples are “Near Kennedy Space Center”, “Near Houston”, “Near Los Angeles”, and
+“Pacific Ocean”. Use a small, sourced local place dataset for space facilities and major
+cities, plus land/region and named ocean/sea geography. Cosmic Clock's time-zone lookup
+alone does not supply these names. No geocoding request is needed for each pointer move.
+
+Use the containing land/water region as context and a nearby facility or city only within
+an explicit, documented distance threshold. Include approximate distance when showing
+“near”; facility priority applies only within its own nearby radius. A point far from all
+listed places falls back to its region/ocean and coordinates, not a distant city described
+as nearby. A missing region returns coordinates with a location-unavailable label. The
+initial release is a curated geographic reference, not exhaustive address lookup; source
+coverage and boundary simplification should remain documented.
+
+Show the readout in the page beside or below Earth, without permanent labels over the
+model. Hide transient hover information off the globe and during camera dragging. Recompute
+for camera/zoom/time changes, including Earth rotation beneath a stationary pointer. Provide
+a tap/click-to-pin equivalent, and a keyboard-accessible way to inspect geography.
+
+This readout describes Earth under the pointer, not the position of an orbital object or
+a predicted impact. Hovering a randomly placed symbolic pulse must retain its illustrative
+location label; no geographic name is written back as a sourced event location. Validate
+picking at different rotations, zoom levels and viewport sizes, land/ocean fallbacks and
+nearby-place distance cutoffs before exposing the feature.
 
 ## Phase 3: small mixed passage
 
