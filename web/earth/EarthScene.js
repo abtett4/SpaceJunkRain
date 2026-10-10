@@ -1,3 +1,4 @@
+import { DEFAULTS, STYLE } from '../PresentationConfig.js';
 import P5 from '../vendor/p5.esm.min.js';
 import { Tracer } from './Tracer.js';
 import { CameraController } from './CameraController.js';
@@ -23,7 +24,7 @@ function sphereMesh() {
 
 // A camera-facing ribbon gives continuous width and opacity between source samples.
 // Both taper along the visible path, from zero at the oldest point to full at the head.
-function drawTaperedTrail(p, points, eye, width, color) {
+function drawTaperedTrail(p, points, eye, width, color, opacity, widthTaper, opacityTaper) {
   if (points.length < 2) return;
   const distances = [0];
   for (let i = 1; i < points.length; i++) {
@@ -47,8 +48,8 @@ function drawTaperedTrail(p, points, eye, width, color) {
     if (i && side.reduce((sum, v, j) => sum + v * previousSide[j], 0) < 0) side = side.map(v => -v);
     previousSide = side;
     const progress = distances[i] / length;
-    const halfWidth = width * progress / 2;
-    tint.setAlpha(255 * progress * progress);
+    const halfWidth = width * progress ** widthTaper / 2;
+    tint.setAlpha(255 * opacity * progress ** opacityTaper);
     p.fill(tint);
     p.vertex(...point.map((v, j) => v - side[j] * halfWidth));
     p.vertex(...point.map((v, j) => v + side[j] * halfWidth));
@@ -58,6 +59,7 @@ function drawTaperedTrail(p, points, eye, width, color) {
 
 export class EarthScene {
   constructor(element) {
+    this.settings = DEFAULTS;
     this.tracers = [];
     this.pulses = [];
     this.timeMs = 0;
@@ -114,6 +116,7 @@ export class EarthScene {
     this.tracers.push(tracer);
     return tracer;
   }
+  configureAppearance(settings) { this.settings = settings; this.p.redraw(); }
   setTime(timeMs) {
     if (timeMs !== this.timeMs) this.state = earthState(timeMs);
     this.timeMs = timeMs; this.p.redraw();
@@ -149,7 +152,7 @@ export class EarthScene {
   draw(p) {
     if (!this.camera || !this.mesh) return;
     const camera = this.camera;
-    p.background('#081b2c');
+    p.background(STYLE.background);
     p.perspective(camera.fov, p.width / p.height, 0.05, 100);
     p.camera(...camera.eye, 0, 0, 0, 0, 1, 0);
     p.noStroke();
@@ -158,12 +161,15 @@ export class EarthScene {
       this.shader.setUniform('uEarthRotation', this.state.rotation);
       this.shader.setUniform('uSun', this.state.sunDirection);
       this.shader.setUniform('uEye', camera.eye);
+      this.shader.setUniform('uBrightness', this.settings.earthBrightness);
+      this.shader.setUniform('uNightIntensity', this.settings.nightLights);
+      this.shader.setUniform('uAtmosphereOpacity', this.settings.atmosphereOpacity);
       this.shader.setUniform('uRadius', 1);
       this.shader.setUniform('uAtmosphere', 0);
       p.model(this.mesh);
       // Decorative rim only. Do not write its transparent surface into the depth buffer.
       p.fill(255, 100);
-      this.shader.setUniform('uRadius', 1.018);
+      this.shader.setUniform('uRadius', STYLE.atmosphereRadius);
       this.shader.setUniform('uAtmosphere', 1);
       p.drawingContext.depthMask(false);
       p.model(this.mesh);
@@ -178,14 +184,14 @@ export class EarthScene {
       p.push();
       try {
         layer.draw({ p, timeMs: this.timeMs, earthRotation: [...this.state.rotation],
-          sunDirection: [...this.state.sunDirection], eye: [...camera.eye], earthRadius: 1 });
+          sunDirection: [...this.state.sunDirection], eye: [...camera.eye], earthRadius: 1, settings: this.settings });
       } finally { p.pop(); p.resetShader(); p.noLights(); p.drawingContext.depthMask(true); }
     }
     for (const tracer of this.tracers) {
       const sample = tracer.sample(this.timeMs);
-      if (!sample) continue;
-      drawTaperedTrail(p, sample.tail, camera.eye, tracer.lineWidthEarth, tracer.color);
-      p.push(); p.translate(...sample.head); p.noStroke(); p.fill(tracer.color);
+      if (!sample || tracer.opacity === 0) continue;
+      drawTaperedTrail(p, sample.tail, camera.eye, tracer.lineWidthEarth, tracer.color, tracer.opacity, tracer.widthTaper, tracer.opacityTaper);
+      p.push(); p.translate(...sample.head); p.noStroke(); const tint = p.color(tracer.color); tint.setAlpha(255 * tracer.opacity); p.fill(tint);
       p.sphere(tracer.markerRadiusEarth, 12, 8); p.pop();
     }
     for (const pulse of this.pulses) {

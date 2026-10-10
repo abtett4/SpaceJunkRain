@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 2,
+  "events": [
+    {
+      "schemaVersion": 1,
+      "eventId": "43267:launch:2018-04-02",
+      "eventKind": "launch",
+      "object": {
+        "noradId": 43267,
+        "objectId": "2018-032A",
+        "name": "DRAGON CRS-14",
+        "launchFamily": "2018-032"
+      },
+      "representation": {
+        "kind": "individual",
+        "noradIds": [
+          43267
+        ],
+        "representedObjectCount": 1
+      },
+      "eventTime": {
+        "date": "2018-04-02",
+        "precision": "reported-time",
+        "resolutionSeconds": 60,
+        "intervalUtc": [
+          "2018-04-02T20:30:00Z",
+          "2018-04-02T20:31:00Z"
+        ],
+        "basis": "reported",
+        "source": "launchReport",
+        "intervalMeaning": "NASA reports 4:30 p.m. EDT, converted to 20:30 UTC. Seconds are not reported; the display anchor is the start of that minute."
+      },
+      "attributes": {
+        "structure": {
+          "value": "spacecraft payload",
+          "basis": "reported",
+          "source": "launchReport"
+        },
+        "debrisOrigin": {
+          "value": null,
+          "basis": "unknown",
+          "note": "No sourced collision or fragmentation link in these inputs."
+        },
+        "parentNoradIds": {
+          "value": null,
+          "basis": "unknown",
+          "note": "No established parent-object link."
+        },
+        "breakupEventId": {
+          "value": null,
+          "basis": "unknown",
+          "note": "No sourced breakup association."
+        },
+        "physicalSize": {
+          "value": null,
+          "basis": "unknown",
+          "note": "No sourced dimensions or mass; radar size is a separate proxy."
+        },
+        "orbitRegimeLifetime": {
+          "value": null,
+          "basis": "unknown",
+          "note": "A terminal orbit does not establish lifetime regime."
+        },
+        "eventLocation": {
+          "value": {
+            "name": "Space Launch Complex 40, Cape Canaveral",
+            "latitudeDeg": 28.562,
+            "longitudeDeg": -80.5772,
+            "note": "Published pad reference coordinates, not an ascent track. Coordinates use the 2025 guide; site identity comes from the 2018 launch report."
+          },
+          "basis": "reported",
+          "source": "launchReport + siteCoordinates"
+        },
+        "owner": {
+          "value": null,
+          "basis": "unknown",
+          "note": "Catalog country is not institutional ownership."
+        },
+        "operator": {
+          "value": "SpaceX",
+          "basis": "reported",
+          "source": "launchReport"
+        },
+        "missionType": {
+          "value": "ISS cargo resupply",
+          "basis": "reported",
+          "source": "launchReport"
+        },
+        "functionalStatus": {
+          "value": null,
+          "basis": "unknown",
+          "note": "No event-time operational state established."
+        },
+        "reentryControl": {
+          "value": null,
+          "basis": "unknown",
+          "note": "No sourced controlled/uncontrolled determination."
+        },
+        "objectType": {
+          "value": "PAYLOAD",
+          "basis": "reported",
+          "source": "catalog:cols.k"
+        },
+        "radarSize": {
+          "value": "LARGE",
+          "basis": "proxy",
+          "source": "catalog:cols.r",
+          "note": "Radar class, not diameter or mass."
+        },
+        "catalogCountry": {
+          "value": null,
+          "basis": "unknown",
+          "note": "No COUNTRY_CODE in selected GP record."
+        },
+        "launchSite": {
+          "name": "Space Launch Complex 40, Cape Canaveral",
+          "coordinates": {
+            "latitudeDeg": 28.562,
+            "longitudeDeg": -80.5772,
+            "basis": "reported",
+            "source": "siteCoordinates"
+          }
+        },
+        "orbitReference": {
+          "epochUtc": "2018-04-02T20:54:48.108096Z",
+          "frame": "TEME",
+          "basis": "reported",
+          "source": "gpHistory",
+          "meaning": "Earliest usable orbital descriptors in the retrieved post-launch interval; not an ascent trajectory.",
+          "inclinationDeg": 51.6437,
+          "raanDeg": 34.3281,
+          "perigeeKm": 203.778,
+          "apogeeKm": 356.6,
+          "eccentricity": 0.011476,
+          "periodMinutes": 90.117
+        },
+        "orbitRegimeReference": {
+          "value": "LEO",
+          "basis": "derived",
+          "source": "gpHistory",
+          "rule": "positive-perigee-apogee-below-2000km-v1"
+        }
+      },
+      "presentation": {
+        "mode": "launch-reference-orbit",
+        "displayAnchorUtc": "2018-04-02T20:30:00Z",
+        "anchorBasis": "reported",
+        "anchorPolicy": {
+          "policy": "reported-minute-start"
+        },
+        "startTime": "2018-04-02T20:30:00Z",
+        "endTime": "2018-04-04T20:30:00Z",
+        "maxDisplaySeconds": 172800,
+        "orbitStartTime": "2018-04-02T20:54:48.108096Z",
+        "geometryAsset": "trajectories/43267-launch-reference.json",
+        "geometryFrame": "illustrative-equatorial",
+        "geometryUnits": "km",
+        "modeReason": "Earliest usable record in the retrieved 48-hour interval is 24.80 minutes after launch.",
+        "timeMapping": "Sourced pad pulse begins at launch. A separate reference loop starts at the selected orbital epoch. No connecting ascent path.",
+        "locationClaim": "launch-site-only",
+        "surfacePulse": {
+          "latitudeDeg": 28.562,
+          "longitudeDeg": -80.5772,
+          "basis": "reported",
+          "locationPolicy": "sourced-launch-site-v1",
+          "timing": "single-pulse-starting-at-display-anchor",
+          "durationSeconds": 14400
+        }
+      },
+      "bounds": {
+        "sourceDelayAfterLaunchSeconds": 1488.108096,
+        "maxDisplaySeconds": 172800,
+        "meaning": "Source delay and display limits, not physical error bounds."
+      },
+      "sources": {
+        "launchReport": {
+          "url": "https://www.nasa.gov/image-article/falcon-9-lifts-off-spacex-crs-14/",
+          "title": "Falcon 9 Lifts Off for SpaceX CRS-14",
+          "published": "2018-04-02",
+          "accessed": "2026-10-10"
+        },
+        "siteCoordinates": {
+          "url": "https://www.spacex.com/assets/media/falcon-users-guide-2025-05-09.pdf",
+          "title": "Falcon Payload User's Guide, Version 8, March 2025",
+          "page": 58,
+          "pdfPage": 69,
+          "accessed": "2026-10-10"
+        },
+        "gpHistory": {
+          "path": "data/raw/gp_history/43267/c8f00f4d2a11f0a5/response.json",
+          "query": "/basicspacedata/query/class/gp_history/NORAD_CAT_ID/43267/EPOCH/2018-04-02T20:30:00--2018-04-04T20:30:00/orderby/EPOCH asc/format/json",
+          "sha256": "977dc21442fdc354d32a0a5488b668960001fde20f27e683178947bdc10f8ae8",
+          "retrievedAt": "2026-10-10T17:17:41Z",
+          "source": "USSPACECOM via Space-Track.org",
+          "rowCount": 11
+        },
+        "catalog": "web/data/decays.json"
+      },
+      "geometryProvenance": {
+        "gpId": "119065128",
+        "elementSha256": "3203bba7de21a629bc1859d8a5c349230431f4b8e5d7f276b9948fe745d318de",
+        "selection": "Earliest valid epoch at/after launch and before launch + 48 h; largest GP_ID breaks epoch ties.",
+        "skippedRecords": []
+      }
+    }
+  ]
+}

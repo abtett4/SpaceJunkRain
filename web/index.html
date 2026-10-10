@@ -8,16 +8,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=20261010-launch-config">
 </head>
 <body>
 <main class="viz-root">
   <header class="hero">
     <div class="topline">
       <p class="eyebrow">Space Junk Rain · 1957 to today</p>
-      <button type="button" class="theme-switch" id="theme" role="switch" aria-checked="false" aria-label="Blueprint (dark) mode">
-        <span class="opt">Paper</span><span class="track" aria-hidden="true"><span class="knob"></span></span><span class="opt">Blueprint</span>
-      </button>
+
     </div>
     <h1><span id="h-down">–</span> catalogued objects have fallen back to Earth.<br><span class="soft" id="h-up"></span></h1>
     <p class="lede">Each one is placed on the day it came down and traced back to the launch it came from. A single collision or anti-satellite test can keep debris raining down for decades, or clear out within months, depending on how high it happened.</p>
@@ -55,7 +53,7 @@
       <label>Highlight
         <select id="family"><option value="-1">Nothing</option></select>
       </label>
-      <label class="check"><input type="checkbox" id="notes" checked> Notes</label>
+
     </div>
     <div class="typefilter" id="typefilter" role="group" aria-label="Object types shown" hidden></div>
 
@@ -67,43 +65,21 @@
       </div>
       <div class="orbit-example"><label for="orbit-example">Preview input</label>
         <select id="orbit-example">
-          <option value="data/samples/april-2018/tracers.json">Mixed passage · April 2–9, 2018</option>
+          <option value="data/samples/april-2018-launch/tracers.json">Launch & reentries · April 2–9, 2018</option>
+          <option value="data/samples/april-2018-launch/launch.json">Dragon CRS-14 · sourced launch</option>
           <option value="data/tracers.json">Tiangong-1 · recent orbital history</option>
           <option value="data/fallbacks/stale/tracers.json">Iridium 33 debris · stale reference orbit</option>
           <option value="data/fallbacks/empty/tracers.json">Same debris event · empty near-event query</option>
         </select>
       </div>
       <details class="tracer-config" id="tracer-config">
-        <summary>Configure tracer · event timing &amp; trail history</summary>
-        <fieldset id="tracer-fields" disabled>
-          <legend>Tracer appearance and timing</legend>
-          <div class="tracer-settings-grid">
-            <div class="tracer-setting">
-              <label for="tracer-window">Show before each reentry <output id="tracer-window-value" for="tracer-window">2 h</output></label>
-              <input id="tracer-window" type="range" min="30" max="7200" step="30" value="7200" aria-describedby="tracer-window-limit">
-            </div>
-            <div class="tracer-setting">
-              <label for="tracer-history">Visible trail history <output id="tracer-history-value" for="tracer-history">20 min</output></label>
-              <input id="tracer-history" type="range" min="0" max="7200" step="30" value="1200" aria-describedby="tracer-history-note">
-            </div>
-            <div class="tracer-setting">
-              <label for="tracer-width">Trail width <output id="tracer-width-value" for="tracer-width">3×</output></label>
-              <input id="tracer-width" type="range" min="0.5" max="3" step="0.25" value="3">
-            </div>
-            <div class="tracer-setting">
-              <label for="tracer-size">Marker size <output id="tracer-size-value" for="tracer-size">3×</output></label>
-              <input id="tracer-size" type="range" min="0.5" max="3" step="0.25" value="3">
-            </div>
-            <div class="tracer-settings-actions">
-              <button id="tracer-reset" type="button">Reset defaults</button>
-              <span id="tracer-preferences-note" role="status">Preferences are saved on this browser when available.</span>
-            </div>
-          </div>
-          <p id="tracer-window-limit" class="note">Up to 2 h of prepared orbit is available.</p>
-          <p id="tracer-history-note" class="note">Trail history stays inside the selected window; representative trails show at most one revolution. The trail thins and fades toward its oldest end. Width and size are visual choices.</p>
-          <p class="note">Amber is the current default. Color will reflect object or event data once that mapping is defined.</p>
-          <p class="note">Changes keep the clock in place. Replay passage starts at 2 simulated hours per second; single-event Replay starts at 5 simulated minutes per second. The page's Speed control changes playback speed. Sample and single-event preferences are saved separately.</p>
-        </fieldset>
+        <summary>Configure visualization · shared appearance &amp; event windows</summary>
+        <div id="config-fields"></div>
+        <div class="config-notes">
+          <p id="tracer-window-limit" class="note">Settings apply to all previews and newly loaded events. Source limits can shorten a window.</p>
+          <p class="note">Amber is the default; future color mappings will use event data. Marker sizes and pulses are exaggerated for visibility.</p>
+          <p class="note">Changing settings keeps the clock in place. Replay uses the new window. Passage speed is 2 simulated hours per second; single-event speed is 5 minutes per second. Use Speed above to change playback.</p>
+        </div>
       </details>
       <div class="orbit-grid">
         <div class="orbit-viewport">
@@ -141,6 +117,10 @@
             <span class="orbit-key-trace" aria-hidden="true"></span>
             <div><strong>Orbital tracers</strong><p>Reference geometry or prepared SGP4 replay · no reentry path claim</p></div>
           </div>
+          <div id="launch-key" class="orbit-key" role="group" aria-label="Launch representation key" hidden>
+            <span class="orbit-key-pulse" aria-hidden="true"></span>
+            <div><strong>Launch · sourced site pulse</strong><p>Separate early reference orbit · illustrative orientation and phase · no powered ascent path</p></div>
+          </div>
           <div id="symbolic-event" class="orbit-key" role="group" aria-label="Representation key" hidden>
             <span class="orbit-key-pulse" aria-hidden="true"></span>
             <div><strong>No orbital data representation</strong>
@@ -160,7 +140,7 @@
           <p id="orbit-evidence" class="note"></p>
           <p><strong>Event anchor</strong><br><span id="orbit-anchor">April 2, 2018 · time of day unknown</span></p>
           <p id="orbit-explanation">Choose a preview input to inspect its representation and limitations.</p>
-          <p class="note">Marker size is exaggerated. Orbit descriptors refer to the source epoch; physical size, mission, owner and lifetime orbit remain unassigned.</p>
+          <p class="note">Marker size is exaggerated. Orbit descriptors refer to the source epoch; physical size and lifetime orbit remain unknown unless explicitly sourced. See the JSON for each attribute’s basis.</p>
           <a id="orbit-provenance" href="data/tracers.json">Event attributes and provenance (JSON)</a>
           </details>
         </div>
@@ -169,7 +149,7 @@
         <p class="sample-score-title">Event sequence <span class="note">· click a dot to preview an event</span></p>
         <div id="sample-lanes"></div>
         <div id="sample-dates" aria-hidden="true"></div>
-        <p class="note">Every dot is one event. Days are reported; times within each day are assigned for display. The full catalog timeline below follows the same clock.</p>
+        <p class="note">Every dot is one event. Reentry times are assigned within reported days; the selected launch uses a sourced minute. The full catalog reentry charts below follow the same clock.</p>
       </div>
       <div class="orbit-scrubber">
         <label for="orbit-scrub">Event replay · moves the shared clock</label>
@@ -219,6 +199,22 @@
 
   <div class="tooltip" id="tip" role="tooltip" hidden></div>
 </main>
-<script type="module" src="app.js"></script>
+<!-- Version this entry and map together when changing the static application. -->
+<script type="importmap">
+{
+  "imports": {
+    "./PresentationConfig.js": "./PresentationConfig.js?v=20261010-launch-config",
+    "./ConfigurationPanel.js": "./ConfigurationPanel.js?v=20261010-launch-config",
+    "./earth/OrbitPanel.js": "./earth/OrbitPanel.js?v=20261010-launch-config",
+    "./earth/EventSequence.js": "./earth/EventSequence.js?v=20261010-launch-config",
+    "./earth/Tracer.js": "./earth/Tracer.js?v=20261010-launch-config",
+    "./earth/SurfacePulse.js": "./earth/SurfacePulse.js?v=20261010-launch-config",
+    "./earth/TracerControls.js": "./earth/TracerControls.js?v=20261010-launch-config",
+    "./earth/EarthScene.js": "./earth/EarthScene.js?v=20261010-launch-config",
+    "./earth/EarthShader.js": "./earth/EarthShader.js?v=20261010-launch-config"
+  }
+}
+</script>
+<script type="module" src="app.js?v=20261010-launch-config"></script>
 </body>
 </html>

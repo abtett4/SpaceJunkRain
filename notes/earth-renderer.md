@@ -74,6 +74,8 @@ The adapter implements `draw(frame)` and optionally `dispose()`. Its frame conta
 - `earthRotation`: column-major 3×3 Earth-local-to-display rotation.
 - `sunDirection`: unit vector toward the Sun in display coordinates.
 - `eye`: camera position in display coordinates; `earthRadius`: 1 display unit.
+- `settings`: immutable snapshot from the shared presentation configuration. Add future
+  layer controls to that schema; do not create an independent preference menu.
 
 Draw calls happen after the opaque Earth and decorative atmosphere, before orbital
 tracers/pulses. A transparent overlay should retain depth testing, temporarily
@@ -97,3 +99,8 @@ and aspect ratios, pulse geographic stability, named-place thresholds, polygon
 holes, antimeridian ocean lookups and missing coverage. Existing clock, tracer,
 settings and sample tests remain in use. Browser checks cover imagery orientation,
 keyboard/click inspection, both viewport layouts, shared-clock motion and pulses.
+
+Current appearance defaults and user controls live in `web/PresentationConfig.js`.
+Earth brightness, city lights and decorative atmospheric opacity update through
+`configureAppearance(settings)` without changing time or source data. Tracers and
+pulses consume the same snapshot. See [the configuration contract](launch-and-configuration.md).

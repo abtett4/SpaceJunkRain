@@ -22,35 +22,38 @@ from `web/` (see `.github/workflows/pages.yml`).
 
 ## Tracer visualization model and fallback previews
 
-The existing page now includes a Tiangong-1 orbital tracer. Choose **Replay orbit** to
-watch its default two-hour sample segment in 24 seconds. The timeline and Earth share one clock;
-pausing or scrubbing either control changes the same simulation time. The globe supports
-drag, pinch, scroll, arrow keys, and +/− zoom. No browser credentials or propagation are
-needed: the preview uses the checked-in derived data and a local p5.js module.
+The default preview combines 12 reentries with **one sourced launch, Dragon CRS-14**,
+from April 2–9, 2018. Choose **Replay passage** for the 96-second sequence, or select
+**Dragon CRS-14 · sourced launch** to inspect it alone. A documented launch-site pulse
+is followed by a separate early reference orbit; no powered ascent is reconstructed.
+The timeline and Earth use one clock. No browser credentials or propagation are needed.
+The globe supports drag, pinch, scroll, arrow keys and +/− zoom.
 
-Open **Configure tracer** to set the time shown before reentry (30 seconds to 48 hours),
-trail history (head only to 2 hours), trail width, and marker size. Preferences
-are saved in this browser; **Reset defaults** restores the two-hour window, 20-minute
-history, and large (3×) width/size. If browser storage is unavailable, the
-controls still work for the current visit. The trail tapers to zero width and opacity
-at its oldest end, reaching the selected width and full opacity at the marker.
-Color comes from event presentation data, with amber as the current default; its future
-object/event-data mapping is still to be decided. Color is not a browser preference.
-Earlier saved preferences retain their timing choices and adopt the large size defaults.
+**Configure visualization** is the shared menu for page theme, timeline notes,
+launch/reentry windows, trail history, width, size, opacity/taper, pulse duration/opacity,
+and Earth brightness, city lights and decorative atmosphere. Defaults are four hours
+before reentry / after launch, five minutes of trail history, four-hour pulses, and large
+3× markers and trails. Pulse durations shorten to fit the event window. Preferences
+persist across previews and reloads; reset restores all defaults. If browser storage is
+unavailable, controls work for the current visit. Amber remains fixed pending a data mapping.
 
-Within Tiangong-1’s prepared two-hour segment, a shorter window clips its final portion.
-Longer windows explicitly switch to a representative orbit for the entire display window;
-the SGP4 samples are never stretched or repeated. Window changes keep the event anchor
-and clock fixed. Trail history is clipped to the window and, for representative orbits,
-to at most one revolution. Replay starts the selected window at 300 simulated seconds per real
-second and stops at the event anchor; the existing Speed control remains independent.
-Width and marker size are visual choices, not physical dimensions. The after-launch control
-will follow with the first launch example.
+`web/PresentationConfig.js` owns the current defaults, bounds, migration and subscription
+store. `ConfigurationPanel.js` derives controls from that schema. Page, timeline and Earth
+subscribe to one instance; future layers can add controls there and consume `frame.settings`.
+Source geometry, event anchors and physics remain independent of display preferences.
+See [launch sources, rebuild instructions and the configuration contract](notes/launch-and-configuration.md).
+
+For Tiangong-1, windows up to two hours clip its prepared SGP4 segment. Longer windows
+switch to a representative loop without stretching the source samples. Representative
+trails show at most one revolution. Launch windows run forward from the sourced minute;
+the orbit is hidden until its reference epoch. Changing settings leaves the clock in place;
+Replay adopts the new interval. All windows are capped at 48 hours as a presentation limit.
+The existing Speed control sets playback speed. Width and marker size are visual choices.
 
 Date-only reentries receive stable random display times within their reported UTC day.
 Tiangong-1 is assigned **2018-04-02T15:35:52Z**. This is an animation anchor, not an
 estimated reentry time. The original SGP4 sample timestamps remain separate and visible.
-The plain inertial globe makes no reentry-location or ground-impact claim.
+The textured globe makes no reentry-location or ground-impact claim.
 
 After producing the diagnostic trajectory described below, regenerate the preview offline:
 
@@ -72,7 +75,7 @@ since the existing epoch. Do not treat its fractional part as observed timing pr
 See [the tracer model](notes/tracer-model.md), [the consumed manifest](web/data/tracers.json),
 and [the portable example](data/examples/tracer-37820-reentry.json) for attributes and
 provenance. Missing size, owner, mission, location and lifetime-orbit information stays
-explicitly unknown. The mixed sample is implemented; the next event type is one sourced launch example.
+explicitly unknown. The mixed sample is implemented; the sourced launch example is now included in the default passage.
 
 `web/earth/` adapts Cosmic Clock's textured Earth, day/night lighting, decorative rim,
 and camera/picking components; Cosmic Clock itself is unchanged. Hover over Earth for
@@ -153,8 +156,9 @@ sample specification to the same exporter; broader catalog acquisition remains f
 
 ## Phase 3: a small historical passage
 
-The default Earth preview now plays **all 12 catalogued reentries from April 2–9, 2018**:
-six payloads, one rocket body and five debris objects. **Replay passage** takes 96 seconds
+The original reentry sample contains **all 12 catalogued reentries from April 2–9, 2018**:
+six payloads, one rocket body and five debris objects. The default view now adds one
+selected launch; it does not claim complete launch coverage. **Replay passage** takes 96 seconds
 at two simulated hours per second. Reported days keep their original spacing, including
 quiet intervals. Times within date-only days retain the existing stable assigned times.
 This is a visual sequence on the shared clock; the colleague's audio layer remains a
@@ -168,21 +172,21 @@ not been queried for this small sample, and the Fengyun-1C debris query returned
 Those two coverage states remain distinct in the data and inspector. Missing data is not
 evidence that no orbital history exists.
 
-**Event sequence** shows one dot per event in payload/rocket/debris lanes. Click a dot to
+**Event sequence** shows one dot per event in launch and payload/rocket/debris reentry lanes. Click a dot to
 pause, inspect and jump near that event without hiding the others. Expand **Event details
 and provenance** to choose any object and read its source epoch, mode, unknown fields and
 provenance. Active objects and the sample count follow the same clock as the full historical
 charts. Pause/Resume and scrubbing work across the collection; playback stops at April 10
-00:00 UTC. The existing Speed menu also has a slower passage setting. In **Configure tracer**,
-**Show before each reentry** changes the event lead-up and **Visible trail history**
+00:00 UTC. The existing Speed menu also has a slower passage setting. In **Configure visualization**,
+**Before each reentry** changes the event lead-up and **Visible trail history**
 changes the trail length. Both apply to each event and are saved in this browser.
 
 The sample's missing-orbit pulse is a **four-hour simulation-time motif**, taking two
 seconds at the preset speed. It ends at the assigned event anchor, has a stable random
-surface point, and carries no orbital path or factual reentry location. Single-event
-pulse timing remains unchanged. Keys and labels stay outside the globe. Sample settings
-are saved separately from single-event settings; the default marker and trail remain
-large and amber, with width/opacity taper.
+surface point, and carries no orbital path or factual reentry location. Pulses now use
+the same duration preference in single and mixed previews, shortened to fit the event
+window. Keys stay outside the globe. All previews share one preference store; the default
+marker and trail remain large and amber, with width/opacity taper.
 
 Rebuild offline from the explicit specification (all paths in it are repository-relative):
 

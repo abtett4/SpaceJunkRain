@@ -1,11 +1,13 @@
+import { DEFAULTS, STYLE } from '../PresentationConfig.js';
 // Preserve source geometry (TEME or illustrative); adapt to p5’s screen-down Y.
 // The display reflection keeps north up and geographic east to the right.
 export const toScene = ([x, y, z], radiusKm) => [x / radiusKm, -z / radiusKm, -y / radiusKm].map(v => v === 0 ? 0 : v);
 
 export class Tracer {
-  constructor({ positions, startTime, endTime, radiusKm, color = '#ffd166',
-    objectType = 'UNKNOWN', trailSeconds = 1200, markerRadiusEarth = 0.012, lineWidthEarth = 0.008,
-    loopPeriodSeconds = null, maxDisplaySeconds = null }) {
+  constructor({ positions, startTime, endTime, radiusKm, color = STYLE.color,
+    objectType = 'UNKNOWN', trailSeconds = DEFAULTS.trailSeconds, markerRadiusEarth = STYLE.markerRadiusEarth * DEFAULTS.markerScale,
+    lineWidthEarth = STYLE.lineWidthEarth * DEFAULTS.widthScale,
+    loopPeriodSeconds = null, maxDisplaySeconds = null, anchorEdge = 'end' }) {
     this.startMs = Date.parse(startTime);
     this.endMs = Date.parse(endTime);
     if (!Number.isFinite(this.startMs) || !Number.isFinite(this.endMs) || this.endMs <= this.startMs
@@ -37,19 +39,25 @@ export class Tracer {
     const initialSeconds = (this.endMs - this.startMs) / 1000;
     this.availableSeconds = this.loopPeriodMs === null ? initialSeconds : maxDisplaySeconds ?? initialSeconds;
     if (!Number.isFinite(this.availableSeconds) || this.availableSeconds < initialSeconds) throw new Error('Invalid display limit.');
+    if (!['start', 'end'].includes(anchorEdge) || (anchorEdge === 'start' && this.loopPeriodMs === null)) throw new Error('Unsupported tracer anchor.');
+    this.anchorEdge = anchorEdge;
+    this.anchorMs = anchorEdge === 'start' ? this.startMs : this.endMs;
     this.objectType = objectType;
     this.configure({ visibleSeconds: initialSeconds, color, trailSeconds, markerRadiusEarth, lineWidthEarth });
   }
   configure({ visibleSeconds = (this.endMs - this.startMs) / 1000, color = this.color,
-    trailSeconds = this.trailSeconds, markerRadiusEarth = this.markerRadiusEarth, lineWidthEarth = this.lineWidthEarth }) {
-    if (![visibleSeconds, trailSeconds, markerRadiusEarth, lineWidthEarth].every(Number.isFinite)
+    trailSeconds = this.trailSeconds, markerRadiusEarth = this.markerRadiusEarth, lineWidthEarth = this.lineWidthEarth,
+    opacity = this.opacity ?? DEFAULTS.tracerOpacity, widthTaper = this.widthTaper ?? DEFAULTS.widthTaper, opacityTaper = this.opacityTaper ?? DEFAULTS.opacityTaper }) {
+    if (![visibleSeconds, trailSeconds, markerRadiusEarth, lineWidthEarth, opacity, widthTaper, opacityTaper].every(Number.isFinite)
       || visibleSeconds <= 0 || visibleSeconds > this.availableSeconds || trailSeconds < 0
+      || opacity < 0 || opacity > 1 || widthTaper < 0 || widthTaper > 4 || opacityTaper < 0 || opacityTaper > 4
       || markerRadiusEarth <= 0 || lineWidthEarth <= 0 || !/^#[0-9a-f]{6}$/i.test(color)) {
       throw new Error('Invalid tracer display settings.');
     }
     // Clip the visible interval; never stretch or retime source geometry.
-    this.startMs = this.endMs - visibleSeconds * 1000;
-    Object.assign(this, { color, trailSeconds, markerRadiusEarth, lineWidthEarth });
+    this.startMs = this.anchorEdge === 'start' ? this.anchorMs : this.anchorMs - visibleSeconds * 1000;
+    this.endMs = this.anchorEdge === 'start' ? this.anchorMs + visibleSeconds * 1000 : this.anchorMs;
+    Object.assign(this, { color, trailSeconds, markerRadiusEarth, lineWidthEarth, opacity, widthTaper, opacityTaper });
   }
   positionAt(sourceMs) {
     let lo = 0, hi = this.points.length - 1;
@@ -67,8 +75,8 @@ export class Tracer {
     if (this.loopPeriodMs !== null) {
       const period = this.loopPeriodMs;
       const phase = (t) => ((t % period) + period) % period;
-      // Phase is anchored to the event, so changing window length cannot move the head.
-      const elapsed = nowMs - this.endMs;
+      // Phase is anchored to the fixed event/source epoch, so changing window length cannot move the head.
+      const elapsed = nowMs - this.anchorMs;
       const head = this.positionAt(phase(elapsed));
       const history = Math.min(this.trailSeconds * 1000, period, nowMs - this.startMs);
       const from = elapsed - history;

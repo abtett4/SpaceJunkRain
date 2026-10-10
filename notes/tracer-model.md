@@ -1,5 +1,10 @@
 # Tracer model: useful attributes with bounded approximation
 
+Current implementation (2026-10-10): one sourced launch joins the mixed passage, and a
+single visualization configuration replaces separate sample/single-event preferences.
+[Launch and configuration notes](launch-and-configuration.md) supersede the earlier
+phase-specific control defaults and storage policies documented below.
+
 This is the visualization direction agreed on 2026-10-07. The goal is a recognizable,
 plausible tracer for each catalogued event, carrying useful attributes even when timing,
 location, or orbital history is incomplete. Missing exact reentry times are not blockers.
@@ -108,7 +113,7 @@ Reported times are retained. `cols.p` records day-only versus reported-time prec
 `build_data.py` applies this policy before publishing, sorting all columns together.
 `--retime-existing` upgrades the current processed catalog without changing or downloading
 raw data. It refuses ambiguous legacy files that lack per-event precision flags. Launch
-tracers are not implemented yet; their eventual event IDs can use the same timing helper.
+event IDs now use the same identity helper. The first example has a reported minute, so it does not receive a random anchor.
 The existing launch-date column still describes catalog/parent-launch chronology, not a
 separate launch animation. Curated collision annotations retain their source dates.
 
@@ -173,7 +178,7 @@ east appears on the correct side. No atmospheric descent or geographic endpoint 
 inferred. The scene redraws on clock, camera or size changes without a second timer.
 
 Phase 2 adds representative-orbit and symbolic fallbacks; Phase 3 adds the mixed sample.
-Launch tracers and audio remain later increments. The original numerical diagnostic
+A sourced launch is now implemented; audio remains a later increment. The original numerical diagnostic
 and immutable raw orbital caches remain unchanged.
 
 
@@ -349,14 +354,13 @@ Recommended sequence:
 3. **Small mixed event sample — complete.** Twelve events from April 2–9, 2018 share
    one scene and the existing clock. Six have orbital inputs and six are surface pulses,
    with missing-query and not-yet-queried inputs distinguished. Details below.
-4. **Earth appearance and geographical inspection complete; one launch next.** Cosmic
+4. **Earth, geographical inspection and one sourced launch — complete.** Cosmic
    Clock's surface textures, day/night lighting and decorative atmosphere now run in the existing
    scene with shared-clock Earth rotation and an offline geographic inspector.
-   Next add a sourced launch-site pulse and first-known orbital arc. Distinguish parental
-   launch from fragment creation/deployment; any connecting arc is illustrative rather than a
-   reconstructed powered ascent. Test launch-follow time.
-5. **Unified presentation and audio contract.** Connect event selection,
-   filters and configuration across views. Define forward-play event crossings, pause, seek
+   Dragon CRS-14 now adds a sourced pad pulse and separate early reference orbit, with
+   configurable launch-follow time and no powered-ascent connector. Debris parent launches
+   are not converted to fragment-creation events.
+5. **Shared configuration complete; selection, filters and audio contract next.** Define forward-play event crossings, pause, seek
    and replay behavior with both collaborators' audio layers so scrubbing does not accidentally
    fire a backlog of sound events.
 6. **Broader coverage after profiling.** Measure the small batch, then introduce time-window
@@ -375,7 +379,7 @@ are separate from the new collaborator's future solar-weather layer.
 limitations, source credits, tests and the minimal `EarthScene.addLayer()` hook.
 Earth rotation and sunlight use the existing clock. Surface pulses keep their
 persistent illustrative coordinates as Earth rotates; no event or source orbit
-assets changed. One sourced launch remains the next orbital-content increment.
+assets changed by that increment. The launch and shared configuration increment is documented separately.
 
 ## Phase 3: small mixed passage
 

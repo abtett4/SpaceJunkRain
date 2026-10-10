@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "noradId": 43267,
+  "objectId": "2018-032A",
+  "mission": "Dragon CRS-14",
+  "reportedTimeUtc": "2018-04-02T20:30:00Z",
+  "timeResolutionSeconds": 60,
+  "timeNote": "NASA reports 4:30 p.m. EDT, converted to 20:30 UTC. Seconds are not reported; the display anchor is the start of that minute.",
+  "site": {
+    "name": "Space Launch Complex 40, Cape Canaveral",
+    "latitudeDeg": 28.5620,
+    "longitudeDeg": -80.5772,
+    "note": "Published pad reference coordinates, not an ascent track. Coordinates use the 2025 guide; site identity comes from the 2018 launch report."
+  },
+  "sources": {
+    "launchReport": {"url": "https://www.nasa.gov/image-article/falcon-9-lifts-off-spacex-crs-14/", "title": "Falcon 9 Lifts Off for SpaceX CRS-14", "published": "2018-04-02", "accessed": "2026-10-10"},
+    "siteCoordinates": {"url": "https://www.spacex.com/assets/media/falcon-users-guide-2025-05-09.pdf", "title": "Falcon Payload User's Guide, Version 8, March 2025", "page": 58, "pdfPage": 69, "accessed": "2026-10-10"}
+  }
+}

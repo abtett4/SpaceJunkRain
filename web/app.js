@@ -1,8 +1,14 @@
 // Space Junk Rain - every decay sits on its real day; nothing is smoothed.
 import { SimulationClock } from './SimulationClock.js';
 import { mountOrbitPanel } from './earth/OrbitPanel.js';
+import { createPresentationStore } from './PresentationConfig.js';
+import { mountConfigurationPanel } from './ConfigurationPanel.js';
 
 (async function () {
+  let storage;
+  try { storage = window.localStorage; } catch { /* session-only settings */ }
+  const presentation = createPresentationStore(storage);
+  const disposeConfiguration = mountConfigurationPanel(document.getElementById('config-fields'), presentation);
   const EPOCH_MS = Date.UTC(1957, 0, 1);
   const DAY_MS = 86400000;
   const YEAR = 365.25;
@@ -234,7 +240,6 @@ import { mountOrbitPanel } from './earth/OrbitPanel.js';
     layout(); rebuild();
   });
 
-  document.getElementById('notes').addEventListener('change', (e) => { state.notes = e.target.checked; draw(); });
   tabs.parent.addEventListener('click', () => setView('parent'));
   tabs.lifespan.addEventListener('click', () => setView('lifespan'));
 
@@ -823,37 +828,31 @@ import { mountOrbitPanel } from './earth/OrbitPanel.js';
       new Promise((r) => setTimeout(r, 1500)),
     ]);
   } catch (e) { /* fall back to Georgia */ }
-  // paper / blueprint switch: an explicit choice is remembered; otherwise follow the system
-  const themeBtn = document.getElementById('theme');
-  const sysDark = matchMedia('(prefers-color-scheme: dark)');
-  let saved = null;
-  try { saved = localStorage.getItem('sjr-theme'); } catch (e) { /* storage blocked */ }
-  // a theme already set on <html> (e.g. by a host page) is respected until the viewer flips the switch
-  function applyTheme(t) {
-    if (t) document.documentElement.dataset.theme = t;
-    const cur = document.documentElement.dataset.theme;
-    themeBtn.setAttribute('aria-checked', String(cur ? cur === 'dark' : sysDark.matches));
-  }
-  applyTheme(saved);
-  themeBtn.addEventListener('click', () => {
-    const t = themeBtn.getAttribute('aria-checked') === 'true' ? 'light' : 'dark';
-    try { localStorage.setItem('sjr-theme', t); } catch (e) { /* not remembered, still applied */ }
-    applyTheme(t); // the observer below redraws the canvases
+  // Page/timeline appearance is a subscriber to the same preferences as Earth.
+  let previousAppearance = {};
+  const unsubscribePresentation = presentation.subscribe(values => {
+    const changed = values.theme !== previousAppearance.theme || values.timelineNotes !== previousAppearance.timelineNotes;
+    state.notes = values.timelineNotes;
+    if (values.theme !== previousAppearance.theme) {
+      if (values.theme === 'system') delete document.documentElement.dataset.theme;
+      else document.documentElement.dataset.theme = values.theme;
+    }
+    previousAppearance = values;
+    if (changed) rebuild();
   });
-  sysDark.addEventListener('change', () => applyTheme(null));
-  new MutationObserver(() => { applyTheme(null); rebuild(); })
+  new MutationObserver(() => rebuild())
     .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
   readColors();
   setView('parent');
-  window.addEventListener('pagehide', () => clock.pause());
+  window.addEventListener('pagehide', e => { clock.pause(); if (!e.persisted) { unsubscribePresentation(); disposeConfiguration(); } });
   mountOrbitPanel(clock, data, (startMs, endMs, rate = 300) => {
     clock.pause();
     document.getElementById('speed').value = String(YEAR * 86400 / rate);
     clock.setRate(rate);
     clock.seek(startMs);
     clock.play(endMs);
-  });
+  }, presentation);
   document.fonts.addEventListener('loadingdone', () => rebuild());
   let lastW = 0;
   new ResizeObserver(() => { if (wrap.clientWidth !== lastW) { lastW = wrap.clientWidth; layout(); rebuild(); } }).observe(wrap);

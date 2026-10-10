@@ -287,3 +287,9 @@ tbody tr:last-child td { border-bottom: 1px solid var(--rule); }
   .sample-lane { grid-template-columns: 95px minmax(0, 1fr); }
   #sample-dates { margin-left: 95px; }
 }
+
+/* One generated configuration panel shared by page, timeline and Earth. */
+.config-notes, #config-fields > .tracer-settings-actions { padding: 0 14px 14px; }
+#config-fields fieldset + fieldset { border-top: 1px solid var(--border); }
+.tracer-setting input[type="checkbox"] { width: auto; }
+.tracer-setting select { max-width: 100%; }

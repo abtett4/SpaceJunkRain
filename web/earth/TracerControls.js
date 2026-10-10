@@ -1,3 +1,4 @@
+// Legacy preference migration helpers; UI now lives in ConfigurationPanel.js.
 // Presentation preferences only. Event identity, source geometry and clock stay separate.
 export const SETTINGS_KEY = 'sjr-tracer-settings-v1';
 export const SAMPLE_SETTINGS_KEY = 'sjr-sample-tracer-settings-v1';
@@ -42,51 +43,4 @@ export function formatDuration(seconds) {
   if (seconds % 3600 === 0) return `${seconds / 3600} h`;
   if (seconds % 60 === 0) return `${seconds / 60} min`;
   return seconds < 60 ? `${seconds} s` : `${Math.floor(seconds / 60)} min ${Math.round(seconds % 60)} s`;
-}
-
-export function mountTracerControls(availableSeconds, onChange, options = {}) {
-  let storage;
-  try { storage = window.localStorage; } catch { /* use session-only preferences */ }
-  let settings = readSettings(storage, availableSeconds, options);
-  const fields = document.getElementById('tracer-fields');
-  const note = document.getElementById('tracer-preferences-note');
-  const inputs = {
-    reentryLeadSeconds: document.getElementById('tracer-window'),
-    trailSeconds: document.getElementById('tracer-history'),
-    widthScale: document.getElementById('tracer-width'),
-    markerScale: document.getElementById('tracer-size'),
-  };
-  inputs.reentryLeadSeconds.min = Math.min(30, availableSeconds);
-  inputs.reentryLeadSeconds.max = availableSeconds;
-  inputs.trailSeconds.max = Math.min(7200, availableSeconds);
-  const paint = () => {
-    for (const [key, input] of Object.entries(inputs)) {
-      input.value = settings[key];
-      const value = key.endsWith('Seconds') ? formatDuration(settings[key]) : `${settings[key]}×`;
-      document.getElementById(`${input.id}-value`).textContent = value;
-      input.setAttribute('aria-valuetext', value);
-    }
-  };
-  const apply = (reset = false) => {
-    paint();
-    onChange(settings);
-    const saved = writeSettings(storage, settings, reset, options.key);
-    note.textContent = saved ? (reset ? 'Defaults restored.' : 'Saved on this browser.')
-      : 'Changes work for this visit; this browser is not saving preferences.';
-  };
-  const events = new AbortController();
-  for (const [key, input] of Object.entries(inputs)) {
-    input.addEventListener('input', () => {
-      settings = normalizeSettings({ ...settings, [key]: Number(input.value) }, availableSeconds, options.defaults);
-      apply();
-    }, { signal: events.signal });
-  }
-  document.getElementById('tracer-reset').addEventListener('click', () => {
-    settings = normalizeSettings(null, availableSeconds, options.defaults);
-    apply(true);
-  }, { signal: events.signal });
-  fields.disabled = false;
-  paint();
-  onChange(settings);
-  return { dispose: () => events.abort() };
 }
