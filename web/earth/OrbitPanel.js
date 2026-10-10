@@ -39,6 +39,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
   const fail = error => {
     sequence = selected = null;
     events.replace([]);
+    clock.setPlaybackWindows(null);
     if (scene) clearScene();
     for (const id of ['symbolic-event', 'orbit-trace-key', 'sample-summary', 'sample-score', 'orbit-inspector', 'launch-key']) el(id).hidden = true;
     slider.disabled = replay.disabled = pause.disabled = true;
@@ -138,10 +139,17 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
         : selected.mode === 'representative' ? 'Representative orbit · illustrative loop, not an event-time reconstruction'
           : 'Orbital geometry unavailable in this input';
     const [startMs, endMs] = range();
+    clock.setPlaybackWindows(values.skipQuietIntervals ? sequence.events.flatMap(s => [
+      [s.endMs,s.endMs],
+      ...(s.active ? [[s.active.startMs,s.active.endMs]] : []),
+      ...(s.pulse ? [[s.pulse.visibleStartMs,s.pulse.visibleEndMs]] : [])
+    ]) : null, [startMs,endMs]);
     slider.max = (endMs - startMs) / 1000;
-    const seconds = sequence.sample ? (endMs - startMs) / 1000 / sequence.sample.playbackRate
+    const playbackMs = clock.playbackWindows ? clock.playbackWindows.windows.reduce((sum,[a,b])=>sum+b-a,0) : endMs-startMs;
+    text('quiet-playback-note', values.skipQuietIntervals ? 'Quiet intervals skipped · playback follows configured event windows.' : 'Quiet intervals included · playback preserves elapsed historical time.');
+    const seconds = sequence.sample ? playbackMs / 1000 / sequence.sample.playbackRate
       : selected.mode === 'symbolic' ? (selected.endMs - selected.pulse.visibleStartMs) / 1000 / 300 : (endMs - startMs) / 1000 / 300;
-    replay.textContent = `▶ Replay${sequence.sample ? ' passage' : selected.mode === 'symbolic' ? ' pulse' : ''} · ${formatDuration(seconds)}`;
+    replay.textContent = `▶ Replay${sequence.sample ? ' passage' : selected.mode === 'symbolic' ? ' pulse' : ''} · ${formatDuration(Math.round(seconds))}`;
     text('tracer-window-times', `${sequence.sample ? 'Passage' : 'Display window'}: ${dateText(startMs)} to ${dateText(endMs)}`);
     inspect();
     update(clock);
@@ -197,6 +205,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     el('history-choice').hidden = !historical;
     clock.pause(); sequence = selected = null;
     events.replace([]);
+    clock.setPlaybackWindows(null);
     clearScene(); activeSignature = ''; scoreButtons = []; hasStarted = false;
     for (const id of ['sample-score', 'sample-summary', 'orbit-inspector', 'symbolic-event', 'orbit-trace-key', 'launch-key']) el(id).hidden = true;
     el('sample-active').replaceChildren();
@@ -305,11 +314,11 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     picker.addEventListener('change', load, { signal: listeners.signal });
     el('history-month').addEventListener('change', load, { signal: listeners.signal });
     window.addEventListener('pagehide', e => {
-      if (!e.persisted) { revision++; loadController?.abort(); listeners.abort(); disposeEventLog(); events.dispose(); unsubscribeSettings?.(); disposeGeography?.(); unsubscribe(); scene.dispose(); }
+      if (!e.persisted) { revision++; loadController?.abort(); listeners.abort(); disposeEventLog(); events.dispose(); clock.setPlaybackWindows(null); unsubscribeSettings?.(); disposeGeography?.(); unsubscribe(); scene.dispose(); }
     });
     await load();
     // Integration seam: collaborators receive the same clock, evidence feed, settings, and Earth host.
     return Object.freeze({ clock, events, settings: presentation,
       earth: Object.freeze({ addLayer: layer => scene.addLayer(layer) }) });
-  } catch (error) { fail(error); disposeEventLog(); events.dispose(); unsubscribeSettings?.(); disposeGeography?.(); unsubscribe?.(); scene?.dispose(); }
+  } catch (error) { fail(error); disposeEventLog(); events.dispose(); clock.setPlaybackWindows(null); unsubscribeSettings?.(); disposeGeography?.(); unsubscribe?.(); scene?.dispose(); }
 }

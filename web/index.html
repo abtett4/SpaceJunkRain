@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap">
-<link rel="stylesheet" href="style.css?v=20261010-history-chunks">
+<link rel="stylesheet" href="style.css?v=20261010-skip-quiet-r2">
 </head>
 <body>
 <main class="viz-root">
@@ -63,6 +63,7 @@
         <div class="orbit-playback"><button id="orbit-pause" type="button" disabled>▶ Resume</button>
           <button id="orbit-replay" type="button" disabled>▶ Replay passage</button></div>
       </div>
+      <p id="quiet-playback-note" class="note">Quiet intervals skipped by default.</p>
       <div class="orbit-example"><label for="orbit-example">Preview input</label>
         <select id="orbit-example">
           <option value="data/history/2018/index.json">Historical passages · 2018 by month</option>
@@ -215,23 +216,24 @@
 <script type="importmap">
 {
   "imports": {
-    "./OrbitalEventFeed.js": "./OrbitalEventFeed.js?v=20261010-history-chunks",
-    "./EventPlaybackLog.js": "./EventPlaybackLog.js?v=20261010-history-chunks",
-    "./DisplayPolicy.js": "./DisplayPolicy.js?v=20261010-history-chunks",
-    "./earth/LaunchTracer.js": "./earth/LaunchTracer.js?v=20261010-history-chunks",
-    "./PresentationConfig.js": "./PresentationConfig.js?v=20261010-history-chunks",
-    "./ConfigurationPanel.js": "./ConfigurationPanel.js?v=20261010-history-chunks",
-    "./earth/OrbitPanel.js": "./earth/OrbitPanel.js?v=20261010-history-chunks",
-    "./earth/HistoryChunks.js": "./earth/HistoryChunks.js?v=20261010-history-chunks",
-    "./earth/EventSequence.js": "./earth/EventSequence.js?v=20261010-history-chunks",
-    "./earth/Tracer.js": "./earth/Tracer.js?v=20261010-history-chunks",
-    "./earth/SurfacePulse.js": "./earth/SurfacePulse.js?v=20261010-history-chunks",
-    "./earth/TracerControls.js": "./earth/TracerControls.js?v=20261010-history-chunks",
-    "./earth/EarthScene.js": "./earth/EarthScene.js?v=20261010-history-chunks",
-    "./earth/EarthShader.js": "./earth/EarthShader.js?v=20261010-history-chunks"
+    "./SimulationClock.js": "./SimulationClock.js?v=20261010-skip-quiet-r2",
+    "./OrbitalEventFeed.js": "./OrbitalEventFeed.js?v=20261010-skip-quiet-r2",
+    "./EventPlaybackLog.js": "./EventPlaybackLog.js?v=20261010-skip-quiet-r2",
+    "./DisplayPolicy.js": "./DisplayPolicy.js?v=20261010-skip-quiet-r2",
+    "./earth/LaunchTracer.js": "./earth/LaunchTracer.js?v=20261010-skip-quiet-r2",
+    "./PresentationConfig.js": "./PresentationConfig.js?v=20261010-skip-quiet-r2",
+    "./ConfigurationPanel.js": "./ConfigurationPanel.js?v=20261010-skip-quiet-r2",
+    "./earth/OrbitPanel.js": "./earth/OrbitPanel.js?v=20261010-skip-quiet-r2",
+    "./earth/HistoryChunks.js": "./earth/HistoryChunks.js?v=20261010-skip-quiet-r2",
+    "./earth/EventSequence.js": "./earth/EventSequence.js?v=20261010-skip-quiet-r2",
+    "./earth/Tracer.js": "./earth/Tracer.js?v=20261010-skip-quiet-r2",
+    "./earth/SurfacePulse.js": "./earth/SurfacePulse.js?v=20261010-skip-quiet-r2",
+    "./earth/TracerControls.js": "./earth/TracerControls.js?v=20261010-skip-quiet-r2",
+    "./earth/EarthScene.js": "./earth/EarthScene.js?v=20261010-skip-quiet-r2",
+    "./earth/EarthShader.js": "./earth/EarthShader.js?v=20261010-skip-quiet-r2"
   }
 }
 </script>
-<script type="module" src="app.js?v=20261010-history-chunks"></script>
+<script type="module" src="app.js?v=20261010-skip-quiet-r2"></script>
 </body>
 </html>

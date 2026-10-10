@@ -123,3 +123,20 @@ seeks, replay, collection replacement, source immutability, subscriber failure a
 The bounded 2018 historical loader is now available: see [historical loading](historical-loading.md).
 Each selected month replaces the feed as a new collection. Cross-month autoplay is not yet
 implemented; contributors should use collection notifications to cancel queued work.
+
+## Quiet-interval editing
+
+`skipQuietIntervals` is a persistent shared presentation setting, default true. The
+preview installs the union of configured tracer/pulse windows and event anchors into
+`SimulationClock.setPlaybackWindows`. Passage replay spends simulation time only in
+that union; intervening gaps and the empty tail jump forward. Overlap plays once.
+The plan applies only inside the selected range with that range's playback endpoint;
+full-catalog playback is unaffected. Reloading a collection clears the old plan.
+
+These automatic jumps are `advance` notifications, not `seek`: traversal/counts stay
+intact and every crossed anchor is delivered once. `previousMs` to `nowMs` can therefore
+span a large quiet gap even at a slow rate. Solar layers sample the new UTC time and may
+visibly jump. Explicit scrubbing retains the existing silent seek behavior. Changing
+window settings rebuilds the plan. Turning skipping off resumes ordinary elapsed-time
+playback from the current position; it does not rewind. The menu toggle and a note near
+Replay make this time editing explicit; event records and timestamps remain unchanged.

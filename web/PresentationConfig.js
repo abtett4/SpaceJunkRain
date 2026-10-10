@@ -12,6 +12,7 @@ export const CONFIG_FIELDS = Object.freeze([
   Object.freeze({ key: 'theme', group: 'Page & timeline', label: 'Page theme', value: 'system',
     choices: [['system', 'Follow system'], ['light', 'Paper'], ['dark', 'Blueprint']] }),
   Object.freeze({ key: 'timelineNotes', group: 'Page & timeline', label: 'Show timeline notes', value: true, kind: 'boolean' }),
+  Object.freeze({ key: 'skipQuietIntervals', group: 'Playback', label: 'Skip quiet intervals', value: true, kind: 'boolean', help: 'During passage playback, jump over gaps between configured event windows. Turn off to preserve elapsed historical time.' }),
   field('reentryLeadSeconds', 'Event windows', 'Before each reentry', 14400, 30, 172800, 30, 'seconds'),
   field('launchFollowSeconds', 'Event windows', 'After each launch', 14400, 30, 172800, 30, 'seconds'),
   field('trailSeconds', 'Event windows', 'Visible trail history', 300, 0, 7200, 30, 'seconds', 'Zero shows the head only. Reference trails show at most one revolution.'),

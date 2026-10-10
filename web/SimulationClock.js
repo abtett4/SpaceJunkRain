@@ -52,11 +52,38 @@ export class SimulationClock {
     };
     this.frame = this.requestFrame(tick);
   }
+  setPlaybackWindows(windows = null, range = null) {
+    if (windows === null) { this.playbackWindows = null; return; }
+    if (!range || !range.every(Number.isFinite) || range[0] >= range[1]
+      || windows.some(w => w.length !== 2 || !w.every(Number.isFinite) || w[0] > w[1])) throw new Error('Invalid playback windows.');
+    const merged = [];
+    for (const [a,b] of windows.map(w => [Math.max(range[0],w[0]),Math.min(range[1],w[1])]).filter(w=>w[0]<=w[1]).sort((a,b)=>a[0]-b[0])) {
+      const last = merged.at(-1);
+      if (last && a <= last[1]) last[1] = Math.max(last[1],b);
+      else merged.push([a,b]);
+    }
+    this.playbackWindows = { range: [...range], windows: merged };
+  }
+  playbackTarget(budget) {
+    const plan = this.playbackWindows;
+    if (!plan || this.untilMs !== plan.range[1] || this.nowMs < plan.range[0] || this.nowMs >= plan.range[1])
+      return Math.min(this.untilMs,this.nowMs+budget);
+    let cursor = this.nowMs;
+    for (const [start,end] of plan.windows) {
+      if (end <= cursor) continue;
+      cursor = Math.max(cursor,start);
+      const available = end-cursor;
+      if (budget < available) return cursor+budget;
+      budget -= available; cursor = end;
+      if (budget === 0) return cursor;
+    }
+    return this.untilMs;
+  }
   advance(elapsedRealMs) {
     if (!Number.isFinite(elapsedRealMs) || elapsedRealMs < 0) throw new Error('Invalid elapsed time.');
     if (!this.playing) return;
     const previous = this.nowMs;
-    this.nowMs = Math.min(this.untilMs, this.nowMs + elapsedRealMs * this.rate);
+    this.nowMs = this.playbackTarget(elapsedRealMs * this.rate);
     if (this.nowMs >= this.untilMs) this.playing = false;
     this.emit('advance', previous);
   }
