@@ -1,3 +1,4 @@
+import { latLonToVector } from './GeoMath.js';
 // An illustrative surface mark, sampled only from the shared simulation clock.
 // Coordinates describe presentation on the globe; no orbital or reentry calculation.
 export class SurfacePulse {
@@ -9,8 +10,7 @@ export class SurfacePulse {
     if (!Number.isFinite(this.endMs)) throw new Error('Invalid pulse anchor.');
     this.durationSeconds = durationSeconds;
     this.startMs = this.endMs - durationSeconds * 1000;
-    const lat = latitudeDeg * Math.PI / 180, lon = longitudeDeg * Math.PI / 180;
-    this.normal = [Math.cos(lat) * Math.sin(lon), -Math.sin(lat), Math.cos(lat) * Math.cos(lon)];
+    this.normal = latLonToVector(latitudeDeg, longitudeDeg);
     this.color = color;
     this.configure({ visibleSeconds: durationSeconds, markerRadiusEarth });
   }

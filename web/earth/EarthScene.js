@@ -1,13 +1,15 @@
 import P5 from '../vendor/p5.esm.min.js';
 import { Tracer } from './Tracer.js';
 import { CameraController } from './CameraController.js';
+import { earthState, earthRotation } from './EarthOrientation.js';
+import { latLonToVector, transform, pickGlobe } from './GeoMath.js';
+import { earthVertex, earthFragment } from './EarthShader.js';
 
 // Sphere mesh adapted from Cosmic Clock's EarthView; no catalog or clock knowledge.
 function sphereMesh() {
-  const w = 96, h = 48, g = new P5.Geometry(w, h);
+  const w = 144, h = 96, g = new P5.Geometry(w, h);
   for (let y = 0; y <= h; y++) for (let x = 0; x <= w; x++) {
-    const lat = Math.PI / 2 - y / h * Math.PI, lon = x / w * 2 * Math.PI;
-    const v = [Math.cos(lat) * Math.sin(lon), -Math.sin(lat), Math.cos(lat) * Math.cos(lon)];
+    const v = latLonToVector(90 - y / h * 180, x / w * 360 - 180);
     g.vertices.push(new P5.Vector(...v));
     g.vertexNormals.push(new P5.Vector(...v));
     g.uvs.push(x / w, y / h);
@@ -59,15 +61,28 @@ export class EarthScene {
     this.tracers = [];
     this.pulses = [];
     this.timeMs = 0;
+    this.state = earthState(0);
+    this.layers = new Set();
+    this.onInspect = () => {};
+    this.pointer = this.pinned = null;
+    this.disposed = false;
     this.ready = new Promise((resolve, reject) => {
       this.p = new P5((p) => {
-        p.setup = () => {
+        p.setup = async () => {
           try {
             const canvas = p.createCanvas(element.clientWidth, 380, p.WEBGL);
             p.pixelDensity(Math.min(devicePixelRatio || 1, 2));
             canvas.elt.tabIndex = 0;
-            canvas.elt.setAttribute('aria-label', 'Earth event preview. Drag or use arrow keys to rotate; plus and minus to zoom.');
-            this.camera = new CameraController(canvas.elt, () => p.redraw());
+            this.canvas = canvas.elt;
+            canvas.elt.setAttribute('aria-label', 'Earth event preview and geographic explorer');
+            canvas.elt.setAttribute('aria-describedby', 'geo-instructions');
+            this.camera = new CameraController(canvas.elt, () => p.redraw(), {
+              hover: point => { this.pointer = point; this.refreshInspection(); },
+              inspect: point => {
+                this.pinned = this.pick(point); this.pointer = null; this.refreshInspection();
+              },
+              clear: () => this.clearInspection(),
+            });
             this.camera.yaw = 0.8;
             this.mesh = sphereMesh();
             p.noLoop();
@@ -76,7 +91,18 @@ export class EarthScene {
               p.redraw();
             });
             this.resize.observe(element);
-            resolve(this);
+            this.shader = p.createShader(earthVertex, earthFragment);
+            const images = await Promise.allSettled(['earth-day.jpg', 'earth-night.jpg'].map(name =>
+              p.loadImage(new URL(`../assets/earth/${name}`, import.meta.url).href)));
+            if (this.disposed) return;
+            if (images.every(image => image.status === 'fulfilled')) {
+              this.shader.setUniform('uDay', images[0].value);
+              this.shader.setUniform('uNight', images[1].value);
+              this.textured = true;
+            } else {
+              this.imageryError = true;
+            }
+            resolve(this); p.redraw();
           } catch (error) { reject(error); }
         };
         p.draw = () => this.draw(p);
@@ -88,26 +114,73 @@ export class EarthScene {
     this.tracers.push(tracer);
     return tracer;
   }
-  setTime(timeMs) { this.timeMs = timeMs; this.p.redraw(); }
+  setTime(timeMs) {
+    if (timeMs !== this.timeMs) this.state = earthState(timeMs);
+    this.timeMs = timeMs; this.p.redraw();
+  }
+  surfaceToWorld(normal, timeMs = this.timeMs) {
+    return transform(timeMs === this.timeMs ? this.state.rotation : earthRotation(timeMs), normal);
+  }
+  pick(clientPoint) {
+    if (!this.canvas) return null;
+    const r = this.canvas.getBoundingClientRect();
+    const [x, y] = clientPoint ? [clientPoint[0] - r.left, clientPoint[1] - r.top] : [r.width / 2, r.height / 2];
+    if (x < 0 || x > r.width || y < 0 || y > r.height) return null;
+    return pickGlobe(x, y, r.width, r.height, this.camera.eye, this.camera.fov, this.state.rotation);
+  }
+  refreshInspection() {
+    this.onInspect(this.pinned ?? (this.pointer ? this.pick(this.pointer) : null), Boolean(this.pinned));
+  }
+  clearInspection() { this.pinned = this.pointer = null; this.refreshInspection(); }
+  focusGeography(lat, lon) {
+    const direction = this.surfaceToWorld(latLonToVector(lat, lon));
+    this.camera.yaw = Math.atan2(direction[0], direction[2]);
+    this.camera.pitch = Math.max(-1.4, Math.min(1.4, Math.asin(-direction[1])));
+    this.pinned = { lat, lon }; this.pointer = null; this.p.redraw();
+  }
+  // Future data layers receive this scene's clock and transforms. No independent timer.
+  // A layer supplies draw(frame) and optionally dispose(); removal owns disposal.
+  addLayer(layer) {
+    if (typeof layer?.draw !== 'function') throw new Error('Earth layer requires draw(frame).');
+    this.layers.add(layer);
+    this.p.redraw();
+    return () => { if (this.layers.delete(layer)) { layer.dispose?.(); this.p.redraw(); } };
+  }
   draw(p) {
     if (!this.camera || !this.mesh) return;
     const camera = this.camera;
     p.background('#081b2c');
     p.perspective(camera.fov, p.width / p.height, 0.05, 100);
     p.camera(...camera.eye, 0, 0, 0, 0, 1, 0);
-    p.ambientLight(135);
-    p.directionalLight(180, 195, 220, -0.5, 0.5, -1);
-    p.noStroke(); p.fill('#274e65');
-    p.model(this.mesh);
-    p.noLights();
-    // Equator only. Surface pulses have illustrative locations; orbits have no geographic endpoint.
-    p.noFill(); p.stroke('#547f92'); p.strokeWeight(0.003);
-    p.beginShape();
-    for (let i = 0; i <= 128; i++) {
-      const a = i / 128 * 2 * Math.PI;
-      p.vertex(Math.cos(a) * 1.0005, 0, Math.sin(a) * 1.0005);
+    p.noStroke();
+    if (this.textured) {
+      p.fill(255); p.shader(this.shader);
+      this.shader.setUniform('uEarthRotation', this.state.rotation);
+      this.shader.setUniform('uSun', this.state.sunDirection);
+      this.shader.setUniform('uEye', camera.eye);
+      this.shader.setUniform('uRadius', 1);
+      this.shader.setUniform('uAtmosphere', 0);
+      p.model(this.mesh);
+      // Decorative rim only. Do not write its transparent surface into the depth buffer.
+      p.fill(255, 100);
+      this.shader.setUniform('uRadius', 1.018);
+      this.shader.setUniform('uAtmosphere', 1);
+      p.drawingContext.depthMask(false);
+      p.model(this.mesh);
+      p.drawingContext.depthMask(true);
+      p.resetShader();
+    } else {
+      p.ambientLight(135); p.directionalLight(180, 195, 220, -0.5, 0.5, -1);
+      p.fill('#274e65'); p.model(this.mesh); p.noLights();
     }
-    p.endShape();
+    // Overlay authors decide what their data means; this host only supplies the frame.
+    for (const layer of this.layers) {
+      p.push();
+      try {
+        layer.draw({ p, timeMs: this.timeMs, earthRotation: [...this.state.rotation],
+          sunDirection: [...this.state.sunDirection], eye: [...camera.eye], earthRadius: 1 });
+      } finally { p.pop(); p.resetShader(); p.noLights(); p.drawingContext.depthMask(true); }
+    }
     for (const tracer of this.tracers) {
       const sample = tracer.sample(this.timeMs);
       if (!sample) continue;
@@ -122,9 +195,14 @@ export class EarthScene {
       tint.setAlpha(255 * sample.opacity);
       p.noStroke(); p.fill(tint);
       p.beginShape(p.TRIANGLE_STRIP);
-      for (const point of sample.ring) p.vertex(...point);
+      for (const point of sample.ring) p.vertex(...this.surfaceToWorld(point));
       p.endShape();
     }
+    this.refreshInspection();
   }
-  dispose() { this.resize?.disconnect(); this.camera?.dispose(); this.p.remove(); }
+  dispose() {
+    this.disposed = true; this.resize?.disconnect(); this.camera?.dispose();
+    for (const layer of this.layers) layer.dispose?.();
+    this.layers.clear(); this.p.remove();
+  }
 }

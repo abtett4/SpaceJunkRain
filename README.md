@@ -72,10 +72,15 @@ since the existing epoch. Do not treat its fractional part as observed timing pr
 See [the tracer model](notes/tracer-model.md), [the consumed manifest](web/data/tracers.json),
 and [the portable example](data/examples/tracer-37820-reentry.json) for attributes and
 provenance. Missing size, owner, mission, location and lifetime-orbit information stays
-explicitly unknown. Launch tracers and a broader mixed sample are next steps.
+explicitly unknown. The mixed sample is implemented; the next event type is one sourced launch example.
 
-`web/earth/` adapts Cosmic Clock's sphere mesh and camera only; Cosmic Clock itself is
-unchanged. [Renderer credits](web/vendor/README.md) document the local p5 dependency.
+`web/earth/` adapts Cosmic Clock's textured Earth, day/night lighting, decorative rim,
+and camera/picking components; Cosmic Clock itself is unchanged. Hover over Earth for
+approximate geographic context, click/tap to pin a point, or use the place shortcuts.
+With the globe focused, Enter inspects its center and Escape clears the pin.
+[Earth implementation and integration](notes/earth-renderer.md) documents the coordinate
+convention, map limitations and future solar-weather layer hook. [Renderer credits](web/vendor/README.md)
+and [imagery/map credits](web/assets/earth/README.md) document the bundled assets.
 The site remains static, with no new web build step. JavaScript modules require HTTP
 serving, as do the existing JSON requests.
 
@@ -88,6 +93,8 @@ node tests/tracer-settings.test.mjs
 node tests/representative-tracer.test.mjs
 node tests/surface-pulse.test.mjs
 node tests/event-sequence.test.mjs
+node tests/earth-geography.test.mjs
+node tests/earth-camera.test.mjs
 ```
 
 ## Phase 2: explicit fallbacks
@@ -256,7 +263,9 @@ Outputs are `data/processed/trajectories/37820-diagnostic.png` and `37820.json` 
 JSON positions are `[UTC timestamp, x, y, z]` in **TEME kilometers**, with NORAD identity,
 source hashes, element age, decay precision, numerical diagnostics, and warnings. The
 radius plot subtracts a WGS72 reference sphere; it is not geodetic altitude. Earth-fixed
-coordinates would require a separate frame conversion before rendering geographic detail.
+coordinates are not stored in this product. The browser now rotates its reference Earth
+using approximate GMST (see the Earth implementation notes); illustrative replay timing
+still prevents interpreting a displayed endpoint as the reentry location.
 
 The retrieved DECAY records only support a calendar day, so this trajectory stops at the
 **start** of April 2 UTC. Midnight is not promoted to an exact decay time. No ground

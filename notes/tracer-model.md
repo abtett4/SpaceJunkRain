@@ -164,17 +164,17 @@ accepts positions, timing and style, with no Space-Track or catalog knowledge. R
 uses 300 simulated seconds per real second and stops at the shared event anchor. The
 Earth view interpolates the 30-second samples; it performs no SGP4 propagation.
 
-The plain sphere and camera were adapted from Cosmic Clock. Propagated coordinates remain
-inertial TEME, mapped to scene axes `[x, -z, y] / 6378.135`, a length- and handedness-preserving
-rotation. North is screen-up in the default orientation. The equator is shown; there are
-no longitude lines, surface imagery, geographic endpoint or atmospheric descent. Sphere
-lighting and marker width are presentation choices. The scene redraws on clock, camera,
-or size changes, without a separate simulation timer.
+The first preview used a plain sphere and camera adapted from Cosmic Clock. The
+current Earth upgrade adds textures, lighting, shared-clock rotation and geographic
+inspection; see [Earth implementation](earth-renderer.md). Source positions remain
+inertial TEME. The corrected p5 display mapping is `[x, -z, -y] / 6378.135`, preserving
+lengths while reflecting the screen-down coordinate convention so north is up and
+east appears on the correct side. No atmospheric descent or geographic endpoint is
+inferred. The scene redraws on clock, camera or size changes without a second timer.
 
-Phase 2 adds representative-orbit and symbolic fallbacks, described below. Launch tracers,
-a broader mixed sample, and audio remain later increments. One object is exported per
-adapter run; this is not a bulk manifest merger. The original numerical diagnostic and
-immutable raw caches remain unchanged.
+Phase 2 adds representative-orbit and symbolic fallbacks; Phase 3 adds the mixed sample.
+Launch tracers and audio remain later increments. The original numerical diagnostic
+and immutable raw orbital caches remain unchanged.
 
 
 ## Phase 2: reference loops and symbolic events
@@ -349,14 +349,13 @@ Recommended sequence:
 3. **Small mixed event sample — complete.** Twelve events from April 2–9, 2018 share
    one scene and the existing clock. Six have orbital inputs and six are surface pulses,
    with missing-query and not-yet-queried inputs distinguished. Details below.
-4. **Earth appearance, geographical inspection, then one launch.** First adapt Cosmic
-   Clock's surface textures, day/night lighting and atmosphere into the existing Earth scene,
-   with explicit coordinate-frame/time handling. Add geographical hover inspection as described
-   below. Then add a sourced launch-site pulse and first-known orbital arc. Distinguish parental
+4. **Earth appearance and geographical inspection complete; one launch next.** Cosmic
+   Clock's surface textures, day/night lighting and decorative atmosphere now run in the existing
+   scene with shared-clock Earth rotation and an offline geographic inspector.
+   Next add a sourced launch-site pulse and first-known orbital arc. Distinguish parental
    launch from fragment creation/deployment; any connecting arc is illustrative rather than a
    reconstructed powered ascent. Test launch-follow time.
-5. **Unified presentation and audio contract.** Refine Earth presentation with explicit
-   coordinate-frame/time handling before adding geographical imagery. Connect event selection,
+5. **Unified presentation and audio contract.** Connect event selection,
    filters and configuration across views. Define forward-play event crossings, pause, seek
    and replay behavior with both collaborators' audio layers so scrubbing does not accidentally
    fire a backlog of sound events.
@@ -364,43 +363,19 @@ Recommended sequence:
    loading and caching only where needed. Report missing geometry/metadata coverage explicitly
    while expanding the locally cached catalog.
 
-## Planned Earth appearance and geographical inspection
+## Earth appearance and geographical inspection — implemented 2026-10-10
 
-The next visual milestone is the existing mixed passage on a textured, lit Earth adapted
-from Cosmic Clock, followed by one launch example. This section records the plan; the
-textured Earth and location inspector are not implemented yet.
+The mixed passage now uses a textured, lit Earth adapted from Cosmic Clock. Hover
+inspection, click/tap pinning, keyboard inspection and place shortcuts operate on
+bundled geographic data. Names stay below the model; geographic inspection does
+not assign a location to an event. The static imagery and decorative atmosphere
+are separate from the new collaborator's future solar-weather layer.
 
-Reuse the Earth surface/day-night/atmosphere rendering and pointer-to-latitude/longitude
-math from Cosmic Clock. Adapt these components inside SpaceJunkRain after agreeing on
-extraction scope; leave the Cosmic Clock project unchanged. The geographic transform must
-match the rendered Earth, camera, viewport and shared simulation time. Keep source orbital
-frames and illustrative replay mappings explicit. Carry texture credits and identify the
-surface/night-light images as static context, not date-specific historical observations.
-
-Hovering the visible surface should identify the location under the pointer. Requested
-examples are “Near Kennedy Space Center”, “Near Houston”, “Near Los Angeles”, and
-“Pacific Ocean”. Use a small, sourced local place dataset for space facilities and major
-cities, plus land/region and named ocean/sea geography. Cosmic Clock's time-zone lookup
-alone does not supply these names. No geocoding request is needed for each pointer move.
-
-Use the containing land/water region as context and a nearby facility or city only within
-an explicit, documented distance threshold. Include approximate distance when showing
-“near”; facility priority applies only within its own nearby radius. A point far from all
-listed places falls back to its region/ocean and coordinates, not a distant city described
-as nearby. A missing region returns coordinates with a location-unavailable label. The
-initial release is a curated geographic reference, not exhaustive address lookup; source
-coverage and boundary simplification should remain documented.
-
-Show the readout in the page beside or below Earth, without permanent labels over the
-model. Hide transient hover information off the globe and during camera dragging. Recompute
-for camera/zoom/time changes, including Earth rotation beneath a stationary pointer. Provide
-a tap/click-to-pin equivalent, and a keyboard-accessible way to inspect geography.
-
-This readout describes Earth under the pointer, not the position of an orbital object or
-a predicted impact. Hovering a randomly placed symbolic pulse must retain its illustrative
-location label; no geographic name is written back as a sourced event location. Validate
-picking at different rotations, zoom levels and viewport sizes, land/ocean fallbacks and
-nearby-place distance cutoffs before exposing the feature.
+[Earth implementation notes](earth-renderer.md) record transforms, interaction,
+limitations, source credits, tests and the minimal `EarthScene.addLayer()` hook.
+Earth rotation and sunlight use the existing clock. Surface pulses keep their
+persistent illustrative coordinates as Earth rotates; no event or source orbit
+assets changed. One sourced launch remains the next orbital-content increment.
 
 ## Phase 3: small mixed passage
 

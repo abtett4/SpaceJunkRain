@@ -1,6 +1,7 @@
 // One event or a bounded passage, using the timeline's existing simulation clock.
 import { mountTracerControls, formatDuration, SAMPLE_SETTINGS_KEY } from './TracerControls.js';
 import { loadSequence, configureSequence, sequenceRange, sequenceAt } from './EventSequence.js';
+import { mountGeographyPanel } from './GeographyPanel.js';
 export { selectMode } from './EventSequence.js';
 
 const modeName = mode => ({ propagated: 'SGP4 replay', representative: 'Reference orbit', symbolic: 'No orbital data · pulse' })[mode];
@@ -12,11 +13,12 @@ export async function mountOrbitPanel(clock, timeline, onReplay) {
   const text = (id, value) => { if (el(id).textContent !== value) el(id).textContent = value; };
   const status = el('orbit-status'), slider = el('orbit-scrub'), replay = el('orbit-replay'), pause = el('orbit-pause');
   const picker = el('orbit-example'), objectPicker = el('orbit-object');
-  let scene, controls, unsubscribe, sequence, settings, selected, revision = 0, firstLoad = true;
+  let scene, controls, unsubscribe, disposeGeography, sequence, settings, selected, revision = 0, firstLoad = true;
   let scoreButtons = [], activeSignature = '', hasStarted = false;
   const listeners = new AbortController();
   const range = () => sequenceRange(sequence, settings);
   const focus = direction => {
+    scene.clearInspection();
     scene.camera.yaw = Math.atan2(direction[0], direction[2]);
     scene.camera.pitch = Math.max(-1.4, Math.min(1.4, Math.asin(-direction[1] / Math.hypot(...direction))));
   };
@@ -51,9 +53,9 @@ export async function mountOrbitPanel(clock, timeline, onReplay) {
     objectPicker.value = event.eventId;
   };
   const update = ({ nowMs, playing = clock.playing }) => {
+    scene.setTime(nowMs); // Earth and future overlays follow time even without orbital data.
     if (!sequence || !settings) return;
     const [startMs, endMs] = range();
-    scene.setTime(nowMs);
     slider.value = Math.max(0, Math.min(Number(slider.max), (nowMs - startMs) / 1000));
     slider.setAttribute('aria-valuetext', nowMs >= startMs && nowMs <= endMs ? dateText(nowMs) : 'Outside preview interval');
     text('orbit-clock', dateText(nowMs));
@@ -127,7 +129,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay) {
     const target = s.mode === 'symbolic' ? (s.pulse.visibleStartMs + s.endMs) / 2
       : s.endMs - Math.min(settings.reentryLeadSeconds / 2, 3600) * 1000;
     clock.pause(); clock.seek(Math.max(start, Math.min(end, target)));
-    if (s.pulse) focus(s.pulse.normal);
+    if (s.pulse) focus(scene.surfaceToWorld(s.pulse.normal));
     else { const head = s.active.sample(clock.nowMs)?.head; if (head) focus(head); }
     scene.setTime(clock.nowMs);
   };
@@ -198,7 +200,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay) {
         text('tracer-window-limit', selected.propagated ? 'Up to 2 h uses prepared SGP4 samples. Longer windows use an illustrative reference loop; maximum 48 h.'
           : selected.representative ? 'Up to 48 h repeats reference geometry without propagating old elements to reentry.'
             : `One pulse in the final ${formatDuration(selected.pulse.durationSeconds)} before the anchor. Replay focuses the pulse; longer windows do not repeat it.`);
-        if (selected.pulse) focus(selected.pulse.normal);
+        if (selected.pulse) focus(scene.surfaceToWorld(selected.pulse.normal));
       }
       slider.disabled = replay.disabled = pause.disabled = false;
       controls = mountTracerControls(sequence.maxSeconds, applySettings, mixed
@@ -213,7 +215,10 @@ export async function mountOrbitPanel(clock, timeline, onReplay) {
     if (!sequence) return;
     let [startMs, endMs] = range();
     if (!sequence.sample) {
-      if (selected.pulse) { startMs = selected.pulse.visibleStartMs; focus(selected.pulse.normal); }
+      if (selected.pulse) {
+        startMs = selected.pulse.visibleStartMs;
+        focus(scene.surfaceToWorld(selected.pulse.normal, (startMs + endMs) / 2));
+      }
       else {
         const head = selected.active.sample(startMs)?.head;
         if (head) focus(head);
@@ -225,6 +230,8 @@ export async function mountOrbitPanel(clock, timeline, onReplay) {
   try {
     const { EarthScene } = await import('./EarthScene.js');
     scene = new EarthScene(el('earth-scene')); await scene.ready;
+    if (scene.imageryError) text('earth-render-status', 'Earth imagery unavailable; showing a plain globe. Geographic inspection still works.');
+    disposeGeography = await mountGeographyPanel(scene);
     unsubscribe = clock.subscribe(update);
     replay.addEventListener('click', replaySequence, { signal: listeners.signal });
     pause.addEventListener('click', () => {
@@ -250,8 +257,8 @@ export async function mountOrbitPanel(clock, timeline, onReplay) {
     el('orbit-jump').addEventListener('click', () => jumpTo(selected), { signal: listeners.signal });
     picker.addEventListener('change', load, { signal: listeners.signal });
     window.addEventListener('pagehide', e => {
-      if (!e.persisted) { revision++; listeners.abort(); controls?.dispose(); unsubscribe(); scene.dispose(); }
+      if (!e.persisted) { revision++; listeners.abort(); controls?.dispose(); disposeGeography?.(); unsubscribe(); scene.dispose(); }
     });
     await load();
-  } catch (error) { fail(error); unsubscribe?.(); scene?.dispose(); }
+  } catch (error) { fail(error); disposeGeography?.(); unsubscribe?.(); scene?.dispose(); }
 }

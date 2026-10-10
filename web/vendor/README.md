@@ -9,7 +9,13 @@ Processing Foundation and contributors, LGPL-2.1; see `p5-LICENSE.txt`.
 Project and source: https://github.com/processing/p5.js/tree/v2.3.3
 Unminified distribution: https://unpkg.com/p5@2.3.3/lib/p5.esm.js
 
-`earth/EarthScene.js` adapts the sphere mesh from Cosmic Clock's `EarthView.js`.
-`earth/CameraController.js` adapts its drag, pinch, zoom and keyboard camera.
-The clock, astronomy model, time-zone layer, shaders, imagery, and other Cosmic
-Clock application code are not included. The original project is unchanged.
+`earth/EarthScene.js`, `EarthShader.js`, `GeoMath.js`, and `CameraController.js`
+adapt Cosmic Clock's sphere, shader and interaction components. Textures are copied
+unchanged; see [imagery and map credits](../assets/earth/README.md). Cosmic Clock's
+application, clock and time-zone layer remain separate and unchanged.
+
+`astronomy.js` is the unmodified **Astronomy Engine 2.1.19** ES module from
+Cosmic Clock's installed `astronomy-engine` npm package. MIT license, Don Cross;
+the full license is retained in the module header. Used only for Sun direction
+and apparent sidereal time, not solar-weather magnitudes.
+[Project and source](https://github.com/cosinekitty/astronomy).

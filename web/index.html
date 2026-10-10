@@ -108,9 +108,28 @@
       <div class="orbit-grid">
         <div class="orbit-viewport">
           <div id="earth-scene"></div>
+          <div class="geography-panel" aria-label="Geographic reference">
+            <p class="eyebrow">Geographic reference</p>
+            <strong id="geo-name">Explore the Earth</strong>
+            <p id="geo-detail">Hover over land or water, or click / tap to pin a geographic point.</p>
+            <div class="geography-actions">
+              <label for="geo-place">Find a place</label>
+              <select id="geo-place">
+                <option value="28.608402,-80.604201">Kennedy Space Center</option>
+                <option value="29.741273,-95.348436">Houston</option>
+                <option value="34.049219,-118.231986">Los Angeles</option>
+                <option value="10,-150">Pacific Ocean</option>
+              </select>
+              <button id="geo-go" type="button">Show</button>
+              <button id="geo-clear" type="button" disabled>Clear pin</button>
+            </div>
+            <p id="geo-instructions" class="note">Drag or use arrow keys to rotate; scroll or + / − to zoom. Hover to explore; click, tap or Enter to pin (Enter uses the center). Escape clears the pin.</p>
+            <p class="note">Approximate map reference, independent of event locations. “Near” means within 75 km of the listed facility point or 100 km of a listed city point. Generalized coastlines and contemporary place names.</p>
+          </div>
         </div>
         <div class="orbit-caption">
           <p id="orbit-status" role="status">Loading orbital preview…</p>
+          <p id="earth-render-status" class="note">Sunlight and Earth rotation follow the display clock. The blue atmospheric rim is decorative. Imagery is a fixed composite, not historical weather. <a href="assets/earth/README.md">Map &amp; imagery credits</a></p>
           <div id="sample-summary" hidden>
             <p id="sample-coverage" class="note"></p>
             <p id="sample-progress"></p>

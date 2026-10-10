@@ -1,5 +1,6 @@
-// Keep the supplied equatorial frame (TEME or illustrative); only adapt p5's axes.
-export const toScene = ([x, y, z], radiusKm) => [x / radiusKm, -z / radiusKm, y / radiusKm];
+// Preserve source geometry (TEME or illustrative); adapt to p5’s screen-down Y.
+// The display reflection keeps north up and geographic east to the right.
+export const toScene = ([x, y, z], radiusKm) => [x / radiusKm, -z / radiusKm, -y / radiusKm].map(v => v === 0 ? 0 : v);
 
 export class Tracer {
   constructor({ positions, startTime, endTime, radiusKm, color = '#ffd166',

@@ -225,6 +225,12 @@ tbody tr:last-child td { border-bottom: 1px solid var(--rule); }
 .orbit-example { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 14px; }
 .orbit-example select { max-width: 100%; }
 .orbit-viewport { position: relative; align-self: start; }
+.geography-panel { padding: 16px 0; border-bottom: 1px solid var(--border); }
+.geography-panel p { margin: 6px 0 12px; }
+.geography-panel .note { font-size: 14px; line-height: 1.4; }
+.geography-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.geography-actions label { font-size: 15px; }
+.geography-actions select { max-width: 100%; }
 .orbit-key { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border); font-size: 14px; }
 .orbit-key[hidden], #sample-score[hidden], #sample-summary[hidden], #orbit-object-choice[hidden] { display: none; }
 .orbit-caption .orbit-key p { margin: 3px 0 0; font-size: 13px; color: var(--text-secondary); }

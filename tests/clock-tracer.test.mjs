@@ -41,12 +41,13 @@ test('changing speed does not apply the new rate retroactively', () => {
   assert.throws(() => clock.seek(NaN));
 });
 
-test('axis adaptation preserves lengths and handedness, with north upwards', () => {
+test('axis adaptation preserves lengths with north up and correct display handedness', () => {
   assert.deepEqual(toScene([0, 0, 1], 1), [0, -1, 0]);
   assert.equal(Math.hypot(...toScene([3, 4, 12], 1)), 13);
   const a = toScene([1, 0, 0], 1), b = toScene([0, 1, 0], 1);
   const cross = [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
-  assert.deepEqual(cross.map(v => v || 0), toScene([0, 0, 1], 1));
+  // p5 screen Y is down: a display reflection, not a physical frame rotation.
+  assert.deepEqual(cross.map(v => -v || 0), toScene([0, 0, 1], 1));
 });
 
 test('replay preserves original sample times and disappears outside its interval', () => {
@@ -55,8 +56,8 @@ test('replay preserves original sample times and disappears outside its interval
   assert.equal(tracer.sample(tracer.startMs - 1), null);
   assert.equal(tracer.sample(tracer.endMs + 1), null);
   assert.equal(tracer.sample(tracer.startMs + 15000).sourceMs, Date.parse('2000-01-01T00:00:15Z'));
-  assert.deepEqual(tracer.sample(tracer.startMs + 15000).head.map(v => v || 0), [0.5, 0, 0.5]);
-  assert.deepEqual(tracer.sample(tracer.endMs).head.map(v => v || 0), [0, 0, 1]);
+  assert.deepEqual(tracer.sample(tracer.startMs + 15000).head.map(v => v || 0), [0.5, 0, -0.5]);
+  assert.deepEqual(tracer.sample(tracer.endMs).head.map(v => v || 0), [0, 0, -1]);
 });
 
 test('exported Tiangong event joins the catalog anchor and its original geometry', () => {
