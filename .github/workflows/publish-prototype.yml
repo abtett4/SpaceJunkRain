@@ -1,0 +1,37 @@
+name: Publish orbital prototype
+
+on:
+  push:
+    branches: ["tyler/orbital-earth"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: orbital-prototype-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload the website
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+
+      - name: Publish the website
+        id: deployment
+        uses: actions/deploy-pages@v4
