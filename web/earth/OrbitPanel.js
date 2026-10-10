@@ -344,7 +344,11 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     unsubscribe = clock.subscribe(state => {
       if (sequence && settings.skipQuietIntervals && state.reason === 'advance' && Number.isFinite(state.skippedToMs)) {
         const direction = skipFocusDirection(sequence,state.skippedToMs,state.nowMs);
-        if (direction) focus(direction);
+        if (direction) {
+          scene.clearInspection();
+          // Quiet skips reframe longitude only; preserve the user's viewing latitude.
+          scene.camera.yaw = Math.atan2(direction[0], direction[2]);
+        }
       }
       update(state);
       if (transitioning && ['pause','seek'].includes(state.reason)) {
