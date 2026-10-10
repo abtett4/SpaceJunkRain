@@ -25,11 +25,14 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
   const disposeEventLog = mountEventPlaybackLog(el('event-playback-log'), events);
   const status = el('orbit-status'), slider = el('orbit-scrub'), replay = el('orbit-replay'), pause = el('orbit-pause');
   const picker = el('orbit-example'), objectPicker = el('orbit-object');
-  let historyIndex = null, loadController = null;
+  let historyIndex = null, loadController = null, provenanceUrl = null;
   let scene, unsubscribeSettings, unsubscribe, disposeGeography, sequence, settings = presentation.values, selected, revision = 0, firstLoad = true;
   let scoreButtons = [], activeSignature = '', hasStarted = false;
   const listeners = new AbortController();
-  const range = () => sequenceRange(sequence, settings);
+  const range = () => {
+    const [start,end] = sequenceRange(sequence,settings);
+    return [Math.max(start,clock.minMs),Math.min(end,clock.maxMs)];
+  };
   const focus = direction => {
     scene.clearInspection();
     scene.camera.yaw = Math.atan2(direction[0], direction[2]);
@@ -197,11 +200,18 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     return response.text();
   };
   const fetchJson = async (url, signal) => JSON.parse(await fetchText(url, signal));
+  const populatePassages = () => {
+    el('history-month').replaceChildren(...historyIndex.chunks.filter(c=>c.id.startsWith(el('history-year').value+'-')).map(chunk=>{
+      const option=document.createElement('option');option.value=chunk.id;
+      option.textContent=`${chunk.id} · ${chunk.eventCount} event${chunk.eventCount===1?'':'s'}`;return option;
+    }));
+  };
   const load = async () => {
     const ticket = ++revision;
+    if (provenanceUrl) { URL.revokeObjectURL(provenanceUrl); provenanceUrl=null; }
     loadController?.abort();
     const controller = loadController = new AbortController();
-    const historical = picker.value === 'data/history/2018/index.json';
+    const historical = picker.value === 'data/history/all/index.json';
     el('history-choice').hidden = !historical;
     clock.pause(); sequence = selected = null;
     events.replace([]);
@@ -220,15 +230,22 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
           const index = validateHistoryIndex(await fetchJson(manifestUrl, controller.signal));
           if (ticket !== revision) return;
           historyIndex = index;
-          el('history-month').replaceChildren(...index.chunks.map(chunk => {
-            const option = document.createElement('option'); option.value = chunk.id;
-            option.textContent = `${chunk.id} · ${chunk.eventCount} events`; return option;
+          text('history-coverage', `${index.reentryCount.toLocaleString()} catalog reentries · ${index.chunks.length.toLocaleString()} bounded passages · ${index.chunks[0].id.slice(0,4)}–${index.chunks.at(-1).id.slice(0,4)} · one curated launch. Coverage is limited to the supplied catalog snapshot.`);
+          const years = [...new Set(index.chunks.map(c=>c.id.slice(0,4)))];
+          el('history-year').replaceChildren(...years.map(year=>{
+            const option=document.createElement('option');option.value=year;option.textContent=year;return option;
           }));
+          el('history-year').value=index.defaultChunk.slice(0,4);
+          populatePassages();
           el('history-month').value = index.defaultChunk;
         }
         const chunk = historyIndex.chunks.find(c => c.id === el('history-month').value);
-        if (!chunk) throw new Error('Choose an indexed historical month.');
-        manifest = await loadHistoryChunk(chunk, manifestUrl, url => fetchText(url, controller.signal));
+        if (!chunk) throw new Error('Choose an indexed historical passage.');
+        manifest = await loadHistoryChunk(chunk, manifestUrl, async url => {
+          const response=await fetch(url,{cache:'no-cache',signal:controller.signal});
+          if (!response.ok) throw new Error(`Could not load historical passage (${response.status}).`);
+          return response.arrayBuffer();
+        });
         manifestUrl = new URL(chunk.asset, manifestUrl);
       } else manifest = await fetchJson(manifestUrl, controller.signal);
       const loaded = await loadSequence(manifest, timeline, name => {
@@ -243,12 +260,13 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
       for (const id of ['sample-summary', 'sample-score', 'orbit-object-choice']) el(id).hidden = !mixed;
       el('orbit-inspector').hidden = false; el('orbit-inspector').open = !mixed;
       text('orbit-title', mixed ? sequence.sample.title : 'One event, one shared clock');
-      text('orbit-name', mixed ? `${sequence.events.length} events · ${sequence.sample.intervalUtc[0].slice(0,10)} to ${new Date(Date.parse(sequence.sample.intervalUtc[1])-1).toISOString().slice(0,10)} · one shared clock` : `${selected.event.object.name} · NORAD ${selected.event.object.noradId}`);
+      text('orbit-name', mixed ? `${sequence.events.length} event${sequence.events.length===1?'':'s'} · ${sequence.sample.intervalUtc[0].slice(0,10)} to ${new Date(Date.parse(sequence.sample.intervalUtc[1])-1).toISOString().slice(0,10)} · one shared clock` : `${selected.event.object.name} · NORAD ${selected.event.object.noradId}`);
       objectPicker.replaceChildren(...sequence.events.map(s => {
         const option = document.createElement('option'); option.value = s.event.eventId;
         option.textContent = `${s.event.eventKind} · ${s.event.object.name} · ${shortDate(s.endMs)}`; return option;
       }));
-      el('orbit-provenance').href = manifestUrl.href;
+      if (historical) provenanceUrl=URL.createObjectURL(new Blob([JSON.stringify(manifest,null,2)],{type:'application/json'}));
+      el('orbit-provenance').href = provenanceUrl ?? manifestUrl.href;
       if (mixed) {
         const coverage = sequence.sample.coverage;
         const plural = { PAYLOAD: 'payloads', 'ROCKET BODY': 'rocket bodies', DEBRIS: 'debris objects', UNKNOWN: 'unknown objects' };
@@ -313,8 +331,9 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     el('orbit-jump').addEventListener('click', () => jumpTo(selected), { signal: listeners.signal });
     picker.addEventListener('change', load, { signal: listeners.signal });
     el('history-month').addEventListener('change', load, { signal: listeners.signal });
+    el('history-year').addEventListener('change', () => { populatePassages(); load(); }, { signal: listeners.signal });
     window.addEventListener('pagehide', e => {
-      if (!e.persisted) { revision++; loadController?.abort(); listeners.abort(); disposeEventLog(); events.dispose(); clock.setPlaybackWindows(null); unsubscribeSettings?.(); disposeGeography?.(); unsubscribe(); scene.dispose(); }
+      if (!e.persisted) { revision++; if (provenanceUrl) URL.revokeObjectURL(provenanceUrl); loadController?.abort(); listeners.abort(); disposeEventLog(); events.dispose(); clock.setPlaybackWindows(null); unsubscribeSettings?.(); disposeGeography?.(); unsubscribe(); scene.dispose(); }
     });
     await load();
     // Integration seam: collaborators receive the same clock, evidence feed, settings, and Earth host.

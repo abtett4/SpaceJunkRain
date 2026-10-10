@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap">
-<link rel="stylesheet" href="style.css?v=20261010-skip-quiet-r2">
+<link rel="stylesheet" href="style.css?v=20261010-full-history">
 </head>
 <body>
 <main class="viz-root">
@@ -66,8 +66,8 @@
       <p id="quiet-playback-note" class="note">Quiet intervals skipped by default.</p>
       <div class="orbit-example"><label for="orbit-example">Preview input</label>
         <select id="orbit-example">
-          <option value="data/history/2018/index.json">Historical passages · 2018 by month</option>
-          <option value="data/samples/april-2018-launch/tracers.json" selected>Launch & reentries · April 2–9, 2018</option>
+          <option value="data/history/all/index.json" selected>Full historical catalog · by year and passage</option>
+          <option value="data/samples/april-2018-launch/tracers.json">Launch & reentries · April 2–9, 2018</option>
           <option value="data/samples/april-2018-launch/launch.json">Dragon CRS-14 · sourced launch</option>
           <option value="data/tracers.json">Tiangong-1 · recent orbital history</option>
           <option value="data/fallbacks/stale/tracers.json">Iridium 33 debris · stale reference orbit</option>
@@ -75,9 +75,12 @@
         </select>
       </div>
       <div id="history-choice" hidden>
-        <label for="history-month">Historical month</label>
-        <select id="history-month" aria-label="Historical month"></select>
-        <p class="note">One month and its available geometry load at a time. Changing months pauses playback and clears the event feed. All catalog reentries are included; launch coverage is limited to the curated Dragon launch. Events at passage edges are clipped to this month.</p>
+        <p id="history-coverage" class="note"></p>
+        <label for="history-year">Year</label>
+        <select id="history-year" aria-label="Historical year"></select>
+        <label for="history-month">Passage</label>
+        <select id="history-month" aria-label="Historical passage"></select>
+        <p class="note">All reentries in the current catalog are available. Dense months are split into passages of at most 50 events. One passage loads at a time; switching pauses and resets playback. Launch coverage is limited to the curated Dragon launch. No orbital data means an illustrative pulse. Event windows are clipped at passage edges.</p>
       </div>
       <details class="tracer-config" id="tracer-config">
         <summary>Configure visualization · shared appearance &amp; event windows</summary>
@@ -216,24 +219,24 @@
 <script type="importmap">
 {
   "imports": {
-    "./SimulationClock.js": "./SimulationClock.js?v=20261010-skip-quiet-r2",
-    "./OrbitalEventFeed.js": "./OrbitalEventFeed.js?v=20261010-skip-quiet-r2",
-    "./EventPlaybackLog.js": "./EventPlaybackLog.js?v=20261010-skip-quiet-r2",
-    "./DisplayPolicy.js": "./DisplayPolicy.js?v=20261010-skip-quiet-r2",
-    "./earth/LaunchTracer.js": "./earth/LaunchTracer.js?v=20261010-skip-quiet-r2",
-    "./PresentationConfig.js": "./PresentationConfig.js?v=20261010-skip-quiet-r2",
-    "./ConfigurationPanel.js": "./ConfigurationPanel.js?v=20261010-skip-quiet-r2",
-    "./earth/OrbitPanel.js": "./earth/OrbitPanel.js?v=20261010-skip-quiet-r2",
-    "./earth/HistoryChunks.js": "./earth/HistoryChunks.js?v=20261010-skip-quiet-r2",
-    "./earth/EventSequence.js": "./earth/EventSequence.js?v=20261010-skip-quiet-r2",
-    "./earth/Tracer.js": "./earth/Tracer.js?v=20261010-skip-quiet-r2",
-    "./earth/SurfacePulse.js": "./earth/SurfacePulse.js?v=20261010-skip-quiet-r2",
-    "./earth/TracerControls.js": "./earth/TracerControls.js?v=20261010-skip-quiet-r2",
-    "./earth/EarthScene.js": "./earth/EarthScene.js?v=20261010-skip-quiet-r2",
-    "./earth/EarthShader.js": "./earth/EarthShader.js?v=20261010-skip-quiet-r2"
+    "./SimulationClock.js": "./SimulationClock.js?v=20261010-full-history",
+    "./OrbitalEventFeed.js": "./OrbitalEventFeed.js?v=20261010-full-history",
+    "./EventPlaybackLog.js": "./EventPlaybackLog.js?v=20261010-full-history",
+    "./DisplayPolicy.js": "./DisplayPolicy.js?v=20261010-full-history",
+    "./earth/LaunchTracer.js": "./earth/LaunchTracer.js?v=20261010-full-history",
+    "./PresentationConfig.js": "./PresentationConfig.js?v=20261010-full-history",
+    "./ConfigurationPanel.js": "./ConfigurationPanel.js?v=20261010-full-history",
+    "./earth/OrbitPanel.js": "./earth/OrbitPanel.js?v=20261010-full-history",
+    "./earth/HistoryChunks.js": "./earth/HistoryChunks.js?v=20261010-full-history",
+    "./earth/EventSequence.js": "./earth/EventSequence.js?v=20261010-full-history",
+    "./earth/Tracer.js": "./earth/Tracer.js?v=20261010-full-history",
+    "./earth/SurfacePulse.js": "./earth/SurfacePulse.js?v=20261010-full-history",
+    "./earth/TracerControls.js": "./earth/TracerControls.js?v=20261010-full-history",
+    "./earth/EarthScene.js": "./earth/EarthScene.js?v=20261010-full-history",
+    "./earth/EarthShader.js": "./earth/EarthShader.js?v=20261010-full-history"
   }
 }
 </script>
-<script type="module" src="app.js?v=20261010-skip-quiet-r2"></script>
+<script type="module" src="app.js?v=20261010-full-history"></script>
 </body>
 </html>

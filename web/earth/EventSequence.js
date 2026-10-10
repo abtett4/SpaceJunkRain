@@ -86,7 +86,8 @@ export async function loadSequence(manifest, timeline, fetchAsset) {
   if (events.length>1 && !sample) throw new Error('Multiple events require a bounded sample.');
   if (sample) {
     const [start,end]=sample.intervalUtc.map(Date.parse);
-    const expected=timeline.cols.id.filter((id,i)=> { const t=Date.parse(timeline.meta.epoch)+timeline.cols.d[i]*86400000; return start<=t && t<end; });
+    // Catalog fractional days can drift below an exact split by a fraction of a millisecond.
+    const expected=timeline.cols.id.filter((id,i)=> { const t=Math.round(Date.parse(timeline.meta.epoch)+timeline.cols.d[i]*86400000); return start<=t && t<end; });
     if (!Number.isFinite(start) || !Number.isFinite(end) || start>=end || end-start>31*86400000
       || sample.eventCount!==events.length || sample.reentryCount !== undefined && sample.reentryCount !== ids.size
       || sample.selectedLaunchCount !== undefined && sample.selectedLaunchCount !== events.length-ids.size

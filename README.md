@@ -320,6 +320,6 @@ appropriate citation. Keep this citation with any copy of `web/data/decays.json`
   (the number in each file name is its Freesound ID); check each sound's license before reuse.
 - Licensed under MPL-2.0 (see `LICENSE`).
 
-## Historical passages
+## Full historical catalog
 
-Choose **Historical passages · 2018 by month** in the orbital preview, choose a month, then replay. This pilot includes 251 catalog reentries plus one curated launch, loading one month and its geometry at a time. April expands the mixed preview to 28 events. Unfetched orbital histories remain labeled pulses. Month changes pause and reset playback; cross-month autoplay is not yet implemented. See [loading contract, rebuild command and measurements](notes/historical-loading.md).
+The default orbital preview now includes every reentry in the supplied catalog: **35,692 reentries across 1,132 passages (1957–2026)**, plus the one curated Dragon launch. Choose a year and passage, then Replay. Dense months are split to keep at most 50 events loaded. Quiet gaps are skipped by default. Missing orbital history remains a labeled pulse; this expansion adds no fabricated orbits. Passage changes still pause/reset playback. See [build, validation and limits](notes/historical-loading.md).

@@ -30,4 +30,19 @@ class HistoryChunksTests(unittest.TestCase):
             for kind,product in original['orbitalData'].items():
                 self.assertEqual((source.parent/product['asset']).resolve(),(target/exported['orbitalData'][kind]['asset']).resolve())
 
+    def test_dense_months_split_without_omission_or_duplicate_membership(self):
+        files=build_chunks(ROOT/'web/data/decays.json',ROOT/'web/data/samples/april-2018-launch/tracers.json',ROOT/'web/data/history/all',1968)
+        index=json.loads(files['index.json'])
+        self.assertTrue(any(c['id'].count('-')==2 for c in index['chunks']))
+        ids=[]
+        for chunk in index['chunks']:
+            self.assertLessEqual(chunk['eventCount'],50)
+            ids.extend(e['object']['noradId'] for e in json.loads(files[chunk['asset']])['events'])
+        self.assertEqual(len(ids),len(set(ids)))
+        from event_time import EPOCH
+        import datetime as dt
+        catalog=json.loads((ROOT/'web/data/decays.json').read_text())
+        expected=[nid for nid,d in zip(catalog['cols']['id'],catalog['cols']['d']) if (EPOCH+dt.timedelta(days=d)).year==1968]
+        self.assertEqual(set(ids),set(expected))
+
 if __name__=='__main__': unittest.main()

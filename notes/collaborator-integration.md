@@ -120,8 +120,8 @@ start-boundary event. Sound remains disabled until the collaborator's real adapt
 
 Tests cover endpoints, ties, large time jumps, pause/resume, speed changes, forward/backward
 seeks, replay, collection replacement, source immutability, subscriber failure and disposal.
-The bounded 2018 historical loader is now available: see [historical loading](historical-loading.md).
-Each selected month replaces the feed as a new collection. Cross-month autoplay is not yet
+The full-catalog bounded historical loader is now available: see [historical loading](historical-loading.md).
+Each selected passage replaces the feed as a new collection. Cross-passage autoplay is not yet
 implemented; contributors should use collection notifications to cancel queued work.
 
 ## Quiet-interval editing

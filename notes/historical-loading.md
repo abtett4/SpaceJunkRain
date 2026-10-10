@@ -1,4 +1,66 @@
-# Bounded historical loading — 2018 pilot
+# Full historical catalog passages
+
+The default preview is now **Full historical catalog · by year and passage**. Select a
+year, then a passage, and Replay. The supplied catalog contains **35,692 reentries**
+from 1957–2026. Every one appears exactly once across **1,132** bounded passages,
+plus the existing curated Dragon CRS-14 launch. This is complete coverage of this
+catalog snapshot, not all objects ever reentered and not complete launch coverage.
+
+Months with more than 50 events are divided into chronological parts. Split boundaries
+never divide events with identical anchors. Every passage stays within one month and
+contains at most 50 events. Missing months mean no catalog events in that month.
+The browser loads only the selected passage and its available geometry; switching
+passages pauses and resets the feed. Event windows are clipped at passage boundaries.
+Quiet-interval skipping remains enabled by default and configurable. Continuous
+cross-passage playback is still a separate next step, not implied by full catalog coverage.
+The most recent passage's playback range is capped at the existing clock endpoint.
+
+The existing April geometry and stale Iridium reference evidence are reused. Other
+records use the same catalog-only exporter and show labeled no-orbital-data pulses.
+No new Space-Track requests were made. Unknown orbital history, location, ownership,
+size and mission fields remain unknown; random display locations are not reentry estimates.
+The empty-history alternative remains a selectable single-event demonstration; it does
+not replace the richer available Iridium reference in the full catalog export.
+
+## Build and validation
+
+```sh
+python3 tools/build_history_chunks.py --all-history
+node tests/full-history.test.mjs
+python3 -m unittest discover -s tests -p test_history_chunks.py
+```
+
+The full output lives in `web/data/history/all/`. The old 2018 pilot remains intact;
+`--year 2018` rebuilds it. Full exports use deterministic gzip files and an uncompressed
+index. The browser verifies compressed checksums and decoded size, decompresses using
+DecompressionStream, then applies the same schema, catalog-join and geometry validation
+as the small previews. Serve through HTTP on localhost or HTTPS; do not open via file://.
+The browser must support DecompressionStream (modern browsers). The year/passage controls
+keep the long index out of a single overwhelming dropdown.
+
+The full index and event files total **4,076,097 bytes** compressed, excluding existing
+geometry, Earth assets and the already-loaded compact timeline. No unbounded application
+cache is introduced. Stale requests are aborted and stale load results cannot install.
+The catalog-only export uses one-row column views so its joins do not repeatedly scan
+the entire catalog for each fallback event.
+
+The exhaustive test loads and validates all 1,132 passages, checks unique membership
+against the catalog, loads every referenced geometry product and delivers all 35,693
+crossings through the shared feed with quiet skipping on. A first local run took about
+9.4 seconds for that offline CPU/validation workload; this is not GPU/FPS or network
+performance. Dense split boundaries exposed floating-point day-to-millisecond drift:
+expected interval membership now rounds to UTC milliseconds before boundary comparison,
+matching the browser clock's precision. This prevents an event being counted on both
+sides of a split by a sub-millisecond artifact.
+
+Next: seamless passage transitions with neighboring visual windows and an uninterrupted
+collaborator event traversal, followed by greater orbital-data coverage and GPU profiling.
+
+---
+
+## Earlier 2018 pilot record
+
+# Bounded historical loading — 2018 pilot (previous milestone)
 
 Choose **Historical passages · 2018 by month**, choose a month, then **Replay passage**.
 The default historical month is April: 27 reentries plus the sourced Dragon launch,
