@@ -1,3 +1,4 @@
+import { validateHistoryIndex, loadHistoryChunk } from './HistoryChunks.js';
 // One event or a bounded passage, using the timeline's existing simulation clock.
 import { formatDuration } from './TracerControls.js';
 import { loadSequence, configureSequence, sequenceRange, sequenceAt } from './EventSequence.js';
@@ -24,6 +25,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
   const disposeEventLog = mountEventPlaybackLog(el('event-playback-log'), events);
   const status = el('orbit-status'), slider = el('orbit-scrub'), replay = el('orbit-replay'), pause = el('orbit-pause');
   const picker = el('orbit-example'), objectPicker = el('orbit-object');
+  let historyIndex = null, loadController = null;
   let scene, unsubscribeSettings, unsubscribe, disposeGeography, sequence, settings = presentation.values, selected, revision = 0, firstLoad = true;
   let scoreButtons = [], activeSignature = '', hasStarted = false;
   const listeners = new AbortController();
@@ -98,7 +100,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
         button.classList.toggle('active', Boolean(view.sample));
         button.setAttribute('aria-pressed', String(s === selected));
       }
-      text('orbit-sample', 'One clock for the passage and full catalog below. The launch uses a reported minute; reentries use assigned times within reported days.');
+      text('orbit-sample', 'One clock for the passage and full catalog below. Curated launch times retain their reported precision; date-only reentries use assigned times within reported days.');
       const pulseCount = active.filter(s => s.state.view.pulse === 'symbolic').length;
       text('symbolic-state', `${pulseCount} pulse${pulseCount === 1 ? '' : 's'} active · no tracers for these events`);
     } else {
@@ -181,13 +183,18 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
       const label = document.createElement('span'); label.textContent = new Date(start+(end-start)*i/4).toISOString().slice(5,10); return label;
     }));
   };
-  const fetchJson = async url => {
-    const response = await fetch(url, { cache: 'no-cache' });
+  const fetchText = async (url, signal) => {
+    const response = await fetch(url, { cache: 'no-cache', signal });
     if (!response.ok) throw new Error(`Could not load ${url.pathname} (${response.status}).`);
-    return response.json();
+    return response.text();
   };
+  const fetchJson = async (url, signal) => JSON.parse(await fetchText(url, signal));
   const load = async () => {
     const ticket = ++revision;
+    loadController?.abort();
+    const controller = loadController = new AbortController();
+    const historical = picker.value === 'data/history/2018/index.json';
+    el('history-choice').hidden = !historical;
     clock.pause(); sequence = selected = null;
     events.replace([]);
     clearScene(); activeSignature = ''; scoreButtons = []; hasStarted = false;
@@ -196,10 +203,27 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     slider.disabled = replay.disabled = pause.disabled = true;
     status.textContent = 'Loading preview…';
     try {
-      const manifestUrl = new URL(picker.value, document.baseURI), cache = new Map();
-      const manifest = await fetchJson(manifestUrl);
+      let manifestUrl = new URL(picker.value, document.baseURI);
+      const cache = new Map();
+      let manifest;
+      if (historical) {
+        if (!historyIndex) {
+          const index = validateHistoryIndex(await fetchJson(manifestUrl, controller.signal));
+          if (ticket !== revision) return;
+          historyIndex = index;
+          el('history-month').replaceChildren(...index.chunks.map(chunk => {
+            const option = document.createElement('option'); option.value = chunk.id;
+            option.textContent = `${chunk.id} · ${chunk.eventCount} events`; return option;
+          }));
+          el('history-month').value = index.defaultChunk;
+        }
+        const chunk = historyIndex.chunks.find(c => c.id === el('history-month').value);
+        if (!chunk) throw new Error('Choose an indexed historical month.');
+        manifest = await loadHistoryChunk(chunk, manifestUrl, url => fetchText(url, controller.signal));
+        manifestUrl = new URL(chunk.asset, manifestUrl);
+      } else manifest = await fetchJson(manifestUrl, controller.signal);
       const loaded = await loadSequence(manifest, timeline, name => {
-        if (!cache.has(name)) cache.set(name, fetchJson(new URL(name, manifestUrl)));
+        if (!cache.has(name)) cache.set(name, fetchJson(new URL(name, manifestUrl), controller.signal));
         return cache.get(name);
       });
       if (ticket !== revision) return;
@@ -227,7 +251,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
       slider.disabled = replay.disabled = pause.disabled = false;
       applySettings(presentation.values);
       if (mixed) makeScore();
-      if (firstLoad && mixed) clock.seek(range()[0]);
+      if ((firstLoad || historical) && mixed) clock.seek(range()[0]);
       if (!mixed) jumpTo(selected);
       firstLoad = false;
       update(clock);
@@ -279,8 +303,9 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     }, { signal: listeners.signal });
     el('orbit-jump').addEventListener('click', () => jumpTo(selected), { signal: listeners.signal });
     picker.addEventListener('change', load, { signal: listeners.signal });
+    el('history-month').addEventListener('change', load, { signal: listeners.signal });
     window.addEventListener('pagehide', e => {
-      if (!e.persisted) { revision++; listeners.abort(); disposeEventLog(); events.dispose(); unsubscribeSettings?.(); disposeGeography?.(); unsubscribe(); scene.dispose(); }
+      if (!e.persisted) { revision++; loadController?.abort(); listeners.abort(); disposeEventLog(); events.dispose(); unsubscribeSettings?.(); disposeGeography?.(); unsubscribe(); scene.dispose(); }
     });
     await load();
     // Integration seam: collaborators receive the same clock, evidence feed, settings, and Earth host.

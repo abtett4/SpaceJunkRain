@@ -319,3 +319,7 @@ appropriate citation. Keep this citation with any copy of `web/data/decays.json`
 - `ExplosionSounds.zip`, `FenderBender.zip`, and the `.wav` files: collision SFX from Freesound
   (the number in each file name is its Freesound ID); check each sound's license before reuse.
 - Licensed under MPL-2.0 (see `LICENSE`).
+
+## Historical passages
+
+Choose **Historical passages · 2018 by month** in the orbital preview, choose a month, then replay. This pilot includes 251 catalog reentries plus one curated launch, loading one month and its geometry at a time. April expands the mixed preview to 28 events. Unfetched orbital histories remain labeled pulses. Month changes pause and reset playback; cross-month autoplay is not yet implemented. See [loading contract, rebuild command and measurements](notes/historical-loading.md).

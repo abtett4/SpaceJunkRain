@@ -298,3 +298,6 @@ tbody tr:last-child td { border-bottom: 1px solid var(--rule); }
 #event-playback-log[hidden] { display: none; }
 #event-playback-log summary { cursor: pointer; }
 #event-playback-log p, #event-playback-log li { margin: 8px 0; }
+
+#history-choice[hidden] { display:none; }
+#history-choice { margin:16px 0; }

@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap">
-<link rel="stylesheet" href="style.css?v=20261010-event-feed">
+<link rel="stylesheet" href="style.css?v=20261010-history-chunks">
 </head>
 <body>
 <main class="viz-root">
@@ -65,12 +65,18 @@
       </div>
       <div class="orbit-example"><label for="orbit-example">Preview input</label>
         <select id="orbit-example">
-          <option value="data/samples/april-2018-launch/tracers.json">Launch & reentries · April 2–9, 2018</option>
+          <option value="data/history/2018/index.json">Historical passages · 2018 by month</option>
+          <option value="data/samples/april-2018-launch/tracers.json" selected>Launch & reentries · April 2–9, 2018</option>
           <option value="data/samples/april-2018-launch/launch.json">Dragon CRS-14 · sourced launch</option>
           <option value="data/tracers.json">Tiangong-1 · recent orbital history</option>
           <option value="data/fallbacks/stale/tracers.json">Iridium 33 debris · stale reference orbit</option>
           <option value="data/fallbacks/empty/tracers.json">Same debris event · empty near-event query</option>
         </select>
+      </div>
+      <div id="history-choice" hidden>
+        <label for="history-month">Historical month</label>
+        <select id="history-month" aria-label="Historical month"></select>
+        <p class="note">One month and its available geometry load at a time. Changing months pauses playback and clears the event feed. All catalog reentries are included; launch coverage is limited to the curated Dragon launch. Events at passage edges are clipped to this month.</p>
       </div>
       <details class="tracer-config" id="tracer-config">
         <summary>Configure visualization · shared appearance &amp; event windows</summary>
@@ -149,7 +155,7 @@
         <p class="sample-score-title">Event sequence <span class="note">· click a dot to preview an event</span></p>
         <div id="sample-lanes"></div>
         <div id="sample-dates" aria-hidden="true"></div>
-        <p class="note">Every dot is one event. Reentry times are assigned within reported days; the selected launch uses a sourced minute. The full catalog reentry charts below follow the same clock.</p>
+        <p class="note">Every dot is one event. Date-only reentries use assigned times within reported days; curated launches retain their reported precision. The full catalog reentry charts below follow the same clock.</p>
       </div>
       <details id="event-playback-log" hidden>
         <summary>Events reached during playback · <span data-event-count>0</span></summary>
@@ -209,22 +215,23 @@
 <script type="importmap">
 {
   "imports": {
-    "./OrbitalEventFeed.js": "./OrbitalEventFeed.js?v=20261010-event-feed",
-    "./EventPlaybackLog.js": "./EventPlaybackLog.js?v=20261010-event-feed",
-    "./DisplayPolicy.js": "./DisplayPolicy.js?v=20261010-event-feed",
-    "./earth/LaunchTracer.js": "./earth/LaunchTracer.js?v=20261010-event-feed",
-    "./PresentationConfig.js": "./PresentationConfig.js?v=20261010-event-feed",
-    "./ConfigurationPanel.js": "./ConfigurationPanel.js?v=20261010-event-feed",
-    "./earth/OrbitPanel.js": "./earth/OrbitPanel.js?v=20261010-event-feed",
-    "./earth/EventSequence.js": "./earth/EventSequence.js?v=20261010-event-feed",
-    "./earth/Tracer.js": "./earth/Tracer.js?v=20261010-event-feed",
-    "./earth/SurfacePulse.js": "./earth/SurfacePulse.js?v=20261010-event-feed",
-    "./earth/TracerControls.js": "./earth/TracerControls.js?v=20261010-event-feed",
-    "./earth/EarthScene.js": "./earth/EarthScene.js?v=20261010-event-feed",
-    "./earth/EarthShader.js": "./earth/EarthShader.js?v=20261010-event-feed"
+    "./OrbitalEventFeed.js": "./OrbitalEventFeed.js?v=20261010-history-chunks",
+    "./EventPlaybackLog.js": "./EventPlaybackLog.js?v=20261010-history-chunks",
+    "./DisplayPolicy.js": "./DisplayPolicy.js?v=20261010-history-chunks",
+    "./earth/LaunchTracer.js": "./earth/LaunchTracer.js?v=20261010-history-chunks",
+    "./PresentationConfig.js": "./PresentationConfig.js?v=20261010-history-chunks",
+    "./ConfigurationPanel.js": "./ConfigurationPanel.js?v=20261010-history-chunks",
+    "./earth/OrbitPanel.js": "./earth/OrbitPanel.js?v=20261010-history-chunks",
+    "./earth/HistoryChunks.js": "./earth/HistoryChunks.js?v=20261010-history-chunks",
+    "./earth/EventSequence.js": "./earth/EventSequence.js?v=20261010-history-chunks",
+    "./earth/Tracer.js": "./earth/Tracer.js?v=20261010-history-chunks",
+    "./earth/SurfacePulse.js": "./earth/SurfacePulse.js?v=20261010-history-chunks",
+    "./earth/TracerControls.js": "./earth/TracerControls.js?v=20261010-history-chunks",
+    "./earth/EarthScene.js": "./earth/EarthScene.js?v=20261010-history-chunks",
+    "./earth/EarthShader.js": "./earth/EarthShader.js?v=20261010-history-chunks"
   }
 }
 </script>
-<script type="module" src="app.js?v=20261010-event-feed"></script>
+<script type="module" src="app.js?v=20261010-history-chunks"></script>
 </body>
 </html>

@@ -120,6 +120,6 @@ start-boundary event. Sound remains disabled until the collaborator's real adapt
 
 Tests cover endpoints, ties, large time jumps, pause/resume, speed changes, forward/backward
 seeks, replay, collection replacement, source immutability, subscriber failure and disposal.
-The next orbital milestone is bounded historical loading: produce an index of time chunks,
-load only the relevant geometry, and profile a larger mixed passage before expanding to
-full history. That work should preserve this feed and the event/visualization separation.
+The bounded 2018 historical loader is now available: see [historical loading](historical-loading.md).
+Each selected month replaces the feed as a new collection. Cross-month autoplay is not yet
+implemented; contributors should use collection notifications to cancel queued work.
