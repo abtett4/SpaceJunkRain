@@ -1,7 +1,7 @@
 // Space Junk Rain - every decay sits on its real day; nothing is smoothed.
 import { SimulationClock } from './SimulationClock.js';
 import { mountOrbitPanel } from './earth/OrbitPanel.js';
-import { createPresentationStore } from './PresentationConfig.js';
+import { createPresentationStore, DEFAULT_PLAYBACK_RATE } from './PresentationConfig.js';
 import { mountConfigurationPanel } from './ConfigurationPanel.js';
 
 (async function () {
@@ -121,7 +121,7 @@ import { mountConfigurationPanel } from './ConfigurationPanel.js';
 
   // ---- state -------------------------------------------------------------
   const clock = new SimulationClock({ minMs: EPOCH_MS + X_MIN * DAY_MS,
-    maxMs: EPOCH_MS + TIME_END * DAY_MS, rate: YEAR * 86400 / 3.1470588 });
+    maxMs: EPOCH_MS + TIME_END * DAY_MS, rate: DEFAULT_PLAYBACK_RATE });
   const state = {
     get playhead() { return (clock.nowMs - EPOCH_MS) / DAY_MS; },
     set playhead(day) { clock.seek(EPOCH_MS + day * DAY_MS); },
@@ -846,7 +846,7 @@ import { mountConfigurationPanel } from './ConfigurationPanel.js';
   readColors();
   setView('parent');
   window.addEventListener('pagehide', e => { clock.pause(); if (!e.persisted) { unsubscribePresentation(); disposeConfiguration(); } });
-  const experienceReady = mountOrbitPanel(clock, data, (startMs, endMs, rate = 300) => {
+  const experienceReady = mountOrbitPanel(clock, data, (startMs, endMs, rate = DEFAULT_PLAYBACK_RATE) => {
     clock.pause();
     document.getElementById('speed').value = String(YEAR * 86400 / rate);
     clock.setRate(rate);

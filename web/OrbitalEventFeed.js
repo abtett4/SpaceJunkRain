@@ -47,7 +47,7 @@ export class OrbitalEventFeed {
     this.crossings.add(listener);
     return () => this.crossings.delete(listener);
   }
-  replace(records, collection = null) {
+  replace(records, collection = null, { continuation = false } = {}) {
     if (this.disposed) throw new Error('Event feed is disposed.');
     const ids = new Set();
     const prepared = records.map(({ event, displayTimeMs }) => {
@@ -60,8 +60,8 @@ export class OrbitalEventFeed {
     const preparedCollection = freeze(structuredClone(collection));
     this.records = Object.freeze(prepared);
     this.collection = preparedCollection;
-    this.revision++; this.traversal++; this.includeStart = true;
-    this.snapshot = this.makeState('collection');
+    this.revision++; if (!continuation) this.traversal++; this.includeStart = true;
+    this.snapshot = this.makeState(continuation ? 'continuation' : 'collection');
     this.notify(this.states, this.snapshot);
   }
   update(state) {

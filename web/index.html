@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap">
-<link rel="stylesheet" href="style.css?v=20261010-full-history">
+<link rel="stylesheet" href="style.css?v=20261010-continuous">
 </head>
 <body>
 <main class="viz-root">
@@ -42,12 +42,12 @@
       <label>Speed
         <select id="speed">
           <option value="1">1 s per year</option>
-          <option value="3.1470588" selected>3.1 s per year</option>
+          <option value="3.1470588">3.1 s per year</option>
           <option value="10">10 s per year</option>
           <option value="30">30 s per year</option>
           <option value="105192">5 min per second · orbit detail</option>
           <option value="17532">30 min per second · passage detail</option>
-          <option value="4383">2 hours per second · passage</option>
+          <option value="2922" selected>3 hours per second</option>
         </select>
       </label>
       <label>Highlight
@@ -80,7 +80,7 @@
         <select id="history-year" aria-label="Historical year"></select>
         <label for="history-month">Passage</label>
         <select id="history-month" aria-label="Historical passage"></select>
-        <p class="note">All reentries in the current catalog are available. Dense months are split into passages of at most 50 events. One passage loads at a time; switching pauses and resets playback. Launch coverage is limited to the curated Dragon launch. No orbital data means an illustrative pulse. Event windows are clipped at passage edges.</p>
+        <p class="note">All reentries in the current catalog are available. Dense months are split into passages of at most 50 events. Playback continues automatically through passages and years. Manual selection pauses and resets playback. Launch coverage is limited to the curated Dragon launch. No orbital data means an illustrative pulse. Event windows are clipped at passage edges.</p>
       </div>
       <details class="tracer-config" id="tracer-config">
         <summary>Configure visualization · shared appearance &amp; event windows</summary>
@@ -88,7 +88,7 @@
         <div class="config-notes">
           <p id="tracer-window-limit" class="note">Settings apply to all previews and newly loaded events. Source limits can shorten a window.</p>
           <p class="note">Colors follow event kind: cyan launches and amber reentries. Marker sizes and pulses are exaggerated for visibility.</p>
-          <p class="note">Changing settings keeps the clock in place. Replay uses the new window. Passage speed is 2 simulated hours per second; single-event speed is 5 minutes per second. Use Speed above to change playback.</p>
+          <p class="note">Changing settings keeps the clock in place. Replay uses the new window. Default replay speed is 3 simulated hours per second. Use Speed above to change playback.</p>
         </div>
       </details>
       <div class="orbit-grid">
@@ -219,24 +219,24 @@
 <script type="importmap">
 {
   "imports": {
-    "./SimulationClock.js": "./SimulationClock.js?v=20261010-full-history",
-    "./OrbitalEventFeed.js": "./OrbitalEventFeed.js?v=20261010-full-history",
-    "./EventPlaybackLog.js": "./EventPlaybackLog.js?v=20261010-full-history",
-    "./DisplayPolicy.js": "./DisplayPolicy.js?v=20261010-full-history",
-    "./earth/LaunchTracer.js": "./earth/LaunchTracer.js?v=20261010-full-history",
-    "./PresentationConfig.js": "./PresentationConfig.js?v=20261010-full-history",
-    "./ConfigurationPanel.js": "./ConfigurationPanel.js?v=20261010-full-history",
-    "./earth/OrbitPanel.js": "./earth/OrbitPanel.js?v=20261010-full-history",
-    "./earth/HistoryChunks.js": "./earth/HistoryChunks.js?v=20261010-full-history",
-    "./earth/EventSequence.js": "./earth/EventSequence.js?v=20261010-full-history",
-    "./earth/Tracer.js": "./earth/Tracer.js?v=20261010-full-history",
-    "./earth/SurfacePulse.js": "./earth/SurfacePulse.js?v=20261010-full-history",
-    "./earth/TracerControls.js": "./earth/TracerControls.js?v=20261010-full-history",
-    "./earth/EarthScene.js": "./earth/EarthScene.js?v=20261010-full-history",
-    "./earth/EarthShader.js": "./earth/EarthShader.js?v=20261010-full-history"
+    "./SimulationClock.js": "./SimulationClock.js?v=20261010-continuous",
+    "./OrbitalEventFeed.js": "./OrbitalEventFeed.js?v=20261010-continuous",
+    "./EventPlaybackLog.js": "./EventPlaybackLog.js?v=20261010-continuous",
+    "./DisplayPolicy.js": "./DisplayPolicy.js?v=20261010-continuous",
+    "./earth/LaunchTracer.js": "./earth/LaunchTracer.js?v=20261010-continuous",
+    "./PresentationConfig.js": "./PresentationConfig.js?v=20261010-continuous",
+    "./ConfigurationPanel.js": "./ConfigurationPanel.js?v=20261010-continuous",
+    "./earth/OrbitPanel.js": "./earth/OrbitPanel.js?v=20261010-continuous",
+    "./earth/HistoryChunks.js": "./earth/HistoryChunks.js?v=20261010-continuous",
+    "./earth/EventSequence.js": "./earth/EventSequence.js?v=20261010-continuous",
+    "./earth/Tracer.js": "./earth/Tracer.js?v=20261010-continuous",
+    "./earth/SurfacePulse.js": "./earth/SurfacePulse.js?v=20261010-continuous",
+    "./earth/TracerControls.js": "./earth/TracerControls.js?v=20261010-continuous",
+    "./earth/EarthScene.js": "./earth/EarthScene.js?v=20261010-continuous",
+    "./earth/EarthShader.js": "./earth/EarthShader.js?v=20261010-continuous"
   }
 }
 </script>
-<script type="module" src="app.js?v=20261010-full-history"></script>
+<script type="module" src="app.js?v=20261010-continuous"></script>
 </body>
 </html>

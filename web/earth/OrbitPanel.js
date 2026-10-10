@@ -4,7 +4,7 @@ import { formatDuration } from './TracerControls.js';
 import { loadSequence, configureSequence, sequenceRange, sequenceAt } from './EventSequence.js';
 import { OrbitalEventFeed } from '../OrbitalEventFeed.js';
 import { mountEventPlaybackLog } from '../EventPlaybackLog.js';
-import { EVENT_COLORS } from '../PresentationConfig.js';
+import { EVENT_COLORS, DEFAULT_PLAYBACK_RATE } from '../PresentationConfig.js';
 import { mountGeographyPanel } from './GeographyPanel.js';
 export { selectMode } from './EventSequence.js';
 
@@ -26,12 +26,14 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
   const status = el('orbit-status'), slider = el('orbit-scrub'), replay = el('orbit-replay'), pause = el('orbit-pause');
   const picker = el('orbit-example'), objectPicker = el('orbit-object');
   let historyIndex = null, loadController = null, provenanceUrl = null;
+  let prefetched = null, transitioning = false, continuationStart = null;
+  const PASSAGE_RATE = DEFAULT_PLAYBACK_RATE;
   let scene, unsubscribeSettings, unsubscribe, disposeGeography, sequence, settings = presentation.values, selected, revision = 0, firstLoad = true;
   let scoreButtons = [], activeSignature = '', hasStarted = false;
   const listeners = new AbortController();
   const range = () => {
     const [start,end] = sequenceRange(sequence,settings);
-    return [Math.max(start,clock.minMs),Math.min(end,clock.maxMs)];
+    return [Math.max(continuationStart ?? start,clock.minMs),Math.min(end,clock.maxMs)];
   };
   const focus = direction => {
     scene.clearInspection();
@@ -150,8 +152,8 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     slider.max = (endMs - startMs) / 1000;
     const playbackMs = clock.playbackWindows ? clock.playbackWindows.windows.reduce((sum,[a,b])=>sum+b-a,0) : endMs-startMs;
     text('quiet-playback-note', values.skipQuietIntervals ? 'Quiet intervals skipped · playback follows configured event windows.' : 'Quiet intervals included · playback preserves elapsed historical time.');
-    const seconds = sequence.sample ? playbackMs / 1000 / sequence.sample.playbackRate
-      : selected.mode === 'symbolic' ? (selected.endMs - selected.pulse.visibleStartMs) / 1000 / 300 : (endMs - startMs) / 1000 / 300;
+    const seconds = sequence.sample ? playbackMs / 1000 / PASSAGE_RATE
+      : selected.mode === 'symbolic' ? (selected.endMs - selected.pulse.visibleStartMs) / 1000 / PASSAGE_RATE : (endMs - startMs) / 1000 / PASSAGE_RATE;
     replay.textContent = `▶ Replay${sequence.sample ? ' passage' : selected.mode === 'symbolic' ? ' pulse' : ''} · ${formatDuration(Math.round(seconds))}`;
     text('tracer-window-times', `${sequence.sample ? 'Passage' : 'Display window'}: ${dateText(startMs)} to ${dateText(endMs)}`);
     inspect();
@@ -206,25 +208,56 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
       option.textContent=`${chunk.id} · ${chunk.eventCount} event${chunk.eventCount===1?'':'s'}`;return option;
     }));
   };
-  const load = async () => {
+  const prepareHistory = async (chunk, signal) => {
+    const indexUrl = new URL('data/history/all/index.json',document.baseURI);
+    const manifest = await loadHistoryChunk(chunk,indexUrl,async url=>{
+      const response=await fetch(url,{cache:'no-cache',signal});
+      if (!response.ok) throw new Error(`Could not load historical passage (${response.status}).`);
+      return response.arrayBuffer();
+    });
+    const manifestUrl=new URL(chunk.asset,indexUrl), cache=new Map();
+    const loaded=await loadSequence(manifest,timeline,name=>{
+      if (!cache.has(name)) cache.set(name,fetchJson(new URL(name,manifestUrl),signal));
+      return cache.get(name);
+    });
+    return {manifest,manifestUrl,loaded};
+  };
+  const nextChunk = () => historyIndex?.chunks[historyIndex.chunks.findIndex(c=>c.id===el('history-month').value)+1];
+  const prefetchNext = () => {
+    const next=nextChunk();
+    if (!next || Date.parse(next.intervalUtc[0])>=clock.maxMs) { prefetched=null; return; }
+    const controller=new AbortController();
+    const promise=prepareHistory(next,controller.signal);
+    promise.catch(()=>{}); // Surface a failure only if/when this passage is needed.
+    prefetched={id:next.id,controller,promise};
+  };
+  const load = async (options = {}) => {
+    const automatic = options.automatic === true;
+    const ready = automatic ? prefetched : null;
+    if (!automatic) { prefetched?.controller.abort(); transitioning=false; continuationStart=null; }
+    prefetched=null;
     const ticket = ++revision;
     if (provenanceUrl) { URL.revokeObjectURL(provenanceUrl); provenanceUrl=null; }
     loadController?.abort();
     const controller = loadController = new AbortController();
+    if (ready) controller.signal.addEventListener('abort',()=>ready.controller.abort(),{once:true});
     const historical = picker.value === 'data/history/all/index.json';
     el('history-choice').hidden = !historical;
-    clock.pause(); sequence = selected = null;
-    events.replace([]);
-    clock.setPlaybackWindows(null);
-    clearScene(); activeSignature = ''; scoreButtons = []; hasStarted = false;
-    for (const id of ['sample-score', 'sample-summary', 'orbit-inspector', 'symbolic-event', 'orbit-trace-key', 'launch-key']) el(id).hidden = true;
-    el('sample-active').replaceChildren();
-    slider.disabled = replay.disabled = pause.disabled = true;
-    status.textContent = 'Loading preview…';
+    if (!automatic) {
+      clock.pause(); sequence = selected = null;
+      events.replace([]); clock.setPlaybackWindows(null); clearScene();
+    }
+    activeSignature = ''; scoreButtons = []; hasStarted = false;
+    if (!automatic) {
+      for (const id of ['sample-score','sample-summary','orbit-inspector','symbolic-event','orbit-trace-key','launch-key']) el(id).hidden=true;
+      el('sample-active').replaceChildren();
+      slider.disabled = replay.disabled = pause.disabled = true;
+    } else { pause.disabled=false; pause.textContent='❚❚ Pause'; }
+    status.textContent = automatic ? 'Continuing historical playback…' : 'Loading preview…';
     try {
       let manifestUrl = new URL(picker.value, document.baseURI);
       const cache = new Map();
-      let manifest;
+      let manifest, loaded;
       if (historical) {
         if (!historyIndex) {
           const index = validateHistoryIndex(await fetchJson(manifestUrl, controller.signal));
@@ -241,21 +274,20 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
         }
         const chunk = historyIndex.chunks.find(c => c.id === el('history-month').value);
         if (!chunk) throw new Error('Choose an indexed historical passage.');
-        manifest = await loadHistoryChunk(chunk, manifestUrl, async url => {
-          const response=await fetch(url,{cache:'no-cache',signal:controller.signal});
-          if (!response.ok) throw new Error(`Could not load historical passage (${response.status}).`);
-          return response.arrayBuffer();
+        const prepared=await (ready?.id===chunk.id ? ready.promise : prepareHistory(chunk,controller.signal));
+        ({manifest,manifestUrl,loaded}=prepared);
+      } else {
+        manifest=await fetchJson(manifestUrl,controller.signal);
+        loaded=await loadSequence(manifest,timeline,name=>{
+          if (!cache.has(name)) cache.set(name,fetchJson(new URL(name,manifestUrl),controller.signal));
+          return cache.get(name);
         });
-        manifestUrl = new URL(chunk.asset, manifestUrl);
-      } else manifest = await fetchJson(manifestUrl, controller.signal);
-      const loaded = await loadSequence(manifest, timeline, name => {
-        if (!cache.has(name)) cache.set(name, fetchJson(new URL(name, manifestUrl), controller.signal));
-        return cache.get(name);
-      });
+      }
       if (ticket !== revision) return;
+      if (automatic) continuationStart=clock.nowMs;
       sequence = loaded; selected = sequence.events[0];
       events.replace(sequence.events.map(s => ({ event: s.event, displayTimeMs: s.endMs })),
-        { id: sequence.sample?.id ?? selected.event.eventId, title: sequence.sample?.title ?? selected.event.object.name });
+        { id: sequence.sample?.id ?? selected.event.eventId, title: sequence.sample?.title ?? selected.event.object.name }, {continuation:automatic});
       const mixed = Boolean(sequence.sample);
       for (const id of ['sample-summary', 'sample-score', 'orbit-object-choice']) el(id).hidden = !mixed;
       el('orbit-inspector').hidden = false; el('orbit-inspector').open = !mixed;
@@ -272,20 +304,23 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
         const plural = { PAYLOAD: 'payloads', 'ROCKET BODY': 'rocket bodies', DEBRIS: 'debris objects', UNKNOWN: 'unknown objects' };
         const types = Object.entries(sequence.sample.objectTypes).filter(([,count]) => count).map(([type,count]) => `${count} ${count === 1 ? type.toLowerCase() : plural[type]}`).join(' · ');
         text('sample-coverage', `Every catalog reentry in this interval: ${types}. ${coverage.propagatedInput+coverage.referenceInput} inputs with geometry; ${coverage.historyQueryEmpty} empty history query; ${coverage.historyNotQueried} histories not yet fetched.${sequence.sample.selectedLaunchCount ? ' Plus one selected launch: Dragon CRS-14; launch coverage is incomplete.' : ''}`);
-        scene.camera.yaw = 0.8; scene.camera.pitch = 0.2;
+        if (!automatic) { scene.camera.yaw = 0.8; scene.camera.pitch = 0.2; }
       }
       text('tracer-window-limit', 'Shared settings apply to every preview. Up to 2 h of Tiangong-1 uses SGP4 samples; longer windows use a reference loop. Launches start at the sourced pad and use an illustrative ascent to the reference orbit; changing the window clips this path. All event windows are capped at 48 h; pulses fade within the chosen window.');
       slider.disabled = replay.disabled = pause.disabled = false;
       applySettings(presentation.values);
       if (mixed) makeScore();
-      if ((firstLoad || historical) && mixed) clock.seek(range()[0]);
+      if (!automatic && (firstLoad || historical) && mixed) clock.seek(range()[0]);
       if (!mixed) jumpTo(selected);
       firstLoad = false;
       update(clock);
-    } catch (error) { if (ticket === revision) fail(error); }
+      if (historical) prefetchNext();
+      if (automatic) { transitioning=false; hasStarted=true; clock.play(range()[1]); }
+    } catch (error) { if (ticket === revision) { transitioning=false; fail(error); } }
   };
   const replaySequence = () => {
     if (!sequence) return;
+    continuationStart=null; applySettings(presentation.values);
     let [startMs, endMs] = range();
     if (!sequence.sample) {
       if (selected.pulse) {
@@ -298,23 +333,43 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
       }
     }
     hasStarted = true;
-    onReplay(startMs, endMs, sequence.sample?.playbackRate ?? 300);
+    onReplay(startMs, endMs, PASSAGE_RATE);
   };
   try {
     const { EarthScene } = await import('./EarthScene.js');
     scene = new EarthScene(el('earth-scene')); await scene.ready;
     if (scene.imageryError) text('earth-render-status', 'Earth imagery unavailable; showing a plain globe. Geographic inspection still works.');
     disposeGeography = await mountGeographyPanel(scene);
-    unsubscribe = clock.subscribe(update);
+    unsubscribe = clock.subscribe(state => {
+      update(state);
+      if (transitioning && ['pause','seek'].includes(state.reason)) {
+        transitioning=false; revision++; loadController?.abort(); pause.textContent='▶ Resume';
+        if (sequence?.sample && historyIndex) {
+          el('history-year').value=sequence.sample.id.slice(0,4);populatePassages();el('history-month').value=sequence.sample.id;
+        }
+      }
+      if (state.reason==='advance' && !state.playing && sequence && state.nowMs===range()[1] && clock.untilMs===range()[1]
+        && picker.value==='data/history/all/index.json' && !transitioning) {
+        const next=nextChunk();
+        if (!next || Date.parse(next.intervalUtc[0])>=clock.maxMs) return;
+        transitioning=true;
+        queueMicrotask(()=>{
+          if (!transitioning) return;
+          el('history-year').value=next.id.slice(0,4); populatePassages(); el('history-month').value=next.id;
+          load({automatic:true});
+        });
+      }
+    });
     unsubscribeSettings = presentation.subscribe(applySettings);
     replay.addEventListener('click', replaySequence, { signal: listeners.signal });
     pause.addEventListener('click', () => {
       if (!sequence) return;
+      if (transitioning) { clock.pause(); return; }
       if (clock.playing) clock.pause();
       else {
         const [start, end] = range();
         if (clock.nowMs < start || clock.nowMs >= end) replaySequence();
-        else if (!hasStarted) { hasStarted = true; onReplay(clock.nowMs, end, sequence.sample?.playbackRate ?? 300); }
+        else if (!hasStarted) { hasStarted = true; onReplay(clock.nowMs, end, PASSAGE_RATE); }
         else clock.play(end);
       }
     }, { signal: listeners.signal });
@@ -333,7 +388,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     el('history-month').addEventListener('change', load, { signal: listeners.signal });
     el('history-year').addEventListener('change', () => { populatePassages(); load(); }, { signal: listeners.signal });
     window.addEventListener('pagehide', e => {
-      if (!e.persisted) { revision++; if (provenanceUrl) URL.revokeObjectURL(provenanceUrl); loadController?.abort(); listeners.abort(); disposeEventLog(); events.dispose(); clock.setPlaybackWindows(null); unsubscribeSettings?.(); disposeGeography?.(); unsubscribe(); scene.dispose(); }
+      if (!e.persisted) { revision++; if (provenanceUrl) URL.revokeObjectURL(provenanceUrl); loadController?.abort(); prefetched?.controller.abort(); listeners.abort(); disposeEventLog(); events.dispose(); clock.setPlaybackWindows(null); unsubscribeSettings?.(); disposeGeography?.(); unsubscribe(); scene.dispose(); }
     });
     await load();
     // Integration seam: collaborators receive the same clock, evidence feed, settings, and Earth host.

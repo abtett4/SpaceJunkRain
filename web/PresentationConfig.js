@@ -1,3 +1,4 @@
+export const DEFAULT_PLAYBACK_RATE = 3 * 60 * 60; // simulated seconds per real second
 // One presentation policy and observable preference store for every preview/layer.
 // Physics, provenance and event times do not belong in this configuration.
 import { readSettings, SETTINGS_KEY as LEGACY_SINGLE, SAMPLE_SETTINGS_KEY as LEGACY_SAMPLE } from './earth/TracerControls.js';
@@ -16,7 +17,7 @@ export const CONFIG_FIELDS = Object.freeze([
   field('reentryLeadSeconds', 'Event windows', 'Before each reentry', 14400, 30, 172800, 30, 'seconds'),
   field('launchFollowSeconds', 'Event windows', 'After each launch', 14400, 30, 172800, 30, 'seconds'),
   field('trailSeconds', 'Event windows', 'Visible trail history', 300, 0, 7200, 30, 'seconds', 'Zero shows the head only. Reference trails show at most one revolution.'),
-  field('pulseSeconds', 'Event windows', 'Surface pulse duration', 14400, 30, 14400, 30, 'seconds', 'Display time, shortened to fit the event window. Launch-pad pulses also fit within the illustrative ascent. Four simulated hours = two seconds at passage speed.'),
+  field('pulseSeconds', 'Event windows', 'Surface pulse duration', 14400, 30, 14400, 30, 'seconds', 'Display time, shortened to fit the event window. Launch-pad pulses also fit within the illustrative ascent. Four simulated hours last about 1.3 seconds at the default playback speed.'),
   field('widthScale', 'Tracers & pulses', 'Trail width', 3, 0.5, 3, 0.25, 'scale'),
   field('markerScale', 'Tracers & pulses', 'Marker & pulse size', 3, 0.5, 3, 0.25, 'scale'),
   field('tracerOpacity', 'Tracers & pulses', 'Tracer opacity', 1, 0, 1, 0.05, 'percent'),

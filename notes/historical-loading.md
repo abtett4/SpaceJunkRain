@@ -9,10 +9,15 @@ catalog snapshot, not all objects ever reentered and not complete launch coverag
 Months with more than 50 events are divided into chronological parts. Split boundaries
 never divide events with identical anchors. Every passage stays within one month and
 contains at most 50 events. Missing months mean no catalog events in that month.
-The browser loads only the selected passage and its available geometry; switching
-passages pauses and resets the feed. Event windows are clipped at passage boundaries.
-Quiet-interval skipping remains enabled by default and configurable. Continuous
-cross-passage playback is still a separate next step, not implied by full catalog coverage.
+The browser loads the current passage and prepares one following passage in advance.
+Playback automatically continues through passages and into the next year, retaining
+the camera, chosen speed and cumulative crossing readout. The default speed is three
+simulated hours per real second. Manual passage selection pauses and resets the feed.
+Quiet-interval skipping remains enabled by default and configurable; disabling it
+preserves the gaps between passages. Event windows remain clipped at passage boundaries.
+If the next file is still loading, the clock waits at the boundary; a failed load stops
+playback rather than skipping events. Pause cancels a pending transition. Playback
+stops at the catalog endpoint.
 The most recent passage's playback range is capped at the existing clock endpoint.
 
 The existing April geometry and stale Iridium reference evidence are reused. Other
@@ -53,8 +58,8 @@ expected interval membership now rounds to UTC milliseconds before boundary comp
 matching the browser clock's precision. This prevents an event being counted on both
 sides of a split by a sub-millisecond artifact.
 
-Next: seamless passage transitions with neighboring visual windows and an uninterrupted
-collaborator event traversal, followed by greater orbital-data coverage and GPU profiling.
+Next: neighboring visual-window overlap, greater orbital-data coverage and GPU profiling.
+The automatic transport and collaborator traversal now continue across passage boundaries.
 
 ---
 

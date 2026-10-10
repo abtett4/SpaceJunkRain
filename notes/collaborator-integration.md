@@ -121,8 +121,12 @@ start-boundary event. Sound remains disabled until the collaborator's real adapt
 Tests cover endpoints, ties, large time jumps, pause/resume, speed changes, forward/backward
 seeks, replay, collection replacement, source immutability, subscriber failure and disposal.
 The full-catalog bounded historical loader is now available: see [historical loading](historical-loading.md).
-Each selected passage replaces the feed as a new collection. Cross-passage autoplay is not yet
-implemented; contributors should use collection notifications to cancel queued work.
+Manual passage selection replaces the feed as a new collection and resets traversal.
+Automatic passage/year continuation emits a `continuation` state: collection revision
+changes, but traversal and the cumulative crossing readout are preserved. The next
+collection is validated and prefetched before installation; its first boundary event
+is included exactly once. Contributors should cancel queued work on manual collection
+notifications, and handle `continuation` as the next part of the same playback.
 
 ## Quiet-interval editing
 
