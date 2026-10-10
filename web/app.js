@@ -846,13 +846,16 @@ import { mountConfigurationPanel } from './ConfigurationPanel.js';
   readColors();
   setView('parent');
   window.addEventListener('pagehide', e => { clock.pause(); if (!e.persisted) { unsubscribePresentation(); disposeConfiguration(); } });
-  mountOrbitPanel(clock, data, (startMs, endMs, rate = 300) => {
+  const experienceReady = mountOrbitPanel(clock, data, (startMs, endMs, rate = 300) => {
     clock.pause();
     document.getElementById('speed').value = String(YEAR * 86400 / rate);
     clock.setRate(rate);
     clock.seek(startMs);
     clock.play(endMs);
   }, presentation);
+  // Mount collaborator adapters with experienceReady.then(experience => { ... }).
+  // Earth preparation must not delay the existing timeline observers below.
+  // Contract and disposal examples: notes/collaborator-integration.md.
   document.fonts.addEventListener('loadingdone', () => rebuild());
   let lastW = 0;
   new ResizeObserver(() => { if (wrap.clientWidth !== lastW) { lastW = wrap.clientWidth; layout(); rebuild(); } }).observe(wrap);

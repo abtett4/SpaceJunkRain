@@ -293,3 +293,8 @@ tbody tr:last-child td { border-bottom: 1px solid var(--rule); }
 #config-fields fieldset + fieldset { border-top: 1px solid var(--border); }
 .tracer-setting input[type="checkbox"] { width: auto; }
 .tracer-setting select { max-width: 100%; }
+
+#event-playback-log { margin: 18px 0; font-size: 15px; }
+#event-playback-log[hidden] { display: none; }
+#event-playback-log summary { cursor: pointer; }
+#event-playback-log p, #event-playback-log li { margin: 8px 0; }

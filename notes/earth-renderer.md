@@ -64,7 +64,7 @@ remain available without names. Geographic inspection never requires credentials
 The new collaborator owns solar data, spatial meaning, color/transparency mapping,
 and solar audio. The original collaborator owns orbital audio and the existing
 timeline work. Tyler owns orbital preprocessing, Earth and tracers. Shared event
-crossing and audio seek behavior will be agreed in the next integration phase.
+crossing and audio seek behavior are now defined in the [integration contract](collaborator-integration.md).
 
 `scene.addLayer(layer)` registers a drawing adapter and returns a removal function.
 The adapter implements `draw(frame)` and optionally `dispose()`. Its frame contains:

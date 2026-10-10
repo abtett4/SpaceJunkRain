@@ -1,6 +1,8 @@
 // One event or a bounded passage, using the timeline's existing simulation clock.
 import { formatDuration } from './TracerControls.js';
 import { loadSequence, configureSequence, sequenceRange, sequenceAt } from './EventSequence.js';
+import { OrbitalEventFeed } from '../OrbitalEventFeed.js';
+import { mountEventPlaybackLog } from '../EventPlaybackLog.js';
 import { EVENT_COLORS } from '../PresentationConfig.js';
 import { mountGeographyPanel } from './GeographyPanel.js';
 export { selectMode } from './EventSequence.js';
@@ -18,6 +20,8 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
   const el = id => document.getElementById(id);
   const text = (id, value) => { if (el(id).textContent !== value) el(id).textContent = value; };
   for (const [id,kind] of [['launch-key','launch'],['orbit-trace-key','reentry'],['symbolic-event','reentry']]) el(id).style.setProperty('--event-ink',EVENT_COLORS[kind]);
+  const events = new OrbitalEventFeed(clock);
+  const disposeEventLog = mountEventPlaybackLog(el('event-playback-log'), events);
   const status = el('orbit-status'), slider = el('orbit-scrub'), replay = el('orbit-replay'), pause = el('orbit-pause');
   const picker = el('orbit-example'), objectPicker = el('orbit-object');
   let scene, unsubscribeSettings, unsubscribe, disposeGeography, sequence, settings = presentation.values, selected, revision = 0, firstLoad = true;
@@ -32,6 +36,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
   const clearScene = () => { scene.tracers = []; scene.pulses = []; scene.setTime(clock.nowMs); };
   const fail = error => {
     sequence = selected = null;
+    events.replace([]);
     if (scene) clearScene();
     for (const id of ['symbolic-event', 'orbit-trace-key', 'sample-summary', 'sample-score', 'orbit-inspector', 'launch-key']) el(id).hidden = true;
     slider.disabled = replay.disabled = pause.disabled = true;
@@ -184,6 +189,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
   const load = async () => {
     const ticket = ++revision;
     clock.pause(); sequence = selected = null;
+    events.replace([]);
     clearScene(); activeSignature = ''; scoreButtons = []; hasStarted = false;
     for (const id of ['sample-score', 'sample-summary', 'orbit-inspector', 'symbolic-event', 'orbit-trace-key', 'launch-key']) el(id).hidden = true;
     el('sample-active').replaceChildren();
@@ -198,6 +204,8 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
       });
       if (ticket !== revision) return;
       sequence = loaded; selected = sequence.events[0];
+      events.replace(sequence.events.map(s => ({ event: s.event, displayTimeMs: s.endMs })),
+        { id: sequence.sample?.id ?? selected.event.eventId, title: sequence.sample?.title ?? selected.event.object.name });
       const mixed = Boolean(sequence.sample);
       for (const id of ['sample-summary', 'sample-score', 'orbit-object-choice']) el(id).hidden = !mixed;
       el('orbit-inspector').hidden = false; el('orbit-inspector').open = !mixed;
@@ -272,8 +280,11 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     el('orbit-jump').addEventListener('click', () => jumpTo(selected), { signal: listeners.signal });
     picker.addEventListener('change', load, { signal: listeners.signal });
     window.addEventListener('pagehide', e => {
-      if (!e.persisted) { revision++; listeners.abort(); unsubscribeSettings?.(); disposeGeography?.(); unsubscribe(); scene.dispose(); }
+      if (!e.persisted) { revision++; listeners.abort(); disposeEventLog(); events.dispose(); unsubscribeSettings?.(); disposeGeography?.(); unsubscribe(); scene.dispose(); }
     });
     await load();
-  } catch (error) { fail(error); unsubscribeSettings?.(); disposeGeography?.(); unsubscribe?.(); scene?.dispose(); }
+    // Integration seam: collaborators receive the same clock, evidence feed, settings, and Earth host.
+    return Object.freeze({ clock, events, settings: presentation,
+      earth: Object.freeze({ addLayer: layer => scene.addLayer(layer) }) });
+  } catch (error) { fail(error); disposeEventLog(); events.dispose(); unsubscribeSettings?.(); disposeGeography?.(); unsubscribe?.(); scene?.dispose(); }
 }

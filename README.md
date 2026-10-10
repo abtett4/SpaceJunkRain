@@ -105,7 +105,21 @@ node tests/earth-camera.test.mjs
 node tests/launch-sequence.test.mjs
 node tests/presentation-config.test.mjs
 node tests/display-policy.test.mjs
+node tests/orbital-event-feed.test.mjs
 ```
+
+## Shared event interface for collaborators
+
+**Events reached during playback** lists the latest five events and counts every event
+crossed in the selected preview. Forward playback emits each crossing once; scrubbing
+clears the list without triggering events. Replay starts a new pass, including a launch
+exactly at its starting timestamp. No sound or solar data is added by this increment.
+
+`OrbitalEventFeed.js` provides immutable evidence records and separate display anchors.
+The experience returned by `mountOrbitPanel()` supplies that feed, the existing clock,
+the shared settings and Earth's layer hook. The original collaborator can attach orbital
+audio while the solar collaborator samples the same clock continuously. See the
+[integration contract and adapter examples](notes/collaborator-integration.md).
 
 ## Phase 2: explicit fallbacks
 
