@@ -1,8 +1,8 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
   "events": [
     {
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "eventId": "38023:reentry:2024-01-05",
       "eventKind": "reentry",
       "object": {
@@ -148,31 +148,6 @@
           "note": "Reference orbit does not establish the event-time regime."
         }
       },
-      "presentation": {
-        "mode": "representative-orbit",
-        "modeReason": "Reference elements are 422.5 days before the reported event. This loop reuses their shape and tilt, without propagation to reentry.",
-        "displayAnchorUtc": "2024-01-05T22:11:53Z",
-        "anchorBasis": "illustrative",
-        "anchorPolicy": {
-          "policy": "sha256-utc-day-v1",
-          "seed": "SpaceJunkRain"
-        },
-        "startTime": "2024-01-05T20:11:53Z",
-        "endTime": "2024-01-05T22:11:53Z",
-        "maxDisplaySeconds": 172800,
-        "geometryAsset": "trajectories/38023-representative.json",
-        "geometryFrame": "illustrative-equatorial",
-        "geometryUnits": "km",
-        "geometrySourceIntervalUtc": null,
-        "timeMapping": "Repeated reference ellipse with fixed period and illustrative phase at the event anchor.",
-        "locationClaim": "none",
-        "geographicEndpoint": null,
-        "style": {
-          "color": "#ffd166",
-          "trailSeconds": 1200,
-          "markerRadiusEarth": 0.012
-        }
-      },
       "bounds": {
         "eventTime": [
           "2024-01-05T00:00:00Z",
@@ -183,7 +158,7 @@
           10139.90537016,
           10163.90537016
         ],
-        "meaning": "Source age and presentation limits only, not physical error bounds."
+        "meaning": "Source age only, not physical error bounds."
       },
       "sources": {
         "gpHistory": {
@@ -204,6 +179,11 @@
         "gpId": "217563156",
         "elementSha256": "f17b788dfe4b76101269778cf707d68d015876e11267ccc59b0d487d3ea83fb2",
         "assetSha256": "2709a038f6b4c83fdab1d101aa8ce7018b82022de1978abd82980d98cdc71365"
+      },
+      "orbitalData": {
+        "reference": {
+          "asset": "trajectories/38023-representative.json"
+        }
       }
     }
   ]

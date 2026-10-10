@@ -7,10 +7,9 @@ import math
 import pathlib
 import sys
 
-from event_time import EPOCH, POLICY, SEED, display_anchor, event_id, iso
+from event_time import EPOCH, POLICY, display_anchor, event_id, iso
 from spacetrack_fetch import read_snapshot
-from representative_orbit import MAX_DISPLAY_SECONDS, RADIUS_KM, representative_loop
-from symbolic_pulse import surface_pulse
+from representative_orbit import RADIUS_KM, representative_loop
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -63,16 +62,13 @@ def build_fallback_manifest(norad_id, rows, catalog, sources):
                       key=lambda r: (stamp(r["EPOCH"]), int(r["GP_ID"])), reverse=True)
     row = eligible[0] if eligible else {}
     epoch = iso(stamp(row["EPOCH"])) if row else None
-    reason = "No pre-event orbital records in the supplied snapshot; other historical data may exist."
+    unavailable = None
     geometry = None
     if row:
         try:
             geometry = representative_loop(row, identifier, norad_id, epoch)
-            age = (cutoff - stamp(epoch)).total_seconds() / 86400
-            age_text = f"{age * 24:.1f} hours" if age < 2 else f"{age:.1f} days"
-            reason = f"Reference elements are {age_text} before the reported event. This loop reuses their shape and tilt, without propagation to reentry."
         except ValueError as exc:
-            reason = str(exc)
+            unavailable = str(exc)
     # Missing fields remain null. The reference orbit is never labeled near-event evidence.
     attributes = attributes_from_gp(row, epoch, strict=False)
     attributes["orbitReference"] = attributes.pop("orbitNearEvent")
@@ -88,9 +84,8 @@ def build_fallback_manifest(norad_id, rows, catalog, sources):
                                     "note": "Radar size class, not diameter or mass."}
     family_index = c["f"][i]
     family = catalog["families"][family_index]["key"] if 0 <= family_index < len(catalog["families"]) else None
-    mode = "representative-orbit" if geometry else "symbolic-event"
     return {
-        "schemaVersion": 1, "eventId": identifier, "eventKind": "reentry",
+        "schemaVersion": 2, "eventId": identifier, "eventKind": "reentry",
         "object": {"noradId": norad_id, "objectId": row.get("OBJECT_ID"),
                    "name": catalog["names"][c["nm"][i]], "launchFamily": family},
         "representation": {"kind": "individual", "noradIds": [norad_id], "representedObjectCount": 1},
@@ -98,26 +93,13 @@ def build_fallback_manifest(norad_id, rows, catalog, sources):
                       "intervalUtc": interval, "basis": "reported", "source": "catalog",
                       "intervalMeaning": "Reported time support from the normalized catalog, not a confidence interval."},
         "attributes": attributes,
-        "presentation": {
-            "mode": mode, "modeReason": reason, "displayAnchorUtc": iso(anchor),
-            "anchorBasis": "illustrative" if c["p"][i] == 0 else "reported",
-            "anchorPolicy": {"policy": POLICY, "seed": SEED} if c["p"][i] == 0 else {"policy": "reported-time"},
-            "startTime": iso(anchor - dt.timedelta(hours=2)), "endTime": iso(anchor),
-            "maxDisplaySeconds": MAX_DISPLAY_SECONDS,
-            "geometryAsset": f"trajectories/{norad_id}-representative.json" if geometry else None,
-            "geometryFrame": "illustrative-equatorial" if geometry else None,
-            "geometryUnits": "km" if geometry else None, "geometrySourceIntervalUtc": None,
-            "timeMapping": "Repeated reference ellipse with fixed period and illustrative phase at the event anchor."
-                           if geometry else "One surface pulse ending at the display anchor; shared clock, no orbital path.",
-            **({"surfacePulse": surface_pulse(identifier)} if geometry is None else {}),
-            "locationClaim": "none", "geographicEndpoint": None,
-            "style": {"color": "#ffd166", "trailSeconds": 1200, "markerRadiusEarth": 0.012},
-        },
+        "orbitalData": {"reference": {"asset": f"trajectories/{norad_id}-representative.json"}} if geometry else {},
         "bounds": {"eventTime": interval, "referenceRadiusKm": RADIUS_KM if geometry else None,
                    "sourceElementAgeAtReportedDecayHours":
                        [(stamp(t) - stamp(epoch)).total_seconds() / 3600 for t in interval] if epoch else None,
-                   "meaning": "Source age and presentation limits only, not physical error bounds."},
+                   "meaning": "Source age only, not physical error bounds."},
         "sources": sources,
+        **({"orbitalDataUnavailableReason": unavailable} if unavailable else {}),
         "geometryProvenance": {"gpId": row.get("GP_ID"),
                                "elementSha256": hashlib.sha256(json.dumps(row, sort_keys=True).encode()).hexdigest() if row else None},
     }, geometry
@@ -197,32 +179,19 @@ def build_manifest(trajectory, trajectory_sha, gp_rows, catalog):
     radius = t["diagnostics"]["referenceSphereRadiusKm"]
     if not math.isfinite(radius) or radius <= 0:
         raise ValueError("Invalid reference sphere radius.")
-    duration = (times[-1] - times[0]).total_seconds()
-    # Replay ends at the shared event anchor. Original source times are never shifted.
-    start = anchor - dt.timedelta(seconds=duration)
+    # Original source sample times stay unchanged; replay mapping belongs to the browser.
     geometry_name = f"trajectories/{t['id']}.json"
     geometry = {"schemaVersion": 1, "id": t["id"], "frame": "TEME", "units": "km",
                 "timeSystem": "UTC", "referenceSphereRadiusKm": radius,
                 "trace": trace}
     attributes = attributes_from_gp(row, t["element"]["epoch"])
     manifest = {
-        "schemaVersion": 1, "eventId": identifier, "eventKind": "reentry",
+        "schemaVersion": 2, "eventId": identifier, "eventKind": "reentry",
         "object": {"noradId": t["id"], "objectId": t["objectId"], "name": t["name"], "launchFamily": t["launchFamily"]},
         "representation": {"kind": "individual", "noradIds": [t["id"]], "representedObjectCount": 1},
         "eventTime": {k: t["decay"][k] for k in ("date", "precision", "intervalUtc", "intervalMeaning")},
         "attributes": attributes,
-        "presentation": {
-            "mode": "illustrative-replay-of-propagated-orbit", "displayAnchorUtc": iso(anchor),
-            "anchorBasis": "illustrative" if precision == "day" else "reported",
-            "anchorPolicy": {"policy": POLICY, "seed": SEED} if precision == "day" else {"policy": "reported-time"},
-            "startTime": iso(start), "endTime": iso(anchor),
-            "geometryAsset": geometry_name, "geometryFrame": "TEME", "geometryUnits": "km",
-            "geometrySourceIntervalUtc": [trace[0][0], trace[-1][0]],
-            "timeMapping": "Source samples replayed at 1:1 simulation duration, ending at the display anchor.",
-            "locationClaim": "none", "geographicEndpoint": None,
-            "style": {"color": "#ffd166", "trailSeconds": 1200, "markerRadiusEarth": 0.012},
-            "styleMeaning": "Fixed prototype style and exaggerated marker size; no physical size/brightness claim.",
-        },
+        "orbitalData": {"propagated": {"asset": geometry_name}},
         "bounds": {"eventTime": t["decay"]["intervalUtc"],
                    "sourceElementAgeAtReportedDecayHours": t["element"]["ageAtReportedDecayHours"],
                    "sampledRadiusMinusReferenceKm": t["diagnostics"]["radiusMinusReferenceRangeKm"],
@@ -295,21 +264,20 @@ def main():
         return hashlib.sha256(data).hexdigest()
 
     if geometry:
-        manifest["geometryProvenance"]["assetSha256"] = write_geometry(manifest["presentation"]["geometryAsset"], geometry)
+        manifest["geometryProvenance"]["assetSha256"] = write_geometry(next(iter(manifest["orbitalData"].values()))["asset"], geometry)
     if args.trajectory:
         row = next(r for r in rows if str(r["GP_ID"]) == str(trajectory["element"]["gpId"]))
         try:
             loop = representative_loop(row, manifest["eventId"], trajectory["id"], trajectory["element"]["epoch"])
         except ValueError as exc:
-            manifest["presentation"]["longWindowUnavailableReason"] = str(exc)
+            manifest["orbitalDataUnavailableReason"] = str(exc)
         else:
             name = f"trajectories/{trajectory['id']}-representative.json"
-            manifest["presentation"].update(representativeOrbitAsset=name, maxDisplaySeconds=MAX_DISPLAY_SECONDS)
-            manifest["presentation"]["longWindowPolicy"] = "Beyond the prepared sample duration, the entire selected window uses the representative loop. Original SGP4 samples are never stretched or looped."
+            manifest["orbitalData"]["reference"] = {"asset": name}
             manifest["geometryProvenance"]["representativeAssetSha256"] = write_geometry(name, loop)
     target = output / "tracers.json"
-    target.write_text(json.dumps({"schemaVersion": 1, "events": [manifest]}, indent=2, allow_nan=False) + "\n")
-    print(f"{manifest['eventId']} -> {target}\nMode: {manifest['presentation']['mode']}\nDisplay anchor: {manifest['presentation']['displayAnchorUtc']}")
+    target.write_text(json.dumps({"schemaVersion": 3, "events": [manifest]}, indent=2, allow_nan=False) + "\n")
+    print(f"{manifest['eventId']} -> {target}\nAvailable orbital products: {list(manifest['orbitalData'])}")
 
 
 if __name__ == "__main__":

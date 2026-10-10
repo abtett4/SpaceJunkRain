@@ -5,7 +5,7 @@ import json
 import pathlib
 
 from build_tracers import ROOT, build_fallback_manifest, load_gp_snapshot, stamp
-from event_time import EPOCH, POLICY, event_id, iso
+from event_time import EPOCH, POLICY, event_id, iso, display_anchor
 
 
 def encoded(value):
@@ -14,14 +14,15 @@ def encoded(value):
 
 def import_event(path, norad_id):
     doc = json.loads(path.read_text())
-    if doc.get("schemaVersion") != 1 or len(doc.get("events", [])) != 1:
+    if doc.get("schemaVersion") != 3 or len(doc.get("events", [])) != 1:
         raise ValueError("Imported input must contain exactly one event.")
     event = copy.deepcopy(doc["events"][0])
     if event["object"]["noradId"] != norad_id:
         raise ValueError("Imported event NORAD ID does not match sample input.")
     assets = {}
-    for field, checksum in [("geometryAsset", "assetSha256"), ("representativeOrbitAsset", "representativeAssetSha256")]:
-        name = event["presentation"].get(field)
+    for kind, product in event["orbitalData"].items():
+        checksum = "representativeAssetSha256" if kind == "reference" and "propagated" in event["orbitalData"] else "assetSha256"
+        name = product["asset"]
         if not name:
             continue
         relative = pathlib.PurePosixPath(name)
@@ -54,12 +55,10 @@ def build_sample(spec, catalog, catalog_source, root=ROOT):
                 if (start - EPOCH).total_seconds() / 86400 <= day < (end - EPOCH).total_seconds() / 86400}
     if set(ids) != selected:
         raise ValueError("Sample inputs must include every catalog event in the selected interval, exactly once.")
-    if sample["playbackRate"] != 7200 or sample["surfacePulseSeconds"] != 14400:
-        raise ValueError("This sample policy uses 2 h/second and a 4 h illustrative pulse.")
-    if not 30 <= sample["defaultLeadSeconds"] <= 172800:
-        raise ValueError("Default lead must be between 30 seconds and 48 hours.")
-    if not 0 <= sample.get("defaultTrailSeconds", 1200) <= 7200:
-        raise ValueError("Default trail history must be between zero and 2 hours.")
+    if sample["playbackRate"] != 7200:
+        raise ValueError("This small passage uses 2 h per second.")
+    for legacy in ("surfacePulseSeconds", "defaultLeadSeconds", "defaultTrailSeconds"):
+        sample.pop(legacy, None)
     assets, events = {}, []
     coverage = {"propagatedInput": 0, "referenceInput": 0, "symbolicInput": 0,
                 "historyNotQueried": 0, "historyQueryEmpty": 0}
@@ -84,38 +83,26 @@ def build_sample(spec, catalog, catalog_source, root=ROOT):
                 coverage["historyNotQueried"] += 1
             event, geometry = build_fallback_manifest(nid, rows, catalog,
                                                       {"gpHistory": source, "catalog": catalog_source})
-            if source.get("status") == "not-queried":
-                event["presentation"]["modeReason"] = "Catalog-only input: orbital history was not fetched for this sample; it may exist."
             if geometry:
-                name = event["presentation"]["geometryAsset"]
+                name = event["orbitalData"]["reference"]["asset"]
                 assets[name] = encoded(geometry)
                 event["geometryProvenance"]["assetSha256"] = hashlib.sha256(assets[name]).hexdigest()
-        p = event["presentation"]
         index = cols["id"].index(nid)
-        anchor = stamp(p["displayAnchorUtc"])
+        anchor = display_anchor(event["eventId"], event["eventTime"]["date"]) if event["eventTime"]["precision"] == "day" else stamp(event["eventTime"]["intervalUtc"][0])
         if (event["eventKind"] != "reentry" or event["eventId"] != event_id(nid, "reentry", event["eventTime"]["date"])
             or abs((anchor-EPOCH).total_seconds()-cols["d"][index]*86400) > 0.001
-            or p["endTime"] != p["displayAnchorUtc"] or not start <= anchor < end
+            or not start <= anchor < end
             or event["eventTime"]["date"] != anchor.date().isoformat()
             or event["eventTime"]["precision"] != ("day" if cols["p"][index] == 0 else "reported-time")
             or event["attributes"]["objectType"]["value"] != catalog["meta"]["types"][cols["k"][index]]):
             raise ValueError("Sample event disagrees with catalog identity, class, or shared clock.")
-        mode = p["mode"]
-        if mode == "symbolic-event":
-            p["surfacePulse"]["durationSeconds"] = sample["surfacePulseSeconds"]
-            p["surfacePulse"]["note"] += " In this passage the 4 h display pulse lasts 2 s at the preset speed."
-            coverage["symbolicInput"] += 1
-        elif mode == "representative-orbit":
-            coverage["referenceInput"] += 1
-        elif mode == "illustrative-replay-of-propagated-orbit":
-            coverage["propagatedInput"] += 1
-        else:
-            raise ValueError("Unsupported sample representation.")
+        kind = "propagatedInput" if "propagated" in event["orbitalData"] else "referenceInput" if "reference" in event["orbitalData"] else "symbolicInput"
+        coverage[kind] += 1
         events.append(event)
-    events.sort(key=lambda e: (e["presentation"]["displayAnchorUtc"], e["eventId"]))
+    events.sort(key=lambda e: (catalog["cols"]["d"][catalog["cols"]["id"].index(e["object"]["noradId"])], e["eventId"]))
     sample.update(intervalUtc=[iso(start), iso(end)], eventCount=len(events), coverage=coverage,
                   objectTypes={kind: sum(e["attributes"]["objectType"]["value"] == kind for e in events)
                                for kind in catalog["meta"]["types"]},
                   selection="All catalog reentries in this UTC interval; orbital coverage is deliberately partial.",
                   timeMeaning="Reported days retain their spacing. Times within date-only days are stable assigned display times, not observations.")
-    return {"schemaVersion": 1, "sample": sample, "events": events}, assets
+    return {"schemaVersion": 3, "sample": sample, "events": events}, assets

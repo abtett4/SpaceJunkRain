@@ -2,10 +2,10 @@
 // Physics, provenance and event times do not belong in this configuration.
 import { readSettings, SETTINGS_KEY as LEGACY_SINGLE, SAMPLE_SETTINGS_KEY as LEGACY_SAMPLE } from './earth/TracerControls.js';
 export const CONFIG_KEY = 'sjr-presentation-v1';
-export const STYLE = Object.freeze({ color: '#ffd166', markerRadiusEarth: 0.012, lineWidthEarth: 0.008,
+// Fixed event-kind palette; intentionally no color picker.
+export const EVENT_COLORS = Object.freeze({ launch: '#56dce8', reentry: '#ffd166' });
+export const STYLE = Object.freeze({ color: EVENT_COLORS.reentry, markerRadiusEarth: 0.012, lineWidthEarth: 0.008,
   background: '#081b2c', atmosphereRadius: 1.018, pulseExpansion: 7, pulseRingWidth: 0.22 });
-// This is the future data-to-style boundary. Color intentionally has no user control.
-export const eventAppearance = _event => ({ color: STYLE.color });
 const field = (key, group, label, value, min, max, step, unit, help = '') =>
   Object.freeze({ key, group, label, value, min, max, step, unit, help });
 export const CONFIG_FIELDS = Object.freeze([
@@ -15,7 +15,7 @@ export const CONFIG_FIELDS = Object.freeze([
   field('reentryLeadSeconds', 'Event windows', 'Before each reentry', 14400, 30, 172800, 30, 'seconds'),
   field('launchFollowSeconds', 'Event windows', 'After each launch', 14400, 30, 172800, 30, 'seconds'),
   field('trailSeconds', 'Event windows', 'Visible trail history', 300, 0, 7200, 30, 'seconds', 'Zero shows the head only. Reference trails show at most one revolution.'),
-  field('pulseSeconds', 'Event windows', 'Surface pulse duration', 14400, 30, 14400, 30, 'seconds', 'Display time, shortened to fit the event window. Four simulated hours = two seconds at passage speed.'),
+  field('pulseSeconds', 'Event windows', 'Surface pulse duration', 14400, 30, 14400, 30, 'seconds', 'Display time, shortened to fit the event window. Launch-pad pulses also fit within the illustrative ascent. Four simulated hours = two seconds at passage speed.'),
   field('widthScale', 'Tracers & pulses', 'Trail width', 3, 0.5, 3, 0.25, 'scale'),
   field('markerScale', 'Tracers & pulses', 'Marker & pulse size', 3, 0.5, 3, 0.25, 'scale'),
   field('tracerOpacity', 'Tracers & pulses', 'Tracer opacity', 1, 0, 1, 0.05, 'percent'),

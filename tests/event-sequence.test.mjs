@@ -1,3 +1,4 @@
+import { DEFAULTS } from '../web/PresentationConfig.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -48,7 +49,7 @@ test('duplicate events, omitted interval members and wrong joins are rejected', 
   await assert.rejects(load(duplicate), /Duplicate/);
   const omitted = manifest(); omitted.events.pop(); omitted.sample.eventCount--;
   await assert.rejects(load(omitted), /membership/);
-  const wrong = manifest(); wrong.events[0].presentation.displayAnchorUtc = '2018-04-02T16:00:00Z';
+  const wrong = manifest(); wrong.events[0].eventTime.date = '2018-04-03';
   await assert.rejects(load(wrong), /disagree/);
 });
 
@@ -61,8 +62,7 @@ test('sample preferences have their own defaults and never replace single-event 
   const values = new Map(), storage = { getItem: k => values.get(k), setItem: (k,v) => values.set(k,v), removeItem: k => values.delete(k) };
   writeSettings(storage, { ...settings, reentryLeadSeconds: 7200 });
   const original = values.get(SETTINGS_KEY);
-  const sample = manifest().sample;
-  const opts = { key: SAMPLE_SETTINGS_KEY, defaults: { reentryLeadSeconds: sample.defaultLeadSeconds, trailSeconds: sample.defaultTrailSeconds } };
+  const opts = { key: SAMPLE_SETTINGS_KEY, defaults: { reentryLeadSeconds: DEFAULTS.reentryLeadSeconds, trailSeconds: DEFAULTS.trailSeconds } };
   assert.equal(readSettings(storage, 172800, opts).reentryLeadSeconds, 14400);
   assert.equal(readSettings(storage, 172800, opts).trailSeconds, 300);
   writeSettings(storage, { ...settings, reentryLeadSeconds: 43200 }, false, SAMPLE_SETTINGS_KEY);

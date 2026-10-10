@@ -26,7 +26,7 @@ class LaunchTests(unittest.TestCase):
         event, geometry = self.build()
         self.assertEqual(event['eventTime']['intervalUtc'], ['2018-04-02T20:30:00Z', '2018-04-02T20:31:00Z'])
         self.assertEqual(event['attributes']['objectType']['value'], 'PAYLOAD')
-        self.assertEqual(event['presentation']['surfacePulse']['longitudeDeg'], -80.5772)
+        self.assertEqual(event['attributes']['launchSite']['coordinates']['longitudeDeg'], -80.5772)
         self.assertAlmostEqual(event['bounds']['sourceDelayAfterLaunchSeconds'], 1488.108096)
         self.assertEqual(geometry['frame'], 'illustrative-equatorial')
         self.assertEqual(geometry['construction']['inclinationDeg'], 51.6437)
@@ -75,8 +75,9 @@ class LaunchTests(unittest.TestCase):
         for old in original['events']:
             new = next(e for e in combined['events'] if e['eventId'] == old['eventId'])
             self.assertEqual(new['eventTime'], old['eventTime'])
-            asset = new['presentation'].get('geometryAsset')
-            if asset: self.assertTrue((output_dir / asset).exists())
+            self.assertEqual(new['attributes'], old['attributes'])
+            self.assertNotIn('presentation', new)
+            for product in new['orbitalData'].values(): self.assertTrue((output_dir / product['asset']).exists())
 
 
 if __name__ == '__main__':

@@ -1,8 +1,8 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "events": [
     {
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "eventId": "43267:launch:2018-04-02",
       "eventKind": "launch",
       "object": {
@@ -141,36 +141,9 @@
           "rule": "positive-perigee-apogee-below-2000km-v1"
         }
       },
-      "presentation": {
-        "mode": "launch-reference-orbit",
-        "displayAnchorUtc": "2018-04-02T20:30:00Z",
-        "anchorBasis": "reported",
-        "anchorPolicy": {
-          "policy": "reported-minute-start"
-        },
-        "startTime": "2018-04-02T20:30:00Z",
-        "endTime": "2018-04-04T20:30:00Z",
-        "maxDisplaySeconds": 172800,
-        "orbitStartTime": "2018-04-02T20:54:48.108096Z",
-        "geometryAsset": "trajectories/43267-launch-reference.json",
-        "geometryFrame": "illustrative-equatorial",
-        "geometryUnits": "km",
-        "modeReason": "Earliest usable record in the retrieved 48-hour interval is 24.80 minutes after launch.",
-        "timeMapping": "Sourced pad pulse begins at launch. A separate reference loop starts at the selected orbital epoch. No connecting ascent path.",
-        "locationClaim": "launch-site-only",
-        "surfacePulse": {
-          "latitudeDeg": 28.562,
-          "longitudeDeg": -80.5772,
-          "basis": "reported",
-          "locationPolicy": "sourced-launch-site-v1",
-          "timing": "single-pulse-starting-at-display-anchor",
-          "durationSeconds": 14400
-        }
-      },
       "bounds": {
         "sourceDelayAfterLaunchSeconds": 1488.108096,
-        "maxDisplaySeconds": 172800,
-        "meaning": "Source delay and display limits, not physical error bounds."
+        "meaning": "Source epoch delay, not an ascent duration or physical error bound."
       },
       "sources": {
         "launchReport": {
@@ -201,6 +174,11 @@
         "elementSha256": "3203bba7de21a629bc1859d8a5c349230431f4b8e5d7f276b9948fe745d318de",
         "selection": "Earliest valid epoch at/after launch and before launch + 48 h; largest GP_ID breaks epoch ties.",
         "skippedRecords": []
+      },
+      "orbitalData": {
+        "reference": {
+          "asset": "trajectories/43267-launch-reference.json"
+        }
       }
     }
   ]

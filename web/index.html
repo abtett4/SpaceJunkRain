@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap">
-<link rel="stylesheet" href="style.css?v=20261010-launch-config">
+<link rel="stylesheet" href="style.css?v=20261010-event-policy-r3">
 </head>
 <body>
 <main class="viz-root">
@@ -77,7 +77,7 @@
         <div id="config-fields"></div>
         <div class="config-notes">
           <p id="tracer-window-limit" class="note">Settings apply to all previews and newly loaded events. Source limits can shorten a window.</p>
-          <p class="note">Amber is the default; future color mappings will use event data. Marker sizes and pulses are exaggerated for visibility.</p>
+          <p class="note">Colors follow event kind: cyan launches and amber reentries. Marker sizes and pulses are exaggerated for visibility.</p>
           <p class="note">Changing settings keeps the clock in place. Replay uses the new window. Passage speed is 2 simulated hours per second; single-event speed is 5 minutes per second. Use Speed above to change playback.</p>
         </div>
       </details>
@@ -115,11 +115,11 @@
           </div>
           <div id="orbit-trace-key" class="orbit-key" role="group" aria-label="Orbital representation key" hidden>
             <span class="orbit-key-trace" aria-hidden="true"></span>
-            <div><strong>Orbital tracers</strong><p>Reference geometry or prepared SGP4 replay · no reentry path claim</p></div>
+            <div><strong>Reentries · amber tracers</strong><p>Reference geometry or prepared SGP4 replay · no reentry path claim</p></div>
           </div>
           <div id="launch-key" class="orbit-key" role="group" aria-label="Launch representation key" hidden>
             <span class="orbit-key-pulse" aria-hidden="true"></span>
-            <div><strong>Launch · sourced site pulse</strong><p>Separate early reference orbit · illustrative orientation and phase · no powered ascent path</p></div>
+            <div><strong>Launches · cyan</strong><p>Sourced pad pulse → illustrative ascent arc → reference orbit. Path, ascent duration, orbit direction and phase are display choices, not a flight reconstruction.</p></div>
           </div>
           <div id="symbolic-event" class="orbit-key" role="group" aria-label="Representation key" hidden>
             <span class="orbit-key-pulse" aria-hidden="true"></span>
@@ -203,18 +203,20 @@
 <script type="importmap">
 {
   "imports": {
-    "./PresentationConfig.js": "./PresentationConfig.js?v=20261010-launch-config",
-    "./ConfigurationPanel.js": "./ConfigurationPanel.js?v=20261010-launch-config",
-    "./earth/OrbitPanel.js": "./earth/OrbitPanel.js?v=20261010-launch-config",
-    "./earth/EventSequence.js": "./earth/EventSequence.js?v=20261010-launch-config",
-    "./earth/Tracer.js": "./earth/Tracer.js?v=20261010-launch-config",
-    "./earth/SurfacePulse.js": "./earth/SurfacePulse.js?v=20261010-launch-config",
-    "./earth/TracerControls.js": "./earth/TracerControls.js?v=20261010-launch-config",
-    "./earth/EarthScene.js": "./earth/EarthScene.js?v=20261010-launch-config",
-    "./earth/EarthShader.js": "./earth/EarthShader.js?v=20261010-launch-config"
+    "./DisplayPolicy.js": "./DisplayPolicy.js?v=20261010-event-policy-r3",
+    "./earth/LaunchTracer.js": "./earth/LaunchTracer.js?v=20261010-event-policy-r3",
+    "./PresentationConfig.js": "./PresentationConfig.js?v=20261010-event-policy-r3",
+    "./ConfigurationPanel.js": "./ConfigurationPanel.js?v=20261010-event-policy-r3",
+    "./earth/OrbitPanel.js": "./earth/OrbitPanel.js?v=20261010-event-policy-r3",
+    "./earth/EventSequence.js": "./earth/EventSequence.js?v=20261010-event-policy-r3",
+    "./earth/Tracer.js": "./earth/Tracer.js?v=20261010-event-policy-r3",
+    "./earth/SurfacePulse.js": "./earth/SurfacePulse.js?v=20261010-event-policy-r3",
+    "./earth/TracerControls.js": "./earth/TracerControls.js?v=20261010-event-policy-r3",
+    "./earth/EarthScene.js": "./earth/EarthScene.js?v=20261010-event-policy-r3",
+    "./earth/EarthShader.js": "./earth/EarthShader.js?v=20261010-event-policy-r3"
   }
 }
 </script>
-<script type="module" src="app.js?v=20261010-launch-config"></script>
+<script type="module" src="app.js?v=20261010-event-policy-r3"></script>
 </body>
 </html>

@@ -1,16 +1,23 @@
 // One event or a bounded passage, using the timeline's existing simulation clock.
 import { formatDuration } from './TracerControls.js';
 import { loadSequence, configureSequence, sequenceRange, sequenceAt } from './EventSequence.js';
+import { EVENT_COLORS } from '../PresentationConfig.js';
 import { mountGeographyPanel } from './GeographyPanel.js';
 export { selectMode } from './EventSequence.js';
 
-const modeName = mode => ({ propagated: 'SGP4 replay', representative: 'Reference orbit', symbolic: 'No orbital data · pulse', launch: 'Launch · sourced site + early reference orbit' })[mode];
+const modeName = mode => ({ propagated: 'SGP4 replay', representative: 'Reference orbit', symbolic: 'No orbital data · pulse', launch: 'Launch · illustrative ascent from sourced pad' })[mode];
+const launchDescription = s => s.launchTracer
+  ? `The cyan tracer starts at the sourced launchpad. An illustrative ascent arc joins a reference orbit over ${formatDuration(s.view.ascentSeconds)}, using the gap to the first usable orbital record as a display interval. The duration, path, direction and phase are display choices, not a recovered ascent. Reference heights and inclination come from the orbital record.`
+  : s.available.launchSite ? 'A cyan pulse marks the sourced launchpad. No prepared orbital geometry is available in this input, so there is no ascent arc or orbital tracer.'
+    : s.available.reference ? 'The cyan reference orbit has illustrative direction and phase. No sourced launchpad is available in this input, so no ascent connection is drawn.'
+      : 'No orbital data representation: a cyan pulse uses a persistent random display point. No sourced launchpad or orbital geometry is available in this input.';
 const dateText = ms => new Date(Math.round(ms)).toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, ' UTC');
 const shortDate = ms => dateText(ms).slice(5, 16) + ' UTC';
 
 export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
   const el = id => document.getElementById(id);
   const text = (id, value) => { if (el(id).textContent !== value) el(id).textContent = value; };
+  for (const [id,kind] of [['launch-key','launch'],['orbit-trace-key','reentry'],['symbolic-event','reentry']]) el(id).style.setProperty('--event-ink',EVENT_COLORS[kind]);
   const status = el('orbit-status'), slider = el('orbit-scrub'), replay = el('orbit-replay'), pause = el('orbit-pause');
   const picker = el('orbit-example'), objectPicker = el('orbit-object');
   let scene, unsubscribeSettings, unsubscribe, disposeGeography, sequence, settings = presentation.values, selected, revision = 0, firstLoad = true;
@@ -32,20 +39,20 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
   };
   const inspect = () => {
     if (!selected) return;
-    const { event, mode, endMs } = selected, p = event.presentation, a = event.attributes;
+    const { event, mode, endMs, anchorBasis } = selected, a = event.attributes;
     const orbit = a.orbitReference ?? a.orbitNearEvent;
     const known = Number.isFinite;
     text('orbit-object-name', `${event.object.name} · NORAD ${event.object.noradId}`);
-    text('orbit-object-mode', modeName(mode));
-    text('orbit-anchor', `${dateText(endMs)} · ${p.anchorBasis === 'illustrative' ? 'assigned time within the reported day' : event.eventTime.resolutionSeconds === 60 ? 'reported to the minute; seconds unspecified' : 'reported timestamp'}`);
+    text('orbit-object-mode', mode === 'launch' && !selected.launchTracer ? selected.available.reference ? 'Launch · reference orbit' : 'Launch · surface pulse' : modeName(mode));
+    text('orbit-anchor', `${dateText(endMs)} · ${anchorBasis === 'illustrative' ? 'assigned time within the reported day' : event.eventTime.resolutionSeconds === 60 ? 'reported to the minute; seconds unspecified' : 'reported timestamp'}`);
     text('orbit-attributes', `${a.objectType.value ?? 'Unknown class'} · `
       + (known(orbit?.inclinationDeg) ? `${orbit.inclinationDeg.toFixed(2)}° reference inclination · ` : 'Inclination unknown · ')
       + (known(orbit?.perigeeKm) && known(orbit?.apogeeKm) ? `${Math.round(orbit.perigeeKm)}–${Math.round(orbit.apogeeKm)} km reference perigee/apogee` : 'Orbital heights unknown')
       + ` · ${a.radarSize.value ?? 'Unknown'} radar-size proxy · catalog country ${a.catalogCountry.value ?? 'unknown'}`);
-    text('orbit-evidence', (event.eventKind === 'launch' ? `Launch site: ${a.launchSite.name}. Mission: ${a.missionType.value}. ` : '') + (orbit?.epochUtc ? `Reference epoch: ${orbit.epochUtc}. ` : '')
-      + (p.modeReason ?? 'Historical element descriptors are separate from the assigned event time.'));
+    text('orbit-evidence', (event.eventKind === 'launch' ? `Launch site: ${a.launchSite?.name ?? 'unknown'}. Mission: ${a.missionType?.value ?? 'unknown'}. ` : '') + (orbit?.epochUtc ? `Reference epoch: ${orbit.epochUtc}. ` : '')
+      + (event.orbitalDataUnavailableReason ?? (event.sources.gpHistory?.status === 'not-queried' ? 'Orbital history was not fetched for this input; it may exist.' : !selected.loop && !selected.propagated ? 'No usable orbital geometry in the supplied input; other historical data may exist.' : 'Historical element descriptors are separate from the display path.')));
     text('orbit-explanation', mode === 'launch'
-      ? 'A pulse marks the sourced launch site. The separate orbit begins at the earliest usable record in the retrieved interval, about 25 minutes later. Its heights and inclination come from that record; direction and phase are illustrative. There is no connecting ascent trajectory.'
+      ? launchDescription(selected)
       : mode === 'propagated'
       ? 'Prepared SGP4 samples replay at their original rate. The assigned event time is illustrative; no reentry location is claimed.'
       : mode === 'representative'
@@ -87,14 +94,14 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
         button.setAttribute('aria-pressed', String(s === selected));
       }
       text('orbit-sample', 'One clock for the passage and full catalog below. The launch uses a reported minute; reentries use assigned times within reported days.');
-      const pulseCount = active.filter(s => s.state.mode === 'symbolic').length;
+      const pulseCount = active.filter(s => s.state.view.pulse === 'symbolic').length;
       text('symbolic-state', `${pulseCount} pulse${pulseCount === 1 ? '' : 's'} active · no tracers for these events`);
     } else {
       const s = sequence.events[0], sample = samples[0].sample;
       text('symbolic-state', sample ? 'Pulse active · no tracer' : nowMs >= s.endMs ? 'Pulse complete' : 'Choose Replay pulse to view this event');
       text('orbit-sample', s.mode === 'launch'
-        ? samples[0].orbitSample ? 'Early reference orbit active · illustrative direction and phase; no ascent path.'
-          : samples[0].pulseSample ? 'Sourced launch-site pulse active · early orbit appears only after its reference epoch.'
+        ? samples[0].orbitSample ? samples[0].orbitSample.stage === 'illustrative-ascent' ? 'Illustrative ascent from the sourced pad · path and duration are not observed.' : 'Reference orbit active · illustrative direction and phase; not an observed flight path.'
+          : samples[0].pulseSample ? s.view.pulse === 'site' ? 'Sourced launch-site pulse active.' : 'No orbital data representation · illustrative surface pulse.'
             : 'Outside the launch display window. Choose Replay to focus the shared clock.'
         : s.mode === 'symbolic'
         ? 'No orbital data representation · persistent random display point; actual reentry location unknown.'
@@ -112,12 +119,15 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     scene.pulses = sequence.events.flatMap(s => s.pulse ? [s.pulse] : []);
     const counts = { propagated: 0, representative: 0, symbolic: 0, launch: 0 };
     sequence.events.forEach(s => counts[s.mode]++);
-    el('symbolic-event').hidden = !counts.symbolic;
-    el('orbit-trace-key').hidden = !sequence.sample || !scene.tracers.length;
+    el('symbolic-event').hidden = !sequence.events.some(s => s.view.pulse === 'symbolic');
+    el('orbit-trace-key').hidden = !sequence.events.some(s => s.event.eventKind === 'reentry' && s.active);
     el('launch-key').hidden = !counts.launch;
+    if (counts.launch) el('launch-key').querySelector('p').textContent = sequence.events.some(s => s.launchTracer)
+      ? 'Sourced pad pulse → illustrative ascent arc → reference orbit. Path, ascent duration, orbit direction and phase are display choices, not a flight reconstruction.'
+      : 'Cyan marks launches. Sourced pads are used when available; no ascent is drawn without a sourced pad and orbital reference. See event details for the available evidence.';
     status.textContent = sequence.sample
       ? `${counts.launch ? `${counts.launch} launch · ` : ''}${counts.propagated ? `${counts.propagated} SGP4 replay · ` : ''}${counts.representative} reentry reference orbits · ${counts.symbolic} no-data pulses`
-      : selected.mode === 'launch' ? 'Sourced launch site · separate early reference orbit' : selected.mode === 'propagated' ? 'Last-known orbit replay · reentry location unknown'
+      : selected.mode === 'launch' ? selected.launchTracer ? 'Launch from sourced pad · illustrative ascent and reference orbit' : 'Launch preview · available evidence shown in event details' : selected.mode === 'propagated' ? 'Last-known orbit replay · reentry location unknown'
         : selected.mode === 'representative' ? 'Representative orbit · illustrative loop, not an event-time reconstruction'
           : 'Orbital geometry unavailable in this input';
     const [startMs, endMs] = range();
@@ -133,11 +143,11 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     if (!sequence || !settings || !s) return;
     selected = s; inspect();
     const [start, end] = range();
-    const target = s.mode === 'launch' ? (s.pulse.visibleStartMs + s.pulse.visibleEndMs) / 2 : s.mode === 'symbolic' ? (s.pulse.visibleStartMs + s.endMs) / 2
+    const target = s.mode === 'launch' ? s.endMs + Math.min((s.launchTracer?.ascentMs ?? 600000) / 2, s.view.seconds * 1000 / 2) : s.mode === 'symbolic' ? (s.pulse.visibleStartMs + s.endMs) / 2
       : s.endMs - Math.min(settings.reentryLeadSeconds / 2, 3600) * 1000;
     clock.pause(); clock.seek(Math.max(start, Math.min(end, target)));
     if (s.pulse) focus(scene.surfaceToWorld(s.pulse.normal));
-    else { const head = s.active.sample(clock.nowMs)?.head; if (head) focus(head); }
+    else { const head = s.active?.sample(clock.nowMs)?.head; if (head) focus(head); }
     scene.setTime(clock.nowMs);
   };
   const makeScore = () => {
@@ -153,8 +163,9 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
       const track = document.createElement('div'); track.className = 'sample-track';
       for (const s of entries) {
         const button = document.createElement('button'); button.type = 'button'; button.className = 'sample-event';
+        button.style.setProperty('--event-ink',EVENT_COLORS[s.event.eventKind]);
         button.style.left = `${(s.endMs - start) / (end - start) * 100}%`;
-        button.title = `${s.event.object.name} · ${shortDate(s.endMs)} · ${s.event.presentation.anchorBasis === 'reported' ? 'reported minute' : 'assigned time'}`;
+        button.title = `${s.event.object.name} · ${shortDate(s.endMs)} · ${s.anchorBasis === 'reported' ? 'reported minute' : 'assigned time'}`;
         button.setAttribute('aria-label', `Preview ${s.event.eventKind}: ${s.event.object.name}, NORAD ${s.event.object.noradId}, ${shortDate(s.endMs)}`);
         button.addEventListener('click', () => jumpTo(s));
         track.append(button); scoreButtons.push({ state: s, button });
@@ -204,7 +215,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
         text('sample-coverage', `Every catalog reentry in this interval: ${types}. ${coverage.propagatedInput+coverage.referenceInput} inputs with geometry; ${coverage.historyQueryEmpty} empty history query; ${coverage.historyNotQueried} histories not yet fetched.${sequence.sample.selectedLaunchCount ? ' Plus one selected launch: Dragon CRS-14; launch coverage is incomplete.' : ''}`);
         scene.camera.yaw = 0.8; scene.camera.pitch = 0.2;
       }
-      text('tracer-window-limit', 'Shared settings apply to every preview. Up to 2 h of Tiangong-1 uses SGP4 samples; longer windows use a reference loop. Launch orbits begin at their reference epoch. All event windows are capped at 48 h; pulses fade within the chosen window.');
+      text('tracer-window-limit', 'Shared settings apply to every preview. Up to 2 h of Tiangong-1 uses SGP4 samples; longer windows use a reference loop. Launches start at the sourced pad and use an illustrative ascent to the reference orbit; changing the window clips this path. All event windows are capped at 48 h; pulses fade within the chosen window.');
       slider.disabled = replay.disabled = pause.disabled = false;
       applySettings(presentation.values);
       if (mixed) makeScore();

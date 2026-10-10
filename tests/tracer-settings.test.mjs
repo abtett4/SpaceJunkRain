@@ -1,3 +1,4 @@
+import { displayAnchor } from '../web/DisplayPolicy.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -9,8 +10,8 @@ const readJson = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url
 const geometry = readJson('../web/data/trajectories/37820.json');
 const event = readJson('../web/data/tracers.json').events[0];
 function newTracer() {
-  return new Tracer({ positions: geometry.trace, startTime: event.presentation.startTime,
-    endTime: event.presentation.endTime, radiusKm: geometry.referenceSphereRadiusKm });
+  return new Tracer({ positions: geometry.trace, startTime: new Date(displayAnchor(event) - 7200000).toISOString(),
+    endTime: new Date(displayAnchor(event)).toISOString(), radiusKm: geometry.referenceSphereRadiusKm });
 }
 
 test('a shorter window clips the final source segment without retiming or changing its endpoint', () => {
@@ -19,7 +20,7 @@ test('a shorter window clips the final source segment without retiming or changi
   const endpoint = tracer.sample(tracer.endMs);
   const earlier = tracer.sample(tracer.endMs - 20 * 60000);
   tracer.configure({ visibleSeconds: 1800, trailSeconds: 7200 });
-  assert.equal(tracer.startMs, Date.parse(event.presentation.displayAnchorUtc) - 1800000);
+  assert.equal(tracer.startMs, displayAnchor(event) - 1800000);
   assert.equal(tracer.sample(tracer.startMs - 1), null);
   assert.equal(tracer.sample(tracer.startMs).sourceMs, Date.parse('2018-04-01T23:30:00Z'));
   assert.equal(tracer.sample(tracer.startMs).tail.length, 1, 'no hidden pre-window trail');
@@ -27,7 +28,7 @@ test('a shorter window clips the final source segment without retiming or changi
   assert.deepEqual(tracer.sample(tracer.endMs - 20 * 60000).head, earlier.head);
   assert.equal(JSON.stringify(tracer.points), originalPoints);
   tracer.configure({ visibleSeconds: 7200 });
-  assert.equal(tracer.startMs, Date.parse(event.presentation.startTime));
+  assert.equal(tracer.startMs, displayAnchor(event) - 7200000);
 });
 
 test('trail history has an interpolated boundary and zero means head only', () => {

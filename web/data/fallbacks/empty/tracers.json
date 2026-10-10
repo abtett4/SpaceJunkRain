@@ -1,8 +1,8 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
   "events": [
     {
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "eventId": "38023:reentry:2024-01-05",
       "eventKind": "reentry",
       "object": {
@@ -147,40 +147,6 @@
           "note": "Reference orbit does not establish the event-time regime."
         }
       },
-      "presentation": {
-        "mode": "symbolic-event",
-        "modeReason": "No pre-event orbital records in the supplied snapshot; other historical data may exist.",
-        "displayAnchorUtc": "2024-01-05T22:11:53Z",
-        "anchorBasis": "illustrative",
-        "anchorPolicy": {
-          "policy": "sha256-utc-day-v1",
-          "seed": "SpaceJunkRain"
-        },
-        "startTime": "2024-01-05T20:11:53Z",
-        "endTime": "2024-01-05T22:11:53Z",
-        "maxDisplaySeconds": 172800,
-        "geometryAsset": null,
-        "geometryFrame": null,
-        "geometryUnits": null,
-        "geometrySourceIntervalUtc": null,
-        "timeMapping": "One surface pulse ending at the display anchor; shared clock, no orbital path.",
-        "surfacePulse": {
-          "basis": "illustrative",
-          "locationPolicy": "sha256-equal-area-surface-v1",
-          "latitudeDeg": 62.20551356536427,
-          "longitudeDeg": -136.17437477100367,
-          "durationSeconds": 600,
-          "timing": "single-pulse-ending-at-display-anchor",
-          "note": "Persistent random display point, uniform by spherical surface area. Not a reentry location, orbital constraint, or physical probability model. Duration is a presentation choice, not atmospheric descent time."
-        },
-        "locationClaim": "none",
-        "geographicEndpoint": null,
-        "style": {
-          "color": "#ffd166",
-          "trailSeconds": 1200,
-          "markerRadiusEarth": 0.012
-        }
-      },
       "bounds": {
         "eventTime": [
           "2024-01-05T00:00:00Z",
@@ -188,7 +154,7 @@
         ],
         "referenceRadiusKm": null,
         "sourceElementAgeAtReportedDecayHours": null,
-        "meaning": "Source age and presentation limits only, not physical error bounds."
+        "meaning": "Source age only, not physical error bounds."
       },
       "sources": {
         "gpHistory": {
@@ -208,7 +174,8 @@
       "geometryProvenance": {
         "gpId": null,
         "elementSha256": null
-      }
+      },
+      "orbitalData": {}
     }
   ]
 }

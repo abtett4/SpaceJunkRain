@@ -28,14 +28,26 @@ This does not establish the earliest record in all possible archives. The select
 reports inclination 51.6437°, perigee 203.778 km, apogee 356.600 km and period 90.117 min.
 The raw response and query/checksum sidecar remain immutable in the ignored raw cache.
 
-A pulse at the documented pad begins at launch. A **separate reference ellipse** begins
-at the selected orbital epoch; no geometry appears during the gap. The existing offline
-reference-ellipse builder uses the heights, inclination and period while assigning node,
-periapsis direction and phase illustratively. It repeats without drag, rendezvous,
-insertion or subsequent orbital evolution. There is no line connecting the pad to the
-orbit, no powered-ascent reconstruction, and no claim that the head is at a true geographic
-position. The pulse's apparent size/duration is a display choice. Its location is sourced;
-missing-orbit reentry pulses retain their distinct random-location policy and key.
+Launches are cyan; reentries remain amber. A pulse marks the sourced pad, and the
+launch head starts at that same geographic point. A smooth **illustrative ascent arc**
+joins the reference ellipse over the gap to the selected orbital epoch (about 25 minutes).
+That gap is a display transition interval, **not an observed ascent or insertion duration**.
+The pulse fades within this interval, or sooner if the selected display window is shorter.
+
+The browser selects an illustrative northbound phase and node orientation compatible
+with the pad latitude when possible. It preserves the reference ellipse's inclination,
+heights and period after the transition. A spherical directional blend and radial rise
+avoid a chord through Earth; angular travel accelerates smoothly into the reference rate.
+For a pad outside the reference inclination range, the same blend remains an explicitly
+illustrative connection, without changing the final orbit's inclination. Direction, phase,
+acceleration and ascent geometry are display choices, not launch azimuth or powered-flight
+observations. The existing reference asset and its source evidence remain untouched.
+
+Launch history is drawn relative to the rotating Earth: a visible tail reaching back to
+liftoff stays attached to the pad. Trail length can remove that older endpoint; it never
+moves the head. This trail is a visual motif, not an observed inertial flight track.
+Windows shorter than the transition show a clipped ascent, not an accelerated insertion.
+Missing-orbit reentries still use labeled random-position pulses without tracers.
 
 ## Reproduce
 
@@ -58,7 +70,7 @@ column remains day-level parent/launch chronology; it is not overwritten by this
 Outputs in `web/data/samples/april-2018-launch/`:
 
 - `launch.json`: standalone launch manifest.
-- `tracers.json`: schema-2 composition of the launch and original reentry passage.
+- `tracers.json`: schema-3 composition of the launch and original reentry passage.
 - `trajectories/43267-launch-reference.json`: compact reference ellipse.
 
 Reentry geometry is referenced by relative paths in the original sample; it is not copied
@@ -80,32 +92,71 @@ Current controls: page theme, timeline notes, reentry lead time, launch follow t
 trail history, width, marker/pulse size, tracer opacity, width/opacity taper, pulse
 duration/opacity, Earth brightness, city lights and decorative atmosphere. Playback speed,
 selection and data filters retain their existing controls. Color has no picker: the
-`eventAppearance(event)` boundary currently returns amber and can later derive color
-from sourced object/event attributes. The decorative atmosphere is separate from the
+`eventAppearance(event)` in `DisplayPolicy.js` maps launch to cyan and reentry to amber.
+It can later derive color from other sourced attributes. The decorative atmosphere is separate from the
 solar collaborator's eventual data-driven overlay.
 
 Defaults: four-hour launch/reentry windows; five-minute trail history; pulses up to four
 hours; width and marker scale 3×. A pulse's full fade fits inside the shorter of its own
 duration and the event window. Reference-orbit history remains at most one revolution;
 Tiangong's SGP4 samples are never stretched. The source epoch and event anchors never move
-when settings change. Launch loops anchor phase to the reference epoch. A launch window
-shorter than the source gap shows only the pad pulse. Settings do not seek or change the
+when settings change. Launch position is anchored to launch time and independent of window clipping. A launch
+window shorter than the source gap shows the beginning of the illustrative ascent. Settings do not seek or change the
 clock; Replay uses the selected interval, including a new launch endpoint.
 
 One localStorage key `sjr-presentation-v1` now serves all previews. Migration prefers the
 old passage values, otherwise the old single-event values, plus the legacy page theme.
 Legacy values are read only during initial migration; defaults fill new fields. Reset
 writes a complete default snapshot so stale keys cannot reappear. Invalid/unsupported
-values fall back or clamp; denied storage permits session-only changes. Legacy per-event
-style fields are ignored by the browser; the new composition omits them. Geometry and
+values fall back or clamp; denied storage permits session-only changes. Event records no longer include presentation fields; the browser requires the updated schema. Geometry and
 raw snapshots do not store user preferences. Future defaults do not override explicit
 saved preferences until reset or an explicit version migration.
+
+## Event / visualization separation
+
+Collections now use schema 3 and individual events use schema 2. Each event contains
+identity, event kind, reported time support, sourced/proxy/unknown attributes, numerical
+bounds and provenance. `orbitalData` describes **available derived products**:
+
+```json
+"orbitalData": {
+  "propagated": {"asset": "trajectories/37820.json"},
+  "reference": {"asset": "trajectories/37820-representative.json"}
+}
+```
+
+Either product may be absent. An empty object means no prepared orbital geometry in
+this input; source metadata distinguishes unqueried history from an empty query. Asset
+headers retain frames, units, original sample times and construction limitations.
+These links are input availability, not a requested rendering mode. A future renderer
+can ignore them or use the reference descriptors directly without rewriting events.
+
+- Python exporters produce evidence records and separate derived geometry. They do not
+  choose colors, pulses, rendering modes, display windows or random surface locations.
+- `PresentationConfig.js` owns appearance defaults and the menu's control schema/store.
+- `DisplayPolicy.js` resolves event facts + available geometry + shared settings into a
+  transient rendering specification. It also owns deterministic timing/location policies.
+- `EventSequence.js` validates joins and assets, owns immutable copies of event records,
+  and applies the resolver to create/configure renderer objects. It never adds view state
+  to an event. Alternate policies can be supplied to `configureSequence`.
+- `LaunchTracer`, `Tracer`, `SurfacePulse` and `EarthScene` consume rendering specifications.
+  The configuration menu updates the shared settings; it does not edit the event data.
+
+Changing the visuals means editing/replacing the resolver and renderer or changing shared
+settings. Re-export event records only when evidence, source data or orbital products change.
+The geometry assets are still computed offline; there is no browser SGP4 or data acquisition.
+SHA-256 assignment matches the existing Python rules byte-for-byte, so migrating the schema
+preserves all assigned times and symbolic surface locations. It also works over plain HTTP
+LAN previews, without requiring Web Crypto in a secure context. Existing raw files and the
+full timeline catalog are unchanged. Older manifests must be rebuilt with the documented
+commands; silently guessing old presentation fields is deliberately unsupported.
 
 ## Verification
 
 Offline Python tests cover source support, deterministic epoch/tie selection, unusable
 records, identity/debris rejection, day/site validation and immutable composition.
-JavaScript tests cover the delayed forward orbit, pulse-only short windows, phase
+JavaScript tests cover pad coincidence, continuous ascent/orbit joins, reference dimensions,
+Earth-fixed tail attachment, short-window clipping, phase
 invariance, backward seek, inherited settings across previews, invalid manifests,
 persistence/migration/reset, blocked storage and schema extension. Browser checks cover
 the generated controls, short launch windows, shared-clock playback, preview switching,

@@ -25,7 +25,8 @@ from `web/` (see `.github/workflows/pages.yml`).
 The default preview combines 12 reentries with **one sourced launch, Dragon CRS-14**,
 from April 2–9, 2018. Choose **Replay passage** for the 96-second sequence, or select
 **Dragon CRS-14 · sourced launch** to inspect it alone. A documented launch-site pulse
-is followed by a separate early reference orbit; no powered ascent is reconstructed.
+shares its pad with a cyan launch tracer: an explicitly illustrative ascent connects to a
+reference orbit. This is a visual approximation, not recovered powered-flight data. Reentries are amber.
 The timeline and Earth use one clock. No browser credentials or propagation are needed.
 The globe supports drag, pinch, scroll, arrow keys and +/− zoom.
 
@@ -35,18 +36,21 @@ and Earth brightness, city lights and decorative atmosphere. Defaults are four h
 before reentry / after launch, five minutes of trail history, four-hour pulses, and large
 3× markers and trails. Pulse durations shorten to fit the event window. Preferences
 persist across previews and reloads; reset restores all defaults. If browser storage is
-unavailable, controls work for the current visit. Amber remains fixed pending a data mapping.
+unavailable, controls work for the current visit. Colors follow event kind (cyan launch / amber reentry), with no color picker.
 
 `web/PresentationConfig.js` owns the current defaults, bounds, migration and subscription
 store. `ConfigurationPanel.js` derives controls from that schema. Page, timeline and Earth
 subscribe to one instance; future layers can add controls there and consume `frame.settings`.
-Source geometry, event anchors and physics remain independent of display preferences.
+`DisplayPolicy.js` reads event facts, available orbital inputs and those settings to select
+a visualization. Event JSON contains evidence and `orbitalData` asset links; colors, modes,
+random surface locations and display windows are derived outside those records. Changing
+the visualization does not require rewriting event data or source geometry.
 See [launch sources, rebuild instructions and the configuration contract](notes/launch-and-configuration.md).
 
 For Tiangong-1, windows up to two hours clip its prepared SGP4 segment. Longer windows
 switch to a representative loop without stretching the source samples. Representative
 trails show at most one revolution. Launch windows run forward from the sourced minute;
-the orbit is hidden until its reference epoch. Changing settings leaves the clock in place;
+the tracer starts at the pad and follows an illustrative transition into its reference orbit. Changing settings leaves the clock in place;
 Replay adopts the new interval. All windows are capped at 48 hours as a presentation limit.
 The existing Speed control sets playback speed. Width and marker size are visual choices.
 
@@ -98,6 +102,9 @@ node tests/surface-pulse.test.mjs
 node tests/event-sequence.test.mjs
 node tests/earth-geography.test.mjs
 node tests/earth-camera.test.mjs
+node tests/launch-sequence.test.mjs
+node tests/presentation-config.test.mjs
+node tests/display-policy.test.mjs
 ```
 
 ## Phase 2: explicit fallbacks
@@ -124,14 +131,13 @@ atmospheric descent. The 48-hour maximum is a presentation limit, not a model-va
 claim. Details, source hashes and null unknowns remain in each manifest.
 
 Missing-orbit pulses use a stable hash of event ID to choose a point uniformly by
-spherical surface area (uniform longitude and uniform sine of latitude). The exported
-`presentation.surfacePulse` is separate from the unknown factual `attributes.eventLocation`.
+spherical surface area (uniform longitude and uniform sine of latitude). The
+point is derived in `DisplayPolicy.js`, outside the unknown factual `attributes.eventLocation`.
 This is a neutral display policy, not a physical reentry distribution. Actual latitude
 patterns depend on orbital inclination and other conditions; see the
 [location policy and sources](notes/tracer-model.md#missing-orbit-surface-pulses).
-One pulse fades in and out during the final ten simulated minutes before the display
-anchor. Replay pulse focuses that interval, taking two seconds at the preset speed.
-Longer windows do not repeat it; shorter windows clip it without shifting its phase.
+One pulse fades in and out before the display anchor, using the shared pulse duration
+and event window settings. Longer windows do not repeat it; shorter windows shorten the fade.
 Pause and seek reproduce the same appearance. Trail controls do not apply.
 
 Regenerate Tiangong-1 with the existing command above; it also writes a separate

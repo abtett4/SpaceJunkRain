@@ -252,7 +252,7 @@ tbody tr:last-child td { border-bottom: 1px solid var(--rule); }
 .sample-track::after { content: ''; position: absolute; left: var(--progress); width: 1px; height: 100%; background: var(--text-secondary); pointer-events: none; }
 .sample-event { position: absolute; top: 7px; transform: translateX(-50%); width: 13px; height: 13px; min-width: 0; padding: 0; border: 1.5px solid var(--event-ink); border-radius: 50%; background: var(--surface-1); z-index: 1; }
 .sample-event.reached { background: var(--event-ink); }
-.sample-event.active { box-shadow: 0 0 0 4px #d2a54155; }
+.sample-event.active { box-shadow: 0 0 0 4px color-mix(in srgb, var(--event-ink) 33%, transparent); }
 .sample-event[aria-pressed="true"] { outline: 1px solid var(--text-primary); outline-offset: 4px; }
 .sample-event:focus-visible { outline: 3px solid var(--series-3); outline-offset: 4px; }
 #sample-dates { display: flex; justify-content: space-between; margin: 8px 0 0 120px; font-size: 12px; color: var(--text-secondary); }

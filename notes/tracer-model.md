@@ -1,5 +1,13 @@
 # Tracer model: useful attributes with bounded approximation
 
+> Current contract (2026-10-10): collection schema 3 / event schema 2 replaces the early
+> `presentation` fields described in the development history below. Event records now
+> contain facts, uncertainty, provenance and `orbitalData` links only. `DisplayPolicy.js`
+> derives render modes, colors, timing and pulse locations from those facts and shared
+> settings. Launches are cyan and start at the sourced pad with a labeled illustrative
+> ascent into the reference orbit. See [the current contract](launch-and-configuration.md#event--visualization-separation).
+
+
 Current implementation (2026-10-10): one sourced launch joins the mixed passage, and a
 single visualization configuration replaces separate sample/single-event preferences.
 [Launch and configuration notes](launch-and-configuration.md) supersede the earlier

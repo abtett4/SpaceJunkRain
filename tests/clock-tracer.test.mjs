@@ -1,3 +1,4 @@
+import { displayAnchor } from '../web/DisplayPolicy.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -67,9 +68,9 @@ test('exported Tiangong event joins the catalog anchor and its original geometry
   const catalog = json('../web/data/decays.json');
   const i = catalog.cols.id.indexOf(event.object.noradId);
   const catalogMs = Math.round(Date.parse(catalog.meta.epoch) + catalog.cols.d[i] * 86400000);
-  assert.equal(catalogMs, Date.parse(event.presentation.displayAnchorUtc));
-  const tracer = new Tracer({ positions: geometry.trace, startTime: event.presentation.startTime,
-    endTime: event.presentation.endTime, radiusKm: geometry.referenceSphereRadiusKm });
+  assert.equal(catalogMs, displayAnchor(event));
+  const tracer = new Tracer({ positions: geometry.trace, startTime: new Date(displayAnchor(event) - 7200000).toISOString(),
+    endTime: new Date(displayAnchor(event)).toISOString(), radiusKm: geometry.referenceSphereRadiusKm });
   assert.equal(tracer.sample(catalogMs).sourceMs, Date.parse(geometry.trace.at(-1)[0]));
   assert.equal(catalog.cols.p[i], 0);
   for (let ms = tracer.startMs; ms <= tracer.endMs; ms += 5000) {
