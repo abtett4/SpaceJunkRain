@@ -50,23 +50,28 @@ Date-only reentries get stable random display times within their reported UTC da
 animation anchors, not estimated reentry times. Missing size, owner, mission, location and
 lifetime-orbit data stays explicitly unknown.
 
-**Preview input** selects the full catalog (pick a year and passage) or one of the smaller
-fixed examples: the April 2–9, 2018 sample with Dragon CRS-14, Dragon alone, Tiangong-1, and
-two Iridium 33 debris fallbacks (stale reference orbit / empty near-event query).
-**Configure visualization** holds the shared, saved appearance settings: theme, event windows,
-trail length, width, size, opacity, pulses and Earth lighting. The globe supports drag, pinch,
-scroll, arrow keys and +/− zoom. Hovering or clicking gives an approximate geographic reference.
+**Layout.** The orbital view sits above the timeline charts. One sticky playback bar drives
+both, since they share a clock: Play/Pause, Replay passage, previous/next passage, Year and
+Passage, the clock readout and Speed. Hour-scale speeds play passage by passage and continue
+automatically. At year-scale speeds ("Charts only") the globe waits and only the charts animate.
+Pressing Play at an hour-scale speed resumes from the passage containing the current clock time.
+The event lanes under the globe share the scrubber's time axis; click a dot to inspect that
+event. Collapsed sections underneath hold the events-reached log, **Configure visualization**
+(shared, saved appearance settings), **About this view** (evidence and limits), and **Other
+examples** (the April 2–9, 2018 sample with Dragon CRS-14, Dragon alone, Tiangong-1, and two
+Iridium 33 debris fallbacks). The globe supports drag, pinch, scroll, arrow keys and +/− zoom.
+Hovering or clicking gives an approximate geographic reference.
 
 ### Code map
 
 | File | Role |
 | --- | --- |
-| `web/app.js` | Timeline charts, shared clock, Speed/Animate controls; mounts the orbital view. |
+| `web/app.js` | Timeline charts, shared clock and Speed; mounts the orbital view. |
 | `web/SimulationClock.js` | The one simulation clock (UTC ms, rate, play/pause/seek, playback windows). |
 | `web/PresentationConfig.js`, `ConfigurationPanel.js` | Settings schema, defaults, persistence; controls generated from the schema. |
 | `web/DisplayPolicy.js` | Chooses a representation from event facts, available orbital inputs and settings. |
 | `web/OrbitalEventFeed.js`, `EventPlaybackLog.js` | Launch/reentry crossings for collaborators; the "events reached" list. |
-| `web/earth/OrbitPanel.js` | Orbital view controller: preview loading, passages, inspector, scrubber. |
+| `web/earth/OrbitPanel.js` | Orbital view controller: shared Play, passages, inspector, scrubber. |
 | `web/earth/EarthScene.js` and neighbours | Renderer (p5/WebGL), shader, camera, tracers, pulses, geography. |
 
 The full design notes are in [`notes/`](notes/), above all

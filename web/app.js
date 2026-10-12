@@ -648,7 +648,8 @@ import { mountConfigurationPanel } from './ConfigurationPanel.js';
 
     let shown = 0;
     for (let i = 0; i < revealed; i++) if (inFamily(i) && typeShown(i)) shown++;
-    document.getElementById('date').textContent = state.playhead >= TIME_END ? 'Today' : fmtDate(state.playhead);
+    document.getElementById('date').textContent = state.playhead >= TIME_END ? 'Today'
+      : new Date(clock.nowMs).toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
     document.getElementById('now-count').textContent = `${fmtInt(shown)} down`;
   }
 
@@ -684,16 +685,9 @@ import { mountConfigurationPanel } from './ConfigurationPanel.js';
   }
 
   // ---- playback ------------------------------------------------------------
-  const playBtn = document.getElementById('play'), pulse = document.getElementById('pulse');
-  function setPlaying(p) {
-    if (p) {
-      if (clock.nowMs >= clock.maxMs) { state.playhead = X_MIN; eventFlash.clear(); }
-      clock.play(clock.untilMs > clock.nowMs ? clock.untilMs : clock.maxMs);
-    } else clock.pause();
-  }
-  clock.subscribe(({ previousMs, playing, reason }) => {
-    playBtn.textContent = playing ? '❚❚ Pause' : '▶ Animate';
-    playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Animate');
+  // The shared Play button lives in the orbital view's transport (earth/OrbitPanel.js).
+  const pulse = document.getElementById('pulse');
+  clock.subscribe(({ previousMs, reason }) => {
     if (reason === 'advance') {
       const prev = (previousMs - EPOCH_MS) / DAY_MS;
       const now = performance.now();
@@ -707,7 +701,6 @@ import { mountConfigurationPanel } from './ConfigurationPanel.js';
     } else if (reason === 'seek') eventFlash.clear();
     draw();
   });
-  playBtn.addEventListener('click', () => setPlaying(!state.playing));
 
   // ---- hover & scrub -------------------------------------------------------
   const tip = document.getElementById('tip');
@@ -785,7 +778,7 @@ import { mountConfigurationPanel } from './ConfigurationPanel.js';
         }
         return;
       }
-      if (state.playing) setPlaying(false);
+      if (state.playing) clock.pause();
       dragging = [cv, getM()]; cv.c.setPointerCapture(ev.pointerId);
       scrubTo(cv, getM(), ev.clientX);
     });
@@ -848,7 +841,8 @@ import { mountConfigurationPanel } from './ConfigurationPanel.js';
   window.addEventListener('pagehide', e => { clock.pause(); if (!e.persisted) { unsubscribePresentation(); disposeConfiguration(); } });
   const experienceReady = mountOrbitPanel(clock, data, (startMs, endMs, rate = DEFAULT_PLAYBACK_RATE) => {
     clock.pause();
-    document.getElementById('speed').value = String(YEAR * 86400 / rate);
+    const speed = document.getElementById('speed'), secPerYear = YEAR * 86400 / rate;
+    speed.value = [...speed.options].reduce((a, b) => Math.abs(+b.value - secPerYear) < Math.abs(+a.value - secPerYear) ? b : a).value;
     clock.setRate(rate);
     clock.seek(startMs);
     clock.play(endMs);

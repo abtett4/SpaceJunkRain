@@ -72,7 +72,7 @@ export class EarthScene {
       this.p = new P5((p) => {
         p.setup = async () => {
           try {
-            const canvas = p.createCanvas(element.clientWidth, 380, p.WEBGL);
+            const canvas = p.createCanvas(element.clientWidth, element.clientHeight || 380, p.WEBGL);
             p.pixelDensity(Math.min(devicePixelRatio || 1, 2));
             canvas.elt.tabIndex = 0;
             this.canvas = canvas.elt;
@@ -89,7 +89,7 @@ export class EarthScene {
             this.mesh = sphereMesh();
             p.noLoop();
             this.resize = new ResizeObserver(() => {
-              p.resizeCanvas(element.clientWidth, 380);
+              p.resizeCanvas(element.clientWidth, element.clientHeight || 380);
               p.redraw();
             });
             this.resize.observe(element);

@@ -1,5 +1,8 @@
 # Orbital view UI cleanup — plan (2026-10-11)
 
+**Status: implemented 2026-10-11** (steps 1–6 landed together; see git log). The speed policy
+below was confirmed: above one simulated day per second (`GLOBE_MAX_RATE`) the globe waits.
+
 Last piece of Tyler's work before the PR to Alan (`abtett4/SpaceJunkRain`). Scope: the UI around
 the 3D Earth and tracers. No changes to evidence, data files, rendering semantics or the
 collaborator API.
