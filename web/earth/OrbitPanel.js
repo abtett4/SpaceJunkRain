@@ -6,7 +6,7 @@ import { OrbitalEventFeed } from '../OrbitalEventFeed.js';
 import { mountEventPlaybackLog } from '../EventPlaybackLog.js';
 import { DEFAULT_PLAYBACK_RATE } from '../PresentationConfig.js';
 import { EventStrip } from './EventStrip.js';
-import { clockParts, longDate, shortDay } from '../DateText.js';
+import { clockParts, longDate, shortDay, MONTH_ABBR } from '../DateText.js';
 export { selectMode } from './EventSequence.js';
 
 // Above one simulated day per second, months can't load fast enough; the globe waits and
@@ -31,7 +31,15 @@ const shownAs = s => {
     launch: s.launchTracer ? 'Illustrative ascent from the launch pad' : `Ring at the ${at}${site?.place ? ` · ${site.place}` : ''}` }[s.mode];
   const facts = known(orbit?.inclinationDeg) && known(orbit?.perigeeKm) && known(orbit?.apogeeKm)
     ? ` · ${orbit.inclinationDeg.toFixed(1)}°, ${Math.round(orbit.perigeeKm)}–${Math.round(orbit.apogeeKm)} km` : '';
-  return how + facts;
+  // GCAT orbits are often operational, years before reentry; say when it was recorded.
+  const when = s.mode === 'representative' && orbit?.source === 'gcat' && orbit.epochUtc ? `, recorded ${MONTH_ABBR[new Date(orbit.epochUtc).getUTCMonth()]} ${orbit.epochUtc.slice(0, 4)}` : '';
+  return how + facts + when;
+};
+// Mass, length and owner, from GCAT where it has them: '8,500 kg · 10.4 m long · China · PLA GAD'.
+const objectFacts = s => {
+  const a = s.event.attributes, size = a.physicalSize?.value ?? {};
+  return [size.massKg && `${Math.round(size.massKg).toLocaleString()} kg`, size.lengthM && `${size.lengthM} m long`,
+    a.ownerCountry?.value, a.owner?.value !== a.ownerCountry?.value && a.owner?.value].filter(Boolean).join(' · ');
 };
 
 export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
@@ -127,8 +135,10 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     text('sel-kind', kindText(s));
     const { time } = clockParts(s.endMs);
     text('sel-date', `${longDate(s.endMs)} · ${time}`);
-    text('sel-time-note', s.anchorBasis === 'illustrative' ? 'Day reported; time of day assigned for display' : '');
+    text('sel-time-note', s.anchorBasis === 'illustrative' ? 'Day reported; time of day assigned for display'
+      : s.event.eventTime.source === 'gcat' && s.event.eventKind === 'reentry' ? 'Time of day from GCAT' : '');
     text('sel-shown', shownAs(s));
+    text('sel-facts', objectFacts(s));
     text('sel-source', `${s.event.object.noradId ? `NORAD ${s.event.object.noradId}` : `GCAT ${s.event.object.objectId}`} · source data`);
   };
   const renderNow = (samples, nowMs) => {

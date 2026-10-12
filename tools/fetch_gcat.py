@@ -1,8 +1,9 @@
-"""Download the GCAT launch tables (J. McDowell, planet4589.org; CC-BY-4.0).
+"""Download the GCAT tables used here (J. McDowell, planet4589.org; CC-BY-4.0).
 
 Each run saves an immutable snapshot under data/raw/gcat/<UTC date>/ with a metadata
 sidecar (URL, retrieval time, SHA-256, GCAT's own "Updated" stamp). A snapshot that
-already exists for today is reused; use --dry-run to see the URLs without downloading.
+already exists for today is reused (and completed if tables were added since);
+use --dry-run to see the URLs without downloading.
 
     python tools/fetch_gcat.py
 """
@@ -20,6 +21,8 @@ FILES = {
     'launch.tsv': f'{BASE}/launch/launch.tsv',   # every launch, orbital and suborbital
     'lp.tsv': f'{BASE}/tables/lp.tsv',           # launch points (pads) with coordinates
     'sites.tsv': f'{BASE}/tables/sites.tsv',     # launch sites, including renamed sites
+    'satcat.tsv': f'{BASE}/cat/satcat.tsv',      # catalogued objects: decay, orbit, mass, owner
+    'orgs.tsv': f'{BASE}/tables/orgs.tsv',       # owner and country names
 }
 CITATION = 'J. McDowell, GCAT: General Catalog of Artificial Space Objects, planet4589.org (CC-BY-4.0)'
 
@@ -57,13 +60,14 @@ def main():
             print(f'{name}: {url}')
         print(f'-> {target.relative_to(ROOT)}')
         return
-    if (target / 'metadata.json').is_file():
-        verify(target)
+    meta = verify(target) if (target / 'metadata.json').is_file() else None
+    files = dict(meta['files']) if meta else {}
+    missing = {name: url for name, url in FILES.items() if name not in files}
+    if not missing:
         print(f'Reusing {target.relative_to(ROOT)} (already fetched today).')
         return
     target.mkdir(parents=True, exist_ok=True)
-    files = {}
-    for name, url in FILES.items():
+    for name, url in missing.items():
         request = urllib.request.Request(url, headers={'User-Agent': 'SpaceJunkRain (educational visualization)'})
         with urllib.request.urlopen(request, timeout=120) as response:
             data = response.read()
@@ -73,7 +77,8 @@ def main():
         print(f'{name}: {len(data):,} bytes, {files[name]["updated"]}')
     (target / 'metadata.json').write_text(json.dumps({
         'source': 'GCAT', 'citation': CITATION, 'license': 'CC-BY-4.0',
-        'home': 'https://planet4589.org/space/gcat/', 'retrievedAt': now.isoformat().replace('+00:00', 'Z'),
+        'home': 'https://planet4589.org/space/gcat/',
+        'retrievedAt': meta['retrievedAt'] if meta else now.isoformat().replace('+00:00', 'Z'),
         'files': files}, indent=2) + '\n')
     print(f'Saved {target.relative_to(ROOT)}')
 

@@ -17,9 +17,10 @@ from build_tracers import ROOT, build_fallback_manifest, stamp
 from event_time import EPOCH, iso, display_anchor
 from mixed_sample import encoded
 from gcat_launches import launch_event, load as load_gcat, source_record
+from gcat_objects import enrich_event, load as load_gcat_objects
 
 
-def build_chunks(catalog_path, enriched_path, output, year=2018, extra_paths=(), launches=(), launch_source=None):
+def build_chunks(catalog_path, enriched_path, output, year=2018, extra_paths=(), launches=(), launch_source=None, gcat=None):
     raw = catalog_path.read_bytes()
     catalog = json.loads(raw)
     enriched = json.loads(enriched_path.read_text())
@@ -56,6 +57,8 @@ def build_chunks(catalog_path, enriched_path, output, year=2018, extra_paths=(),
             else:
                 event, _ = build_fallback_manifest(nid, [], {**catalog, 'cols': {k: [v[i]] for k,v in catalog['cols'].items()}}, {'catalog': source,
                     'gpHistory': {'status': 'not-queried', 'note': 'Orbital history not fetched for this historical passage.'}})
+                if gcat and nid in gcat['objects']:
+                    enrich_event(event, gcat['objects'][nid], gcat['source'])
             events.append(event)
         curated = [copy.deepcopy(e) for e in evidence.values() if e['eventKind'] == 'launch'
                    and start <= stamp(e['eventTime']['intervalUtc'][0]) < end]
@@ -68,6 +71,8 @@ def build_chunks(catalog_path, enriched_path, output, year=2018, extra_paths=(),
             continue
         for event in events:
             for product in event['orbitalData'].values():
+                if 'asset' not in product:
+                    continue  # inline reference elements (GCAT) have no geometry file
                 asset = (enriched_path.parent / product['asset']).resolve()
                 if not asset.is_file():
                     raise ValueError('Missing enriched geometry asset.')
@@ -90,9 +95,12 @@ def build_chunks(catalog_path, enriched_path, output, year=2018, extra_paths=(),
             reentries = [e for e in events if e['eventKind'] == 'reentry']
             coverage = { 'propagatedInput': 0, 'referenceInput': 0, 'symbolicInput': 0,
                          'historyQueryEmpty': 0, 'historyNotQueried': 0 }
+            if gcat:
+                coverage['gcatOrbitInput'] = 0
             for e in reentries:
                 coverage['propagatedInput' if 'propagated' in e['orbitalData'] else
-                         'referenceInput' if 'reference' in e['orbitalData'] else 'symbolicInput'] += 1
+                         'referenceInput' if 'reference' in e['orbitalData'] else
+                         'gcatOrbitInput' if 'elements' in e['orbitalData'] else 'symbolicInput'] += 1
                 gp = e['sources'].get('gpHistory', {})
                 coverage['historyNotQueried'] += gp.get('status') == 'not-queried'
                 coverage['historyQueryEmpty'] += gp.get('rowCount') == 0
@@ -112,6 +120,7 @@ def build_chunks(catalog_path, enriched_path, output, year=2018, extra_paths=(),
             chunks.append({'id': key, 'asset': f'{key}.json', 'intervalUtc': sample['intervalUtc'],
                            'eventCount': len(events), 'reentryCount': len(reentries),
                            'launchCount': sample['launchCount'], 'failedLaunchCount': sample['failedLaunchCount'],
+                           **({'gcatOrbitCount': coverage['gcatOrbitInput']} if gcat else {}),
                            'bytes': len(payload), 'sha256': hashlib.sha256(payload).hexdigest()})
     if not chunks:
         raise ValueError('No catalog events in the selected year.')
@@ -128,12 +137,14 @@ def build_full_history(catalog_path, enriched_path, output, gcat_snapshot=None):
     end = EPOCH + dt.timedelta(days=max(catalog['cols']['d']) + 1)
     launches = [l for l in launches if EPOCH <= l['start'] < max(end, dt.datetime.now(dt.timezone.utc))]
     source = source_record(meta)
+    objects, _ = load_gcat_objects(gcat_snapshot)
+    gcat = {'objects': objects, 'source': source}
     years = sorted({(EPOCH+dt.timedelta(days=d)).year for d in catalog['cols']['d']} | {l['start'].year for l in launches})
     files, chunks = {}, []
     for year in years:
         yearly = build_chunks(catalog_path,enriched_path,output,year,
             extra_paths=[catalog_path.parent/'fallbacks/stale/tracers.json'],
-            launches=[l for l in launches if l['start'].year == year], launch_source=source)
+            launches=[l for l in launches if l['start'].year == year], launch_source=source, gcat=gcat)
         index = json.loads(yearly.pop('index.json'))
         for chunk in index['chunks']:
             original = yearly[chunk['asset']]
@@ -147,7 +158,8 @@ def build_full_history(catalog_path, enriched_path, output, gcat_snapshot=None):
         'reentryCount':sum(c['reentryCount'] for c in chunks),'eventCount':sum(c['eventCount'] for c in chunks),
         'launchCount':sum(c['launchCount'] for c in chunks),'failedLaunchCount':sum(c['failedLaunchCount'] for c in chunks),
         'launchSource':source,
-        'scope':'All reentries in the supplied catalog and every GCAT orbital launch attempt. One bounded passage loaded at a time.'})
+        'scope':'All reentries in the supplied catalog and every GCAT orbital launch attempt. One bounded passage loaded at a time.',
+        'gcatOrbitCount':sum(c.get('gcatOrbitCount',0) for c in chunks)})
     return files
 
 

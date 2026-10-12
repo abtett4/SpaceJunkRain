@@ -1,5 +1,6 @@
 // Validate offline evidence, then let the independent display policy choose visuals.
 import { Tracer } from './Tracer.js';
+import { referenceLoop } from './ReferenceLoop.js';
 import { LaunchTracer } from './LaunchTracer.js';
 import { SurfacePulse } from './SurfacePulse.js';
 import { DEFAULTS } from '../PresentationConfig.js';
@@ -42,7 +43,7 @@ export async function loadSequence(manifest, timeline, fetchAsset) {
     } else if (Math.abs(endMs-timelineMs)>1 || (event.eventTime.precision === 'day' ? 0 : 1) !== timeline.cols.p[index]) {
       throw new Error('Event and timeline time disagree.');
     }
-    if (!event.orbitalData || Object.keys(event.orbitalData).some(k => !['propagated','reference'].includes(k))) throw new Error('Unsupported orbital data product.');
+    if (!event.orbitalData || Object.keys(event.orbitalData).some(k => !['propagated','reference','elements'].includes(k))) throw new Error('Unsupported orbital data product.');
     const products = await Promise.all(['propagated','reference'].map(async kind => {
       const product=event.orbitalData[kind];
       if (!product) return null;
@@ -53,7 +54,11 @@ export async function loadSequence(manifest, timeline, fetchAsset) {
         || g.timeSystem !== (isLoop ? 'loop-seconds' : 'UTC')) throw new Error('Unsupported geometry identity, frame or units.');
       return g;
     }));
-    const [geometry,loop]=products;
+    const [geometry,prepared]=products;
+    // Inline reference elements (GCAT) become a loop here; invalid elements leave a ring.
+    const elements=event.orbitalData.elements;
+    if (elements && (prepared || geometry || launch)) throw new Error('Reference elements must be the only orbital product.');
+    const loop=prepared ?? (elements ? referenceLoop(elements,event.eventId,nid) : null);
     const epochMs=loop ? Date.parse(loop.referenceEpochUtc) : null;
     const orbit=event.attributes.orbitReference ?? event.attributes.orbitNearEvent;
     if (loop && (!Number.isFinite(epochMs) || epochMs !== Date.parse(orbit?.epochUtc))) throw new Error('Reference geometry epoch disagrees with source evidence.');

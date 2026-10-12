@@ -1,0 +1,164 @@
+"""Fill catalog gaps from GCAT's satellite table (J. McDowell, planet4589.org; CC-BY-4.0).
+
+Space-Track stays the record of which objects reentered and on which day. GCAT adds, per
+object and only where it has a value:
+
+* a time of day for the decay, when GCAT's decay falls on the same UTC day as Space-Track's
+  (written into web/data/decays.json as p=1; other days keep their assigned display time);
+* a reference orbit (perigee, apogee, inclination and the date GCAT gives for it), which the
+  browser draws as an illustrative loop instead of a ring;
+* mass and dimensions, and the owning organisation and country.
+
+Hand-curated evidence (the Tiangong-1, Iridium and April 2018 examples) is left untouched.
+
+    python tools/gcat_objects.py        # updates web/data/decays.json in place (idempotent)
+"""
+import argparse
+import datetime as dt
+import json
+import math
+from pathlib import Path
+
+from event_time import EPOCH, UTC, apply_event_times, iso
+from fetch_gcat import ROOT, latest_snapshot, verify
+from gcat_launches import MONTHS, parse_time, read_tsv, source_record
+
+CATALOG = ROOT / 'web/data/decays.json'
+# Objects with hand-curated evidence (sample, fallback and launch manifests) keep their records.
+CURATED = {24965, 26926, 31309, 31777, 37820, 38023, 38249, 41486, 41565, 41568, 41569, 43267, 43268, 43269}
+
+
+def number(value):
+    try:
+        x = float(value.rstrip('?'))
+    except (AttributeError, ValueError):
+        return None
+    return x if math.isfinite(x) else None
+
+
+def gcat_day(text):
+    parts = text.replace('?', ' ').split()
+    if len(parts) < 3 or parts[1] not in MONTHS:
+        return None
+    try:
+        return dt.date(int(parts[0]), MONTHS[parts[1]], int(parts[2]))
+    except ValueError:
+        return None
+
+
+def org_names(snapshot):
+    names = {}
+    for r in read_tsv(snapshot / 'orgs.tsv'):
+        for key in ('ShortEName', 'EName', 'ShortName', 'Name'):
+            if r.get(key) not in (None, '', '-'):
+                names[r['Code']] = r[key]
+                break
+    return names
+
+
+def objects(snapshot):
+    """NORAD ID -> GCAT facts used here; absent or zero values are left out."""
+    names = org_names(snapshot)
+    out = {}
+    for r in read_tsv(snapshot / 'satcat.tsv'):
+        if not r['Satcat'].isdigit():
+            continue
+        record = {'jcat': r['JCAT'], 'name': r['Name']}
+        decay = gcat_day(r['DDate'])
+        if decay:
+            record['decayDate'] = decay.isoformat()
+            if len(r['DDate'].split()) >= 4:
+                try:
+                    start, resolution = parse_time(r['DDate'])
+                    if resolution < 86400 and start.date() == decay:
+                        record['decayTime'], record['decayResolution'] = start, resolution
+                except ValueError:
+                    pass
+        low, high, inc, epoch = number(r['Perigee']), number(r['Apogee']), number(r['Inc']), gcat_day(r['ODate'])
+        if None not in (low, high, inc) and epoch:
+            record['orbit'] = {'perigeeKm': low, 'apogeeKm': high, 'inclinationDeg': inc,
+                               'epochUtc': iso(dt.datetime.combine(epoch, dt.time(), UTC)), 'regime': r.get('OpOrbit')}
+        size = {k: v for k, v in (('massKg', number(r['Mass'])), ('lengthM', number(r['Length'])),
+                                  ('diameterM', number(r['Diameter']))) if v}
+        if size:
+            record['size'] = size
+        for key, field in (('owner', 'Owner'), ('state', 'State')):
+            if r.get(field) not in (None, '', '-'):
+                record[key] = {'code': r[field], 'name': names.get(r[field], r[field])}
+        out[int(r['Satcat'])] = record
+    return out
+
+
+def load(snapshot=None):
+    snapshot = snapshot or latest_snapshot()
+    meta = verify(snapshot)
+    if 'satcat.tsv' not in meta['files']:
+        raise FileNotFoundError('GCAT snapshot lacks satcat.tsv; run python tools/fetch_gcat.py.')
+    return objects(snapshot), meta
+
+
+def enrich_catalog(catalog, gcat, meta):
+    """Give same-day GCAT decay times to date-only rows; returns how many were applied."""
+    c = catalog['cols']
+    applied = disagree = 0
+    for i, nid in enumerate(c['id']):
+        record = gcat.get(nid)
+        if nid in CURATED or not record or 'decayTime' not in record:
+            continue
+        day = (EPOCH + dt.timedelta(days=math.floor(c['d'][i]))).date()
+        if record['decayTime'].date() != day:
+            disagree += 1
+            continue
+        c['d'][i] = (record['decayTime'] - EPOCH).total_seconds() / 86400
+        if not c['p'][i]:
+            applied += 1
+        c['p'][i] = 1
+    apply_event_times(catalog)
+    catalog['meta']['gcatTimes'] = {
+        'source': source_record(meta), 'count': catalog['meta']['preciseEpochs'],
+        'rule': 'A GCAT decay time is used only when it falls on the Space-Track decay day; otherwise the day keeps its assigned display time.',
+        'curatedExcluded': sorted(CURATED)}
+    return applied, disagree
+
+
+def enrich_event(event, record, source):
+    """Add GCAT orbit/size/owner to a fallback reentry event that lacks them (mutates)."""
+    a = event['attributes']
+    if record.get('size'):
+        a['physicalSize'] = {'value': record['size'], 'basis': 'reported', 'source': 'gcat'}
+    if record.get('owner'):
+        a['owner'] = {'value': record['owner']['name'], 'code': record['owner']['code'], 'basis': 'reported', 'source': 'gcat'}
+    if record.get('state'):
+        a['ownerCountry'] = {'value': record['state']['name'], 'code': record['state']['code'], 'basis': 'reported', 'source': 'gcat'}
+    orbit = record.get('orbit')
+    if orbit and not event['orbitalData'] and 0 < orbit['perigeeKm'] <= orbit['apogeeKm'] and 0 <= orbit['inclinationDeg'] <= 180:
+        a['orbitReference'] = {**orbit, 'basis': 'reported', 'source': 'gcat',
+                               'meaning': 'An orbit GCAT records for this object, dated epochUtc (often operational, not near reentry). The loop drawn from it has illustrative node, direction and phase.'}
+        event['orbitalData'] = {'elements': {k: orbit[k] for k in ('perigeeKm', 'apogeeKm', 'inclinationDeg', 'epochUtc')}}
+    if event['eventTime']['precision'] == 'reported-time':
+        t = event['eventTime']
+        t['source'] = 'gcat'
+        t['resolutionSeconds'] = record.get('decayResolution', 60)
+        t['intervalMeaning'] = 'Reentry time from GCAT (J. McDowell); Space-Track reports the same UTC day.'
+    event['sources']['gcat'] = source
+    return event
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('--snapshot', type=Path)
+    parser.add_argument('--catalog', type=Path, default=CATALOG)
+    args = parser.parse_args()
+    gcat, meta = load(args.snapshot)
+    catalog = json.loads(args.catalog.read_text())
+    applied, disagree = enrich_catalog(catalog, gcat, meta)
+    args.catalog.write_text(json.dumps(catalog, separators=(',', ':')) + '\n')
+    joined = sum(1 for nid in catalog['cols']['id'] if nid in gcat)
+    orbits = sum(1 for nid in catalog['cols']['id'] if 'orbit' in gcat.get(nid, {}))
+    print(f'{joined:,} of {len(catalog["cols"]["id"]):,} reentries found in GCAT; {orbits:,} with an orbit; '
+          f'{catalog["meta"]["preciseEpochs"]:,} with a time of day ({applied:,} newly applied); '
+          f'{disagree:,} GCAT times on a different day were not used.')
+
+
+if __name__ == '__main__':
+    main()

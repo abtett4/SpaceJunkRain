@@ -43,12 +43,12 @@ Every orbital mark says what kind of evidence is behind it:
 | Representation | When it is used | What it claims |
 | --- | --- | --- |
 | **SGP4 replay** | Tiangong-1 (NORAD 37820), event windows ≤ 2 h | Last-known orbital estimate from prepared element sets. Not an observed descent or impact path. |
-| **Reference loop** | An object with a usable reference orbit | Real inclination and perigee/apogee. Node, periapsis direction and phase are illustrative. No drag or descent is modelled. |
-| **Surface pulse** | No usable orbital history | A stable, randomly chosen display point (uniform over the sphere). Not a reentry location. |
+| **Reference loop** | 35,140 of 35,692 reentries: GCAT's recorded orbit, or Space-Track element history for the curated examples | Real inclination and perigee/apogee. Node, periapsis direction and phase are illustrative. GCAT's orbit is dated and often operational, not near reentry; the card shows its date. No drag or descent is modelled. |
+| **Surface pulse** | No usable orbit (552 reentries) | A stable, randomly chosen display point (uniform over the sphere). Not a reentry location. |
 | **Launch** (cyan) | Every GCAT orbital launch attempt (7,191) | A ring at the GCAT launch pad (7,108) or launch site (83), at GCAT's time (usually to the minute or second). Dragon CRS-14 also has an illustrative ascent arc. |
 | **Failed launch** (small, red) | GCAT attempts that did not reach orbit (524) | Same placement as launches. |
 
-Date-only reentries get stable random display times within their reported UTC day. These are
+4,108 reentries have a time of day from GCAT, used only where GCAT and Space-Track agree on the day. The other date-only reentries get stable random display times within their reported UTC day. These are
 animation anchors, not estimated reentry times. Missing size, owner, mission, location and
 lifetime-orbit data stays explicitly unknown.
 
@@ -117,6 +117,10 @@ python -m venv .venv
 | April 2018 sample | `python tools/build_tracers.py --sample data/samples/april-2018.json --output-dir web/data/samples/april-2018` |
 | Dragon CRS-14 launch | `tools/build_launch.py` · [launch and configuration](notes/launch-and-configuration.md#reproduce) |
 | GCAT launches `web/data/launches.json` (+ in the passages above) | `python tools/fetch_gcat.py` (snapshot in `data/raw/gcat/<date>/`), then `python tools/gcat_launches.py` and rebuild the passages |
+| GCAT object facts: decay times in `decays.json`; orbits, mass, owner in the passages | `python tools/gcat_objects.py` (after `build_data.py`, before rebuilding the passages; idempotent) |
+
+Full order after fresh downloads: `spacetrack_fetch.py` → `build_data.py` → `fetch_gcat.py` →
+`gcat_objects.py` → `gcat_launches.py` → `build_history_chunks.py --all-history`.
 | Tiangong-1 and Iridium fallbacks | `tools/propagate.py`, `tools/build_tracers.py` · [orbital view reference](notes/orbital-reference.md) |
 | Geography `web/data/geography.json` (not used by the page since the place lookup was removed) | `tools/fetch_geography.py`, `tools/build_geography.py` · [credits](web/assets/earth/README.md) |
 
@@ -144,7 +148,10 @@ The page lists every source in a **Data sources** section directly under the sum
 [planet4589.org](https://planet4589.org/space/gcat/), CC BY 4.0. `launch.tsv`, `lp.tsv` and
 `sites.tsv`; orbital attempts only (LaunchCode `OS`/`OF`). Pads resolve through GCAT's site
 renames (e.g. NIIP-5 → GIK-5); the record states whether a launch sits at its pad or its site.
-Keep this citation with `web/data/launches.json` and the history passages.
+Keep this citation with `web/data/launches.json` and the history passages. GCAT's `satcat.tsv` and
+`orgs.tsv` also supply recorded orbits (35,374 objects), decay times of day, mass/length and owner
+for catalogued objects, joined by NORAD number; Space-Track stays the record of which objects
+reentered and on which day. The 14 hand-curated objects keep their prepared evidence unchanged.
 
 **Reentries:** 
 Data: U.S. Space Command (USSPACECOM), via [Space-Track.org](https://www.space-track.org):

@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap">
-<link rel="stylesheet" href="style.css?v=20261012-gcat5">
+<link rel="stylesheet" href="style.css?v=20261012-gcat6">
 </head>
 <body>
 <main class="viz-root">
@@ -39,14 +39,14 @@
       <article>
         <p class="source-what">Launches</p>
         <p class="source-name"><a href="https://planet4589.org/space/gcat/">GCAT · Jonathan McDowell</a></p>
-        <p>Every orbital launch attempt since 1957 (<span id="src-launch-count">–</span>, of which <span id="src-launch-failed">–</span> failed): time, vehicle, outcome and launch-pad coordinates. Updated <span id="src-gcat-date">–</span>.</p>
+        <p>Every orbital launch attempt since 1957 (<span id="src-launch-count">–</span>, of which <span id="src-launch-failed">–</span> failed) with pad coordinates; and, for catalogued objects, a recorded orbit, decay times, mass and owner. Updated <span id="src-gcat-date">–</span>.</p>
         <p class="source-terms">CC BY 4.0 · cite “J. McDowell, planet4589.org”</p>
       </article>
       <article>
         <p class="source-what">Orbits</p>
-        <p class="source-name"><a href="https://www.space-track.org">USSPACECOM via Space-Track.org</a></p>
-        <p>General-perturbations element history for the few objects drawn with an orbit (Tiangong-1, six April 2018 reentries, Dragon CRS-14). Everything else is a ring.</p>
-        <p class="source-terms">Same terms as the catalog</p>
+        <p class="source-name">GCAT, plus Space-Track element history</p>
+        <p>98% of reentries are drawn on a reference orbit: GCAT’s recorded orbit for the object, or Space-Track element history for the hand-checked April 2018 and Tiangong-1 examples. The rest are rings.</p>
+        <p class="source-terms">Orbit shape is real; position on it is illustrative</p>
       </article>
       <article>
         <p class="source-what">Earth</p>
@@ -117,6 +117,7 @@
             <p class="sel-date" id="sel-date"></p>
             <p class="sel-note" id="sel-time-note"></p>
             <p class="sel-shown" id="sel-shown"></p>
+            <p class="sel-facts" id="sel-facts"></p>
             <p class="sel-source"><a id="sel-source" href="data/tracers.json">Source data</a></p>
           </div>
         </div>
@@ -154,8 +155,8 @@
       </details>
       <details id="orbit-about">
         <summary>About this view · evidence and limits</summary>
-        <p class="note"><strong>What the marks mean.</strong> An amber trace follows a reference orbit built from the object’s real inclination and perigee/apogee; its direction and phase are illustrative, and it does not model the descent or claim a reentry location. Tiangong-1 at short windows replays its last known orbit (SGP4). A ring marks an object with no usable orbital history, at a stable random point on the globe chosen evenly by area — not a reentry location. Launches are every orbital launch attempt in GCAT, shown as a ring at the launch pad (or at the launch site when GCAT has no pad coordinates); failed attempts are smaller and red. Dragon CRS-14 (April 2018) additionally has an illustrative ascent arc into its first recorded orbit; it is not a flight reconstruction.</p>
-        <p class="note"><strong>Times.</strong> Most decay records give only the day. Those objects get a stable, randomly assigned time within that UTC day; it is an animation anchor, not an estimated reentry time. Launch times keep GCAT’s precision, usually to the minute or second; the few given only to the day get an assigned time the same way.</p>
+        <p class="note"><strong>What the marks mean.</strong> An amber trace follows a reference orbit built from the object’s real inclination and perigee/apogee; its direction and phase are illustrative, and it does not model the descent or claim a reentry location. For most objects that orbit is the one GCAT records for it, dated and often from its working life rather than its last days, so the card says when it was recorded. Tiangong-1 at short windows replays its last known orbit (SGP4). A ring marks an object with no usable orbit, at a stable random point on the globe chosen evenly by area — not a reentry location. Launches are every orbital launch attempt in GCAT, shown as a ring at the launch pad (or at the launch site when GCAT has no pad coordinates); failed attempts are smaller and red. Dragon CRS-14 (April 2018) additionally has an illustrative ascent arc into its first recorded orbit; it is not a flight reconstruction.</p>
+        <p class="note"><strong>Times.</strong> About 4,100 reentries have a time of day from GCAT, used only when GCAT and Space-Track agree on the day. The rest give only the day. Those objects get a stable, randomly assigned time within that UTC day; it is an animation anchor, not an estimated reentry time. Launch times keep GCAT’s precision, usually to the minute or second; the few given only to the day get an assigned time the same way.</p>
         <p id="quiet-playback-note" class="note">Quiet intervals skipped by default.</p>
         <p id="history-coverage" class="note"></p>
         <p class="note">The globe loads one month at a time (dense months in parts of at most 50 events) and continues automatically through months and years. Event windows are clipped at those boundaries. At year-scale speeds the globe waits and only the charts animate.</p>
@@ -225,7 +226,7 @@
     <h3>About the data</h3>
     <p id="credit"></p>
     <ul>
-      <li>Decay dates come from the SATCAT and Space-Track's historical decay messages, which record each one to the day only. Each dot sits on its reported day. When only the date is known, a reproducible random time within that UTC day drives the timeline and orbit replay; it is not an estimated reentry time. Within a row, dots are spread up and down only so they don't overlap.</li>
+      <li>Decay dates come from the SATCAT and Space-Track's historical decay messages, which record each one to the day only; about 4,100 also have a time of day from GCAT, used only when both sources agree on the day. Each dot sits on its reported day. When only the date is known, a reproducible random time within that UTC day drives the timeline and orbit replay; it is not an estimated reentry time. Within a row, dots are spread up and down only so they don't overlap.</li>
       <li>A "source" is everything from one launch (its international designator, e.g. 1999-025). Debris usually keeps its parent's designator, so a breakup shows up as a burst within one source.</li>
       <li>Launches are every orbital launch attempt in J. McDowell's GCAT (planet4589.org, CC BY 4.0), placed at the launch pad GCAT gives, or at the launch site when it gives no pad.</li>
       <li>"Still in orbit" counts every tracked object, working satellites included. Only tracked objects appear here, roughly softball-sized and up in low orbit. Collision dates and altitudes are hand-curated.</li>
@@ -239,26 +240,27 @@
 <script type="importmap">
 {
   "imports": {
-    "./DateText.js": "./DateText.js?v=20261012-gcat5",
-    "./earth/EventStrip.js": "./earth/EventStrip.js?v=20261012-gcat5",
-    "./SimulationClock.js": "./SimulationClock.js?v=20261012-gcat5",
-    "./OrbitalEventFeed.js": "./OrbitalEventFeed.js?v=20261012-gcat5",
-    "./EventPlaybackLog.js": "./EventPlaybackLog.js?v=20261012-gcat5",
-    "./DisplayPolicy.js": "./DisplayPolicy.js?v=20261012-gcat5",
-    "./earth/LaunchTracer.js": "./earth/LaunchTracer.js?v=20261012-gcat5",
-    "./PresentationConfig.js": "./PresentationConfig.js?v=20261012-gcat5",
-    "./ConfigurationPanel.js": "./ConfigurationPanel.js?v=20261012-gcat5",
-    "./earth/OrbitPanel.js": "./earth/OrbitPanel.js?v=20261012-gcat5",
-    "./earth/HistoryChunks.js": "./earth/HistoryChunks.js?v=20261012-gcat5",
-    "./earth/EventSequence.js": "./earth/EventSequence.js?v=20261012-gcat5",
-    "./earth/Tracer.js": "./earth/Tracer.js?v=20261012-gcat5",
-    "./earth/SurfacePulse.js": "./earth/SurfacePulse.js?v=20261012-gcat5",
-    "./earth/TracerControls.js": "./earth/TracerControls.js?v=20261012-gcat5",
-    "./earth/EarthScene.js": "./earth/EarthScene.js?v=20261012-gcat5",
-    "./earth/EarthShader.js": "./earth/EarthShader.js?v=20261012-gcat5"
+    "./DateText.js": "./DateText.js?v=20261012-gcat6",
+    "./earth/EventStrip.js": "./earth/EventStrip.js?v=20261012-gcat6",
+    "./earth/ReferenceLoop.js": "./earth/ReferenceLoop.js?v=20261012-gcat6",
+    "./SimulationClock.js": "./SimulationClock.js?v=20261012-gcat6",
+    "./OrbitalEventFeed.js": "./OrbitalEventFeed.js?v=20261012-gcat6",
+    "./EventPlaybackLog.js": "./EventPlaybackLog.js?v=20261012-gcat6",
+    "./DisplayPolicy.js": "./DisplayPolicy.js?v=20261012-gcat6",
+    "./earth/LaunchTracer.js": "./earth/LaunchTracer.js?v=20261012-gcat6",
+    "./PresentationConfig.js": "./PresentationConfig.js?v=20261012-gcat6",
+    "./ConfigurationPanel.js": "./ConfigurationPanel.js?v=20261012-gcat6",
+    "./earth/OrbitPanel.js": "./earth/OrbitPanel.js?v=20261012-gcat6",
+    "./earth/HistoryChunks.js": "./earth/HistoryChunks.js?v=20261012-gcat6",
+    "./earth/EventSequence.js": "./earth/EventSequence.js?v=20261012-gcat6",
+    "./earth/Tracer.js": "./earth/Tracer.js?v=20261012-gcat6",
+    "./earth/SurfacePulse.js": "./earth/SurfacePulse.js?v=20261012-gcat6",
+    "./earth/TracerControls.js": "./earth/TracerControls.js?v=20261012-gcat6",
+    "./earth/EarthScene.js": "./earth/EarthScene.js?v=20261012-gcat6",
+    "./earth/EarthShader.js": "./earth/EarthShader.js?v=20261012-gcat6"
   }
 }
 </script>
-<script type="module" src="app.js?v=20261012-gcat5"></script>
+<script type="module" src="app.js?v=20261012-gcat6"></script>
 </body>
 </html>

@@ -57,6 +57,8 @@ function digest(text) {
   return h;
 }
 const first64 = (h,i=0) => BigInt(h[i]) * 4294967296n + BigInt(h[i+1]);
+// First 64 bits of SHA-256(text) as a fraction in [0, 1), matching Python's int.from_bytes(...)/2**64.
+export const hashFraction = text => Number(first64(digest(text))) / 2**64;
 export function displayAnchor(event) {
   return event.eventTime.precision === 'day'
     ? Date.parse(`${event.eventTime.date}T00:00:00Z`)
