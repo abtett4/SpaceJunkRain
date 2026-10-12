@@ -45,6 +45,6 @@ test('keyboard supports center inspection, clearing, camera motion and bounded z
   emit('keydown',{key:'Escape'}); assert.equal(calls.pop(),'clear');
   emit('keydown',{key:'ArrowRight'}); assert.ok(camera.yaw>0);
   camera.zoom(.001); assert.equal(camera.distance,2.05);
-  camera.zoom(1000); assert.equal(camera.distance,6);
+  camera.zoom(1000); assert.equal(camera.distance,70);
   camera.dispose();
 });

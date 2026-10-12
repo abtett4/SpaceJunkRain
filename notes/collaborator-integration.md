@@ -40,6 +40,11 @@ Dragon CRS-14 record is unchanged and still has its NORAD ID.
 Launch records also carry `attributes.launchSite.coordinates.uncertaintyKm` (GCAT's stated error)
 and `precision` `'pad'`, `'site'` or `'release-area'` (air launches, with `carrier` and `takeoff`).
 
+Successful GCAT launches may also carry `orbitalData.elements` and `attributes.orbitReference`
+(with `from`: `'launch-record'`, `'upper-stage'` or `'payload'`) and `attributes.ascentHeading`
+(`'north'`/`'south'`, illustrative). Launch sites have `country`; payload reentries may carry
+`attributes.mission` (`category`, `class`, `program`) and `attributes.ownerCountry`.
+
 ## Viewer filters (added 2026-10-12)
 
 `experience.settings` now includes `showLaunches`, `showPayloads`, `showRocketBodies`,

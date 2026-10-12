@@ -5,7 +5,7 @@ P5.disableFriendlyErrors = true;
 import { Tracer } from './Tracer.js';
 import { CameraController } from './CameraController.js';
 import { earthState, earthRotation } from './EarthOrientation.js';
-import { latLonToVector, transform, pickGlobe } from './GeoMath.js';
+import { latLonToVector, transform, pickGlobe, normalize, cross } from './GeoMath.js';
 import { earthVertex, earthFragment } from './EarthShader.js';
 
 // Sphere mesh adapted from Cosmic Clock's EarthView; no catalog or clock knowledge.
@@ -26,6 +26,27 @@ function sphereMesh() {
 
 // A camera-facing ribbon gives continuous width and opacity between source samples.
 // Both taper along the visible path, from zero at the oldest point to full at the head.
+// A faint whole-orbit path for an active tracer. Built once into p5 geometry (two crossed thin
+// ribbons, so it reads from any angle) and reused; rebuilding per frame cost too much.
+function orbitPathGeometry(p, tracer, width) {
+  const all = tracer.pathPoints(), path = all.filter((_, i) => i % 8 === 0 || i === all.length - 1);
+  const tint = p.color(tracer.color); tint.setAlpha(255 * 0.3 * tracer.opacity);
+  return p.buildGeometry(() => {
+    p.noStroke(); p.fill(tint);
+    for (const crosswise of [false, true]) {
+      p.beginShape(p.TRIANGLE_STRIP);
+      path.forEach((point, i) => {
+        const a = path[Math.max(0, i - 1)], b = path[Math.min(path.length - 1, i + 1)];
+        const tangent = b.map((v, j) => v - a[j]), radial = normalize(point);
+        const side = crosswise ? normalize(cross(tangent, radial)) : radial;
+        p.vertex(...point.map((v, j) => v - side[j] * width / 2));
+        p.vertex(...point.map((v, j) => v + side[j] * width / 2));
+      });
+      p.endShape();
+    }
+  });
+}
+
 function drawTaperedTrail(p, points, eye, width, color, opacity, widthTaper, opacityTaper) {
   if (points.length < 2) return;
   const distances = [0];
@@ -164,9 +185,15 @@ export class EarthScene {
   }
   draw(p) {
     if (!this.camera || !this.mesh) return;
+    this.paths ??= new Map();
+    if (this.paths.size > this.tracers.length + 20) {
+      const live = new Set(this.tracers);
+      for (const [tracer, cached] of this.paths) if (!live.has(tracer)) { p.freeGeometry(cached.geometry); this.paths.delete(tracer); }
+    }
     const camera = this.camera;
     p.background(STYLE.background);
-    p.perspective(camera.fov, p.width / p.height, 0.05, 100);
+    // Near/far follow the zoom so depth precision holds from close up to far out.
+    p.perspective(camera.fov, p.width / p.height, Math.max(0.05, (camera.distance - 1.05) * 0.5), camera.distance + 160);
     p.camera(...camera.eye, 0, 0, 0, 0, 1, 0);
     p.noStroke();
     if (this.textured) {
@@ -200,12 +227,26 @@ export class EarthScene {
           sunDirection: [...this.state.sunDirection], eye: [...camera.eye], earthRadius: 1, settings: this.settings });
       } finally { p.pop(); p.resetShader(); p.noLights(); p.drawingContext.depthMask(true); }
     }
+    // Keep markers and trails a steady size on screen as the camera zooms out to high orbits.
+    const zoomScale = Math.max(1, camera.distance / 3.7);
     for (const tracer of this.tracers) {
       const sample = tracer.sample(this.timeMs);
       if (!sample || tracer.opacity === 0) continue;
-      drawTaperedTrail(p, sample.tail, camera.eye, tracer.lineWidthEarth, tracer.color, tracer.opacity, tracer.widthTaper, tracer.opacityTaper);
+      if (this.settings.showOrbitPaths && typeof tracer.pathPoints === 'function') {
+        // Rebuild only when the look changes; zoom is bucketed so the line stays about a pixel wide.
+        const width = tracer.lineWidthEarth * 0.3 * 1.5 ** Math.round(Math.log(zoomScale) / Math.log(1.5));
+        const key = `${tracer.color}|${tracer.opacity}|${width}`;
+        let cached = this.paths.get(tracer);
+        if (cached?.key !== key) {
+          if (cached) p.freeGeometry(cached.geometry);
+          cached = { key, geometry: orbitPathGeometry(p, tracer, width) };
+          this.paths.set(tracer, cached);
+        }
+        p.model(cached.geometry);
+      }
+      drawTaperedTrail(p, sample.tail, camera.eye, tracer.lineWidthEarth * zoomScale, tracer.color, tracer.opacity, tracer.widthTaper, tracer.opacityTaper);
       p.push(); p.translate(...sample.head); p.noStroke(); const tint = p.color(tracer.color); tint.setAlpha(255 * tracer.opacity); p.fill(tint);
-      p.sphere(tracer.markerRadiusEarth, 12, 8); p.pop();
+      p.sphere(tracer.markerRadiusEarth * zoomScale, 12, 8); p.pop();
     }
     for (const pulse of this.pulses) {
       const sample = pulse.sample(this.timeMs);

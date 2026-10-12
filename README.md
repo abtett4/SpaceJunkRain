@@ -45,13 +45,19 @@ Every orbital mark says what kind of evidence is behind it:
 | **SGP4 replay** | Tiangong-1 (NORAD 37820), event windows ≤ 2 h | Last-known orbital estimate from prepared element sets. Not an observed descent or impact path. |
 | **Reference loop** | 35,140 of 35,692 reentries: GCAT's recorded orbit, or Space-Track element history for the curated examples | Real inclination and perigee/apogee. Node, periapsis direction and phase are illustrative. GCAT's orbit is dated and often operational, not near reentry; the card shows its date. No drag or descent is modelled. |
 | **Surface pulse** | No usable orbit (552 reentries) | A stable, randomly chosen display point (uniform over the sphere). Not a reentry location. |
-| **Launch** (cyan) | Every GCAT orbital launch attempt (7,191) | A ring at the GCAT launch pad (7,108) or launch site (83), at GCAT's time (usually to the minute or second). Dragon CRS-14 also has an illustrative ascent arc. |
+| **Launch** (cyan) | Every GCAT orbital launch attempt (7,191) | A ring at the GCAT pad, site or air-launch drop zone, at GCAT's time (usually to the minute or second). 6,642 successful launches also get an illustrative 9-minute ascent onto the orbit GCAT records for the launch (or its upper stage or a payload), through the pad at launch time; heading north/south by a stated rule. |
 | **Failed launch** (small, red) | GCAT attempts that did not reach orbit (524) | Same placement as launches. |
 
 Launch locations carry GCAT's own coordinate uncertainty: 4,753 within 1 km, 1,253 within 5 km,
 1,181 within 25 km and 4 coarser. Air launches (57) sit at GCAT's drop zone, not the carrier's
 runway. The event card states each launch's precision, and **About this view** on the page has a
 full known-versus-illustrative table.
+
+**Globe:** zoom out to 70 Earth radii for high orbits; markers keep their screen size and active
+objects draw a faint full orbit. A caption box in the globe's corner says what each active object
+is and whose (e.g. "Commercial communications satellite · USA", "Launch from Jiuquan, China"),
+from GCAT's payload, owner and site tables. **Fine time** under the strip moves the clock within
+the day by the minute, or in ±10 min / ±1 h steps.
 
 **Show / hide:** click a lane name on the strip to show or hide launches, payloads, rocket bodies,
 debris or unknown objects; the orbit-height range shows only reentries whose recorded orbit

@@ -70,6 +70,8 @@ export class Tracer {
     const f = b.time === a.time ? 0 : (sourceMs - a.time) / (b.time - a.time);
     return a.xyz.map((v, j) => v + (b.xyz[j] - v) * f);
   }
+  // The whole source path in scene coordinates (one revolution for loops), for a faint full path.
+  pathPoints() { return this.points.map(p => p.xyz); }
   sample(nowMs) {
     if (!Number.isFinite(nowMs) || nowMs < this.startMs || nowMs > this.endMs) return null;
     if (this.loopPeriodMs !== null) {

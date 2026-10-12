@@ -31,13 +31,31 @@ const shownAs = s => {
   const launchPlace = c?.precision === 'release-area'
     ? `Ring at the air-launch release area · ${site.place}${within(c.uncertaintyKm)} · carried by ${site.carrier} from ${site.takeoff}`
     : `Ring at the ${c?.precision === 'site' ? 'launch site (no pad coordinates)' : 'launch pad'}${site?.place ? ` · ${site.place}` : ''}${within(c?.uncertaintyKm)}${site?.padUncertain ? ' · pad not certain' : ''}`;
+  const heading = s.event.attributes.ascentHeading?.value;
+  const from = { 'launch-record': 'launch record', 'upper-stage': 'upper stage', payload: 'payload' }[orbit?.from];
+  const ascent = `Illustrative ascent${heading ? `, heading ${heading}` : ''} from the ${c?.precision === 'release-area' ? 'release area' : 'pad'}`
+    + `${site?.place ? ` · ${site.place}` : ''}${within(c?.uncertaintyKm)}${from ? ` · orbit from the ${from}` : ''}`;
   const how = { propagated: 'Last known orbit, replayed', representative: 'Reference orbit, illustrative path', symbolic: 'Ring · no orbital data',
-    launch: s.launchTracer ? 'Illustrative ascent from the launch pad' : launchPlace }[s.mode];
+    launch: s.launchTracer ? ascent : launchPlace }[s.mode];
   const facts = known(orbit?.inclinationDeg) && known(orbit?.perigeeKm) && known(orbit?.apogeeKm)
     ? ` · ${orbit.inclinationDeg.toFixed(1)}°, ${Math.round(orbit.perigeeKm)}–${Math.round(orbit.apogeeKm)} km` : '';
   // GCAT orbits are often operational, years before reentry; say when it was recorded.
   const when = s.mode === 'representative' && orbit?.source === 'gcat' && orbit.epochUtc ? `, recorded ${MONTH_ABBR[new Date(orbit.epochUtc).getUTCMonth()]} ${orbit.epochUtc.slice(0, 4)}` : '';
   return how + facts + when;
+};
+// One short line for the globe's info box: what the object is and whose it is.
+const NO_SATELLITE_NOUN = new Set(['space station', 'crewed spacecraft', 'cargo spacecraft', 'planetary probe', 'calibration target', 'target']);
+const titleWords = name => name.split(/\s+/).map(w => /\d/.test(w) ? w : w[0] + w.slice(1).toLowerCase()).join(' ');
+export const describeObject = (s, familyName) => {
+  const a = s.event.attributes;
+  if (s.event.eventKind === 'launch') {
+    const site = a.launchSite;
+    return [`${isFailedLaunch(s) ? 'Failed launch' : 'Launch'} from ${site?.place ?? 'an unknown site'}`, site?.country].filter(Boolean).join(', ');
+  }
+  const m = a.mission?.value, type = a.objectType.value, country = a.ownerCountry?.value;
+  const what = type === 'PAYLOAD' ? ([m?.class, m?.category].filter(Boolean).join(' ') + (NO_SATELLITE_NOUN.has(m?.category) ? '' : ' satellite')).trim()
+    : type === 'ROCKET BODY' ? 'rocket stage' : type === 'DEBRIS' ? `debris${familyName ? ` from ${titleWords(familyName)}` : ''}` : 'unidentified object';
+  return capital(what) + (country ? ` · ${country}` : '');
 };
 // Mass, length and owner, from GCAT where it has them: '8,500 kg · 10.4 m long · China · PLA GAD'.
 const objectFacts = s => {
@@ -66,6 +84,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     return [Math.max(continuationStart ?? start,clock.minMs),Math.min(end,clock.maxMs)];
   };
 
+  const familyNames = new Map(timeline.families.map(f => [f.key, f.name]));
   // ---- catalog reentries for the event strip (decays.json is sorted by display time) ----
   const catMs = Float64Array.from(timeline.cols.d, d => EPOCH_MS + d * DAY_MS);
   const lowerBound = ms => { let lo = 0, hi = catMs.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (catMs[mid] < ms) lo = mid + 1; else hi = mid; } return lo; };
@@ -198,10 +217,26 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
       span.className = 'now-name'; span.textContent = name;
       el('now-next').replaceChildren(before, ...(name ? [span, after] : []));
     }
+    renderInfo(active, next);
     const auto = active[0] ?? next ?? visibleEvents.at(-1);
     selected = pinned ?? auto ?? null;
     showCard(selected, pinned ? 'Selected' : active.includes(selected) ? 'In progress' : 'Next up');
     if (selected) strip.setSelected(selected.endMs, laneOf(selected)); else strip.setSelected(null);
+  };
+  let infoSignature = '';
+  const renderInfo = (active, next) => {
+    const shownItems = active.length ? active.slice(0, 4) : next ? [next] : [];
+    const signature = (active.length ? 'a' : 'n') + shownItems.map(s => s.event.eventId).join('|') + (active.length > 4 ? active.length : '');
+    if (signature === infoSignature) return;
+    infoSignature = signature;
+    el('globe-info').replaceChildren(...shownItems.map(s => {
+      const li = document.createElement('li');
+      li.className = `${s.event.eventKind}${isFailedLaunch(s) ? ' failed' : ''}${active.length ? '' : ' info-next'}`;
+      li.innerHTML = '<span class="info-dot" aria-hidden="true"></span><span class="info-name"></span><span class="info-what"></span>';
+      li.querySelector('.info-name').textContent = (active.length ? '' : 'Next: ') + s.event.object.name;
+      li.querySelector('.info-what').textContent = describeObject(s, familyNames.get(s.event.object.launchFamily));
+      return li;
+    }), ...(active.length > 4 ? [Object.assign(document.createElement('li'), { className: 'info-next', textContent: `and ${active.length - 4} more` })] : []));
   };
   const update = ({ nowMs, playing = clock.playing }) => {
     if (tooFast() && playing) return; // The globe waits; the strip and charts keep moving.
@@ -212,6 +247,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
       // The charts or the strip moved the clock past the loaded month; don't describe it.
       selected = null; nowSignature = '';
       el('now-list').replaceChildren(); el('event-card').hidden = true; strip.setSelected(null);
+      el('globe-info').replaceChildren(); infoSignature = '';
       el('now-next').replaceChildren('Press Play to show this date on the globe.'); delete el('now-next').dataset.text;
       return;
     }
@@ -413,12 +449,15 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
   };
 
   // ---- controls that work even before (or without) the globe ----
+  // Moving the clock by hand: pause, seek, and once the gesture ends load the month at that time.
+  const seekTo = (ms, final) => {
+    ms = Math.max(clock.minMs, Math.min(clock.maxMs, ms));
+    clock.pause(); clock.seek(ms);
+    if (final && historical() && historyIndex && sequence && (ms < range()[0] || ms >= range()[1])) loadAt(ms);
+  };
   const strip = new EventStrip(el('event-strip'), {
     onToggle: lane => presentation.update({ [SHOW[lane]]: !presentation.values[SHOW[lane]] }),
-    onSeek: (ms, final) => {
-      clock.pause(); clock.seek(ms);
-      if (final && historical() && historyIndex && sequence && (ms < range()[0] || ms >= range()[1])) loadAt(ms);
-    },
+    onSeek: seekTo,
     onPick: async mark => {
       if (mark.state) { jumpTo(mark.state); return; }
       const find = () => sequence?.events.find(s => mark.tag ? s.event.eventKind === 'launch' && s.event.object.launchFamily === mark.tag
@@ -428,6 +467,20 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
       if (s) jumpTo(s); else { clock.pause(); clock.seek(mark.ms); }
     },
   });
+  // Fine time: the current UTC day at one-minute resolution, plus ±10 min / ±1 h steps.
+  const fine = el('fine-scrub'), DAY = 86400000;
+  let fineDay = 0, fineText = '';
+  const showFine = nowMs => {
+    fineDay = Math.floor(nowMs / DAY) * DAY;
+    if (document.activeElement !== fine) fine.value = String(Math.floor((nowMs - fineDay) / 60000));
+    const { day, time } = clockParts(nowMs), label = `${day} · ${time}`;
+    if (label !== fineText) { fineText = label; el('fine-out').textContent = label; fine.setAttribute('aria-valuetext', label); }
+  };
+  fine.addEventListener('input', () => seekTo(fineDay + Number(fine.value) * 60000, false), { signal: listeners.signal });
+  fine.addEventListener('change', () => seekTo(fineDay + Number(fine.value) * 60000, true), { signal: listeners.signal });
+  for (const button of document.querySelectorAll('.fine-time [data-step]'))
+    button.addEventListener('click', () => seekTo(clock.nowMs + Number(button.dataset.step) * 1000, true), { signal: listeners.signal });
+  showFine(clock.nowMs);
   const showPlayState = ({ playing }) => {
     pause.textContent = playing || transitioning ? '❚❚ Pause' : '▶ Play';
   };
@@ -437,6 +490,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     const year = new Date(state.nowMs).getUTCFullYear();
     if (historical() && historyIndex && stripYear !== null && year !== stripYear && !transitioning) { stripYear = year; refreshStrip(); showYear(); }
     strip.setTime(state.nowMs);
+    showFine(state.nowMs);
     el('globe-speed-note').hidden = !tooFast();
     if (state.reason === 'rate' && sequence && settings && scene) applySettings(settings);
   });

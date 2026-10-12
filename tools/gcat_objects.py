@@ -22,7 +22,7 @@ from pathlib import Path
 
 from event_time import EPOCH, UTC, apply_event_times, iso
 from fetch_gcat import ROOT, latest_snapshot, verify
-from gcat_launches import MONTHS, parse_time, read_tsv, source_record
+from gcat_launches import MONTHS, org_names, parse_time, read_tsv, source_record
 
 CATALOG = ROOT / 'web/data/decays.json'
 HEIGHTS = ROOT / 'web/data/orbit-heights.json'
@@ -48,24 +48,39 @@ def gcat_day(text):
         return None
 
 
-def org_names(snapshot):
-    names = {}
-    for r in read_tsv(snapshot / 'orgs.tsv'):
-        for key in ('ShortEName', 'EName', 'ShortName', 'Name'):
-            if r.get(key) not in (None, '', '-'):
-                names[r['Code']] = r[key]
-                break
-    return names
+# GCAT payload mission categories and classes, in plain words (first code of compound values).
+CATEGORY = {'COM': 'communications', 'IMG': 'imaging', 'IMG-R': 'radar imaging', 'TECH': 'technology test',
+            'CAL': 'calibration target', 'SS': 'space station', 'SIG': 'signals intelligence', 'NAV': 'navigation',
+            'SCI': 'science', 'MET': 'weather', 'MET-RO': 'weather', 'PLAN': 'planetary probe', 'AST': 'astronomy',
+            'EW': 'early warning', 'EOSCI': 'Earth science', 'GEOD': 'geodesy', 'WEAPON': 'weapon test',
+            'MGRAV': 'microgravity', 'BIO': 'biology', 'TARG': 'target', 'HUM': 'crewed spacecraft',
+            'CREW': 'crewed spacecraft', 'CARGO': 'cargo spacecraft', 'RADAR': 'radar'}
+CLASS = {'B': 'commercial', 'D': 'military', 'C': 'civil', 'A': 'amateur'}
+
+
+def missions(snapshot):
+    """GCAT JCAT -> {category, class, program} for payloads."""
+    out = {}
+    if not (snapshot / 'psatcat.tsv').is_file():
+        return out
+    for r in read_tsv(snapshot / 'psatcat.tsv'):
+        code = r.get('Category', '-').split('/')[0].rstrip('?*')
+        entry = {k: v for k, v in (('category', CATEGORY.get(code)), ('class', CLASS.get(r.get('Class', '-')[:1])),
+                                   ('program', r.get('Program') if r.get('Program') not in (None, '', '-') else None)) if v}
+        if entry:
+            out[r['JCAT']] = entry
+    return out
 
 
 def objects(snapshot):
     """NORAD ID -> GCAT facts used here; absent or zero values are left out."""
     names = org_names(snapshot)
+    mission = missions(snapshot)
     out = {}
     for r in read_tsv(snapshot / 'satcat.tsv'):
         if not r['Satcat'].isdigit():
             continue
-        record = {'jcat': r['JCAT'], 'name': r['Name']}
+        record = {'jcat': r['JCAT'], 'name': r['Name'], **({'mission': mission[r['JCAT']]} if r['JCAT'] in mission else {})}
         decay = gcat_day(r['DDate'])
         if decay:
             record['decayDate'] = decay.isoformat()
@@ -130,6 +145,8 @@ def enrich_event(event, record, source):
         a['physicalSize'] = {'value': record['size'], 'basis': 'reported', 'source': 'gcat'}
     if record.get('owner'):
         a['owner'] = {'value': record['owner']['name'], 'code': record['owner']['code'], 'basis': 'reported', 'source': 'gcat'}
+    if record.get('mission'):
+        a['mission'] = {'value': record['mission'], 'basis': 'reported', 'source': 'gcat'}
     if record.get('state'):
         a['ownerCountry'] = {'value': record['state']['name'], 'code': record['state']['code'], 'basis': 'reported', 'source': 'gcat'}
     orbit = record.get('orbit')

@@ -146,17 +146,31 @@ function loadGcatLaunch(event, eventIds) {
     || lower < day || lower >= day + 86400000 || upper <= lower || endMs < day || endMs >= day + 86400000
     || t.precision === 'day' && (lower !== day || upper !== day + 86400000)
     || t.precision === 'reported-time' && upper - lower !== t.resolutionSeconds * 1000
-    || !['success', 'failure'].includes(outcome) || !event.sources.gcat.url || Object.keys(event.orbitalData ?? {}).length
+    || !['success', 'failure'].includes(outcome) || !event.sources.gcat.url || Object.keys(event.orbitalData ?? {}).some(k => k !== 'elements')
+    || !['north', 'south', undefined].includes(event.attributes.ascentHeading?.value)
     || site?.basis !== 'reported' || !Number.isFinite(site.latitudeDeg) || Math.abs(site.latitudeDeg) > 90
     || !Number.isFinite(site.longitudeDeg) || Math.abs(site.longitudeDeg) > 180) throw new Error('Invalid GCAT launch record.');
   eventIds.add(event.eventId);
   const times = { startTime: new Date(endMs).toISOString(), endTime: new Date(endMs).toISOString(), anchorEdge: 'start',
     durationSeconds: DEFAULTS.pulseSeconds, ...eventAppearance(event) };
-  return { event, endMs, loop: null, maxSeconds: DISPLAY_LIMIT_SECONDS, delaySeconds: 0,
+  // A successful launch with a GCAT orbit gets an illustrative ascent onto that orbit, through the pad.
+  const elements = event.orbitalData?.elements, heading = event.attributes.ascentHeading?.value ?? 'north';
+  const loop = elements && outcome === 'success' ? referenceLoop(elements, event.eventId, null) : null;
+  let representative = null, launchTracer = null;
+  if (loop) {
+    representative = new Tracer({ objectType: 'LAUNCH', ...eventAppearance(event), positions: loop.trace, radiusKm: loop.referenceSphereRadiusKm,
+      startTime: new Date(endMs).toISOString(), endTime: new Date(endMs + DISPLAY_LIMIT_SECONDS * 1000).toISOString(), anchorEdge: 'start',
+      loopPeriodSeconds: loop.periodSeconds, maxDisplaySeconds: DISPLAY_LIMIT_SECONDS });
+    launchTracer = new LaunchTracer({ orbit: representative, ...site, startTime: times.startTime, heading,
+      ascentSeconds: NOMINAL_ASCENT_SECONDS, maxDisplaySeconds: DISPLAY_LIMIT_SECONDS, ...eventAppearance(event) });
+  }
+  return { event, endMs, loop, maxSeconds: DISPLAY_LIMIT_SECONDS, delaySeconds: 0,
     anchorBasis: t.precision === 'day' ? 'illustrative' : 'reported',
-    available: freeze({ reference: false, propagatedSeconds: null, launchSite: true, launchGapSeconds: 0 }),
-    pulses: { symbolic: null, site: new SurfacePulse({ ...site, ...times }) }, launchTracer: null, propagated: null, representative: null };
+    available: freeze({ reference: Boolean(loop), propagatedSeconds: null, launchSite: true, launchGapSeconds: NOMINAL_ASCENT_SECONDS }),
+    pulses: { symbolic: null, site: new SurfacePulse({ ...site, ...times }) }, launchTracer, propagated: null, representative };
 }
+// Display time from pad to orbit for GCAT launches: a typical time to orbit insertion, not a record.
+export const NOMINAL_ASCENT_SECONDS = 540;
 
 export function configureSequence(sequence, input, policy=resolveVisualization) {
   for (const s of sequence.events) {

@@ -46,9 +46,27 @@ def clean(value):
     return None if value in ('', '-') else value
 
 
+def org_names(snapshot):
+    """GCAT organisation/country code -> short English name where GCAT gives one."""
+    names = {}
+    for r in read_tsv(snapshot / 'orgs.tsv'):
+        for key in ('ShortEName', 'EName', 'ShortName', 'Name'):
+            if r.get(key) not in (None, '', '-'):
+                names[r['Code']] = r[key]
+                break
+    return names
+
+
 def pad_locator(snapshot):
     pads = {(r['Site'], r['Code']): r for r in read_tsv(snapshot / 'lp.tsv')}
     sites = {r['Site']: r for r in read_tsv(snapshot / 'sites.tsv')}
+    names = org_names(snapshot) if (snapshot / 'orgs.tsv').is_file() else {}
+
+    def country(site):
+        # The site's state today (renamed sites point at their successor, e.g. NIIP-5 -> GIK-5).
+        info = sites.get(site, {})
+        code = info.get('StateCode') if clean(info.get('StateCode')) else sites.get(info.get('UCode'), {}).get('StateCode')
+        return names.get(code, code) if clean(code) else None
     by_code = {}
     for (site, code), row in pads.items():
         by_code.setdefault(code, []).append(row)
@@ -84,13 +102,13 @@ def pad_locator(snapshot):
             or (len(by_code.get(pad, [])) == 1 and pad not in ('', '-') and by_code[pad][0])
         if row and clean(row['Longitude']) and clean(row['Latitude']):
             lat, lon = coords(row)
-            return {'name': row['Name'], 'place': place(site, row), 'code': f'{site} {pad}'.strip(),
+            return {'name': row['Name'], 'place': place(site, row), 'country': country(site), 'code': f'{site} {pad}'.strip(),
                     'latitudeDeg': lat, 'longitudeDeg': lon, 'precision': 'pad', 'uncertaintyKm': error_km(row),
                     **({'padUncertain': True} if uncertain_pad else {})}
         info = sites.get(site)
         if info and clean(info['Longitude']) and clean(info['Latitude']):
             lat, lon = coords(info)
-            return {'name': info['Name'], 'place': place(site, info), 'code': f'{site} {pad}'.strip(),
+            return {'name': info['Name'], 'place': place(site, info), 'country': country(site), 'code': f'{site} {pad}'.strip(),
                     'latitudeDeg': lat, 'longitudeDeg': lon, 'precision': 'site', 'uncertaintyKm': error_km(info)}
         return None
     return locate
@@ -103,9 +121,39 @@ def launch_name(row):
     return row['LV_Type']
 
 
+def number(value):
+    try:
+        return float(value.rstrip('?'))
+    except (AttributeError, ValueError):
+        return None
+
+
+def launch_orbits(snapshot):
+    """Launch tag -> an orbit for its illustrative ascent: GCAT's launch-record orbit, else the
+    recorded orbit of the upper stage it left in orbit (close to the insertion orbit), else of a
+    payload (which may since have manoeuvred, e.g. to geostationary)."""
+    by_tag = {}
+    if not (snapshot / 'satcat.tsv').is_file():
+        return by_tag
+    for r in read_tsv(snapshot / 'satcat.tsv'):
+        low, high, inc = number(r['Perigee']), number(r['Apogee']), number(r['Inc'])
+        if None in (low, high, inc) or not (0 < low <= high) or not 0 <= inc <= 180:
+            continue
+        rank = 1 if r['Type'].startswith('R') else 2 if r['Type'].startswith('P') else None
+        if rank is None:
+            continue
+        tag = r['Launch_Tag'].strip().replace(' ', '-')
+        best = by_tag.get(tag)
+        if best is None or rank < best[0]:
+            by_tag[tag] = (rank, {'perigeeKm': low, 'apogeeKm': high, 'inclinationDeg': inc,
+                                  'source': 'upper-stage' if rank == 1 else 'payload', 'object': r['Name']})
+    return {tag: orbit for tag, (_, orbit) in by_tag.items()}
+
+
 def orbital_launches(snapshot):
     """Parsed orbital launch attempts, oldest first."""
     locate = pad_locator(snapshot)
+    object_orbits = launch_orbits(snapshot)
     launches = []
     for row in read_tsv(snapshot / 'launch.tsv'):
         code = row['LaunchCode']
@@ -122,7 +170,15 @@ def orbital_launches(snapshot):
                 site = release
         if site is None:
             continue  # one record has no usable site; it is reported by the builder
-        launches.append({'tag': row['Launch_Tag'].replace(' ', '-'), 'start': start, 'resolution': resolution,
+        tag = row['Launch_Tag'].replace(' ', '-')
+        orbit = None
+        if code.startswith('OS'):
+            low, high, inc = number(row.get('Perigee', '-')), number(row.get('Apogee', '-')), number(row.get('Inc', '-'))
+            if None not in (low, high, inc) and 0 < low <= high and 0 <= inc <= 180:
+                orbit = {'perigeeKm': low, 'apogeeKm': high, 'inclinationDeg': inc, 'source': 'launch-record'}
+            else:
+                orbit = object_orbits.get(tag)
+        launches.append({'tag': tag, 'orbit': orbit, 'start': start, 'resolution': resolution,
                          'name': launch_name(row), 'vehicle': clean(row['LV_Type']), 'agency': clean(row['Agency']),
                          'outcome': 'success' if code.startswith('OS') else 'failure', 'code': code, 'site': site})
     launches.sort(key=lambda l: (l['start'], l['tag']))
@@ -149,7 +205,7 @@ def launch_event(launch, source):
                 'intervalUtc': [iso(launch['start']), iso(launch['start'] + dt.timedelta(seconds=launch['resolution']))],
                 'basis': 'reported', 'source': 'gcat'}
     site = launch['site']
-    return {
+    event = {
         'schemaVersion': 2,
         'eventId': f"{launch['tag']}:launch:{date}",
         'eventKind': 'launch',
@@ -161,7 +217,7 @@ def launch_event(launch, source):
             'launchOutcome': {'value': launch['outcome'], 'code': launch['code'], 'basis': 'reported', 'source': 'gcat'},
             'launchVehicle': {'value': launch['vehicle'], 'basis': 'reported', 'source': 'gcat'},
             'agency': {'value': launch['agency'], 'basis': 'reported', 'source': 'gcat'},
-            'launchSite': {'name': site['name'], 'place': site['place'], 'code': site['code'],
+            'launchSite': {'name': site['name'], 'place': site['place'], 'country': site.get('country'), 'code': site['code'],
                            **{k: site[k] for k in ('carrier', 'takeoff', 'padUncertain') if k in site},
                            'coordinates': {'latitudeDeg': site['latitudeDeg'], 'longitudeDeg': site['longitudeDeg'],
                                            'precision': site['precision'], 'uncertaintyKm': site['uncertaintyKm'],
@@ -171,6 +227,31 @@ def launch_event(launch, source):
         'sources': {'gcat': source},
         'orbitalData': {},
     }
+    if launch.get('orbit'):
+        add_orbit(event, launch)
+    return event
+
+
+# Illustrative heading rule: retrograde orbits (sun-synchronous etc.) and Vandenberg's polar
+# launches head south; everything else heads north from the pad. A display choice, stated.
+SOUTHBOUND_PLACES = ('Vandenberg',)
+
+
+def add_orbit(event, launch):
+    o = launch['orbit']
+    heading = 'south' if o['inclinationDeg'] >= 90 or (o['inclinationDeg'] >= 80 and any(
+        p in (launch['site'].get('place') or '') for p in SOUTHBOUND_PLACES)) else 'north'
+    event['orbitalData'] = {'elements': {'perigeeKm': o['perigeeKm'], 'apogeeKm': o['apogeeKm'],
+                                         'inclinationDeg': o['inclinationDeg'], 'epochUtc': iso(launch['start'])}}
+    a = event['attributes']
+    a['orbitReference'] = {'perigeeKm': o['perigeeKm'], 'apogeeKm': o['apogeeKm'], 'inclinationDeg': o['inclinationDeg'],
+                           'epochUtc': iso(launch['start']), 'source': 'gcat', 'from': o['source'],
+                           **({'object': o['object']} if 'object' in o else {}), 'basis': 'reported',
+                           'meaning': {'launch-record': "GCAT's orbit for this launch.",
+                                       'upper-stage': "The recorded orbit of the upper stage this launch left in orbit; close to the insertion orbit.",
+                                       'payload': "The recorded orbit of a payload from this launch; it may have manoeuvred since (e.g. to geostationary)."}[o['source']]}
+    a['ascentHeading'] = {'value': heading, 'basis': 'illustrative',
+                          'rule': 'South for inclinations of 90 degrees or more, and for Vandenberg launches of 80 degrees or more; otherwise north.'}
 
 
 def anchor(launch):

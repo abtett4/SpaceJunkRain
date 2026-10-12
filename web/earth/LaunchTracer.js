@@ -14,20 +14,22 @@ const mixDirections = (a,b,u) => {
   return a.map((v,i) => (v*Math.sin((1-u)*angle)+b[i]*Math.sin(u*angle))/Math.sin(angle));
 };
 export class LaunchTracer {
-  constructor({ orbit, latitudeDeg, longitudeDeg, startTime, ascentSeconds, maxDisplaySeconds, color }) {
+  constructor({ orbit, latitudeDeg, longitudeDeg, startTime, ascentSeconds, maxDisplaySeconds, color, heading = 'north' }) {
     this.orbit = orbit;
     this.anchorMs = Date.parse(startTime);
     this.ascentMs = ascentSeconds * 1000;
     this.availableSeconds = maxDisplaySeconds;
     this.pad = transform(earthRotation(this.anchorMs), latLonToVector(latitudeDeg,longitudeDeg));
     this.phaseMs = 0;
-    // Choose a northbound latitude crossing when possible, then rotate only around
-    // Earth's axis. This keeps the reference inclination and orbital dimensions intact.
+    // Choose a northbound (or, if asked, southbound) latitude crossing when possible, then rotate
+    // only around Earth's axis. This keeps the reference inclination and orbital dimensions intact.
+    // Scene y points down, so northbound means y decreasing through the pad's y.
+    const sign = heading === 'south' ? -1 : 1;
     for (let i=1;i<orbit.points.length;i++) {
       const a=orbit.points[i-1], b=orbit.points[i];
-      if (normalize(a.xyz)[1] >= this.pad[1] && normalize(b.xyz)[1] <= this.pad[1]) {
+      if (sign*normalize(a.xyz)[1] >= sign*this.pad[1] && sign*normalize(b.xyz)[1] <= sign*this.pad[1]) {
         let lo=a.time, hi=b.time;
-        for (let n=0;n<40;n++) { const mid=(lo+hi)/2; if (normalize(orbit.positionAt(mid))[1] > this.pad[1]) lo=mid; else hi=mid; }
+        for (let n=0;n<40;n++) { const mid=(lo+hi)/2; if (sign*normalize(orbit.positionAt(mid))[1] > sign*this.pad[1]) lo=mid; else hi=mid; }
         this.phaseMs=(lo+hi)/2; break;
       }
     }
@@ -61,6 +63,11 @@ export class LaunchTracer {
     // blend the direction on the sphere, never cut a straight chord through Earth.
     const direction=mixDirections(this.pad,normal,fraction);
     return scale(direction,1.004+(Math.hypot(...point)-1.004)*fraction);
+  }
+  // The reference orbit as placed for this launch (scene coordinates), for a faint full path.
+  pathPoints() {
+    const c=Math.cos(this.angle), s=Math.sin(this.angle);
+    return this.orbit.points.map(({xyz:[x,y,z]}) => [c*x+s*z,y,-s*x+c*z]);
   }
   sample(timeMs) {
     if (!Number.isFinite(timeMs) || timeMs < this.startMs || timeMs > this.endMs) return null;

@@ -23,6 +23,7 @@ FILES = {
     'sites.tsv': f'{BASE}/tables/sites.tsv',     # launch sites, including renamed sites
     'satcat.tsv': f'{BASE}/cat/satcat.tsv',      # catalogued objects: decay, orbit, mass, owner
     'orgs.tsv': f'{BASE}/tables/orgs.tsv',       # owner and country names
+    'psatcat.tsv': f'{BASE}/cat/psatcat.tsv',    # payloads: mission category, class, programme
 }
 CITATION = 'J. McDowell, GCAT: General Catalog of Artificial Space Objects, planet4589.org (CC-BY-4.0)'
 

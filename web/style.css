@@ -453,3 +453,28 @@ button:disabled { opacity: .4; cursor: default; }
 .known-table tbody th { font-weight: 500; white-space: nowrap; }
 .known-table thead th { color: var(--muted); font-weight: 400; }
 @media (max-width: 700px) { .known-table tbody th { white-space: normal; } }
+
+/* A small, permanent caption box in the globe's bottom-right corner: what is on screen, and whose. */
+.globe-info {
+  position: absolute; right: 10px; bottom: 10px; max-width: min(340px, 70%); margin: 0; padding: 6px 10px;
+  list-style: none; pointer-events: none; font-size: 13px; line-height: 1.35;
+  background: rgba(8, 27, 44, 0.78); color: #dfe8f4; border: 1px solid rgba(201, 215, 236, 0.25);
+}
+.globe-info:empty { display: none; }
+.globe-info li { margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.globe-info li + li { margin-top: 2px; }
+.globe-info .info-name { text-transform: lowercase; font-variant: small-caps; letter-spacing: .03em; color: #fff; margin-right: 6px; }
+.globe-info .info-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; background: #ffd166; }
+.globe-info .launch .info-dot { background: #56dce8; }
+.globe-info .failed .info-dot { background: #ff4b1f; }
+.globe-info .info-next { color: #9fb2cc; font-style: italic; }
+
+/* Fine time: one UTC day at minute resolution, with step buttons. */
+.fine-time { display: flex; align-items: center; gap: 6px; margin: 10px 0 0 var(--label-w, 160px); font-size: 14px; }
+.fine-label { font-variant: small-caps; letter-spacing: .05em; color: var(--text-secondary); margin-right: 4px; white-space: nowrap; }
+.fine-time button { padding: 1px 7px; font-size: 13px; white-space: nowrap; }
+.fine-track { flex: 1; min-width: 120px; display: flex; flex-direction: column; }
+.fine-track input { width: 100%; margin: 0; accent-color: var(--series-3); }
+.fine-ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+#fine-out { min-width: 9.5em; text-align: right; font-variant-numeric: lining-nums tabular-nums; }
+@media (max-width: 700px) { .fine-time { margin-left: 0; flex-wrap: wrap; } .fine-track { flex-basis: 100%; order: 3; } }

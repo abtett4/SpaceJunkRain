@@ -51,7 +51,8 @@ export class CameraController {
   orbit(yaw, pitch) {
     this.yaw += yaw; this.pitch = clamp(this.pitch + pitch, -1.4, 1.4); this.changed();
   }
-  zoom(factor) { this.distance = clamp(this.distance * factor, 2.05, 6); this.changed(); }
+  // Out to 70 Earth radii (about 450,000 km) so geostationary and highly elliptical orbits fit.
+  zoom(factor) { this.distance = clamp(this.distance * factor, 2.05, 70); this.changed(); }
   get eye() {
     return [Math.cos(this.pitch) * Math.sin(this.yaw), -Math.sin(this.pitch), Math.cos(this.pitch) * Math.cos(this.yaw)]
       .map((v) => v * this.distance);

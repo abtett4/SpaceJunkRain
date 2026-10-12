@@ -28,6 +28,7 @@ export const CONFIG_FIELDS = Object.freeze([
   field('widthTaper', 'Tracers & pulses', 'Width taper', 1, 0, 4, 0.25, 'number', 'Zero gives uniform width; higher values narrow more of the trail.'),
   field('opacityTaper', 'Tracers & pulses', 'Fade toward tail', 2, 0, 4, 0.25, 'number', 'Zero gives uniform opacity; higher values fade more of the trail.'),
   field('pulseOpacity', 'Tracers & pulses', 'Pulse opacity', 1, 0, 1, 0.05, 'percent'),
+  Object.freeze({ key: 'showOrbitPaths', group: 'Tracers & pulses', label: 'Show each full orbit faintly', value: true, kind: 'boolean', help: 'Helps when zoomed out to high orbits. The path’s orientation is illustrative, like the tracer.' }),
   // What the globe and strip show. These have their own controls beside the strip.
   ...[['showLaunches', 'Launches'], ['showPayloads', 'Payloads'], ['showRocketBodies', 'Rocket bodies'], ['showDebris', 'Debris'], ['showUnknown', 'Unknown']]
     .map(([key, label]) => Object.freeze({ key, group: 'Show', label, value: true, kind: 'boolean' })),
