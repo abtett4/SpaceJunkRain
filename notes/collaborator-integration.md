@@ -37,6 +37,16 @@ not a catalogued object; use `object.objectId`, the launch designator, e.g. `201
 `'site'`) are present. `sources.gcat` carries the citation and snapshot hash. The curated
 Dragon CRS-14 record is unchanged and still has its NORAD ID.
 
+Launch records also carry `attributes.launchSite.coordinates.uncertaintyKm` (GCAT's stated error)
+and `precision` `'pad'`, `'site'` or `'release-area'` (air launches, with `carrier` and `takeoff`).
+
+## Viewer filters (added 2026-10-12)
+
+`experience.settings` now includes `showLaunches`, `showPayloads`, `showRocketBodies`,
+`showDebris`, `showUnknown` and `minHeightKm` / `maxHeightKm` (0 and 100000 mean no limit). The
+globe and strip apply them; **the event feed does not**, so every crossing is still delivered.
+An audio layer that should follow what is on screen can read these settings itself.
+
 ## Crossing contract
 
 A batch contains `reason`, `previousMs`, `nowMs`, `rate`, `playing`, `revision`,

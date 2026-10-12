@@ -2,8 +2,10 @@
 
 Only orbital launch attempts are kept (GCAT LaunchCode O*: OS success, OF failure); the
 suborbital records are not part of this piece. Each launch is placed at its GCAT pad when
-the pad has coordinates, otherwise at its launch site; the record says which. Launch times
-keep GCAT's precision (second, minute, or day). Nothing is inferred beyond the tables.
+the pad has coordinates, otherwise at its launch site; air launches are placed at GCAT's
+release (drop) area, not the runway the aircraft took off from. Every record carries GCAT's
+own stated coordinate uncertainty. Launch times keep GCAT's precision (second, minute, or
+day). Nothing is inferred beyond the tables.
 
     python tools/gcat_launches.py            # writes web/data/launches.json
 """
@@ -57,6 +59,13 @@ def pad_locator(snapshot):
             raise ValueError('Invalid GCAT coordinates.')
         return round(lat, 4), round(lon, 4)
 
+    def error_km(row):
+        # GCAT's Error column is the coordinate uncertainty in degrees of arc.
+        try:
+            return round(float(row['Error']) * 111.2, 3)
+        except (KeyError, ValueError):
+            return None
+
     def place(site, row):
         # A short, readable place: the pad's location, else the site's short name (Baykonur).
         info, renamed = sites.get(site, {}), sites.get(sites.get(site, {}).get('UCode'), {})
@@ -66,6 +75,7 @@ def pad_locator(snapshot):
         return None
 
     def locate(site, pad):
+        uncertain_pad = pad.endswith('?')
         pad = pad.rstrip('?').strip()
         renamed = sites.get(site, {}).get('UCode')
         # Exact pad, then the same pad under the site's later name (NIIP-5 -> GIK-5), then a
@@ -74,13 +84,14 @@ def pad_locator(snapshot):
             or (len(by_code.get(pad, [])) == 1 and pad not in ('', '-') and by_code[pad][0])
         if row and clean(row['Longitude']) and clean(row['Latitude']):
             lat, lon = coords(row)
-            return {'name': row['Name'], 'place': place(site, row),
-                    'code': f'{site} {pad}'.strip(), 'latitudeDeg': lat, 'longitudeDeg': lon, 'precision': 'pad'}
+            return {'name': row['Name'], 'place': place(site, row), 'code': f'{site} {pad}'.strip(),
+                    'latitudeDeg': lat, 'longitudeDeg': lon, 'precision': 'pad', 'uncertaintyKm': error_km(row),
+                    **({'padUncertain': True} if uncertain_pad else {})}
         info = sites.get(site)
         if info and clean(info['Longitude']) and clean(info['Latitude']):
             lat, lon = coords(info)
-            return {'name': info['Name'], 'place': place(site, info),
-                    'code': f'{site} {pad}'.strip(), 'latitudeDeg': lat, 'longitudeDeg': lon, 'precision': 'site'}
+            return {'name': info['Name'], 'place': place(site, info), 'code': f'{site} {pad}'.strip(),
+                    'latitudeDeg': lat, 'longitudeDeg': lon, 'precision': 'site', 'uncertaintyKm': error_km(info)}
         return None
     return locate
 
@@ -102,6 +113,13 @@ def orbital_launches(snapshot):
             continue
         start, resolution = parse_time(row['Launch_Date'])
         site = locate(row['Launch_Site'], row['Launch_Pad'])
+        # Air launches: the rocket starts at the drop area, not at the carrier's runway.
+        if clean(row.get('Platform')) and clean(row.get('Ascent_Site')):
+            release = locate(row['Ascent_Site'], row.get('Ascent_Pad', '-'))
+            if release:
+                release.update(precision='release-area', carrier=row['Platform'],
+                               takeoff=site['place'] if site else row['Launch_Site'])
+                site = release
         if site is None:
             continue  # one record has no usable site; it is reported by the builder
         launches.append({'tag': row['Launch_Tag'].replace(' ', '-'), 'start': start, 'resolution': resolution,
@@ -144,8 +162,11 @@ def launch_event(launch, source):
             'launchVehicle': {'value': launch['vehicle'], 'basis': 'reported', 'source': 'gcat'},
             'agency': {'value': launch['agency'], 'basis': 'reported', 'source': 'gcat'},
             'launchSite': {'name': site['name'], 'place': site['place'], 'code': site['code'],
+                           **{k: site[k] for k in ('carrier', 'takeoff', 'padUncertain') if k in site},
                            'coordinates': {'latitudeDeg': site['latitudeDeg'], 'longitudeDeg': site['longitudeDeg'],
-                                           'precision': site['precision'], 'basis': 'reported', 'source': 'gcat'}},
+                                           'precision': site['precision'], 'uncertaintyKm': site['uncertaintyKm'],
+                                           'basis': 'reported', 'source': 'gcat',
+                                           'meaning': "GCAT's coordinates and stated uncertainty for the pad, site or air-launch release area."}},
         },
         'sources': {'gcat': source},
         'orbitalData': {},
@@ -182,9 +203,9 @@ def main():
     launches, meta = load(args.snapshot)
     index = launch_index(launches, meta)
     args.output.write_text(json.dumps(index, separators=(',', ':')) + '\n')
-    pads = sum(l['site']['precision'] == 'pad' for l in launches)
-    print(f"{index['count']:,} orbital launch attempts ({index['failures']} failed); {pads:,} at a pad, "
-          f"{index['count'] - pads} at site level -> {args.output.relative_to(ROOT)}")
+    kinds = {k: sum(l['site']['precision'] == k for l in launches) for k in ('pad', 'site', 'release-area')}
+    print(f"{index['count']:,} orbital launch attempts ({index['failures']} failed); {kinds['pad']:,} at a pad, "
+          f"{kinds['site']} at site level, {kinds['release-area']} air-launched at a release area -> {args.output.relative_to(ROOT)}")
 
 
 if __name__ == '__main__':

@@ -12,6 +12,7 @@ object and only where it has a value:
 Hand-curated evidence (the Tiangong-1, Iridium and April 2018 examples) is left untouched.
 
     python tools/gcat_objects.py        # updates web/data/decays.json in place (idempotent)
+                                        # and writes web/data/orbit-heights.json
 """
 import argparse
 import datetime as dt
@@ -24,6 +25,7 @@ from fetch_gcat import ROOT, latest_snapshot, verify
 from gcat_launches import MONTHS, parse_time, read_tsv, source_record
 
 CATALOG = ROOT / 'web/data/decays.json'
+HEIGHTS = ROOT / 'web/data/orbit-heights.json'
 # Objects with hand-curated evidence (sample, fallback and launch manifests) keep their records.
 CURATED = {24965, 26926, 31309, 31777, 37820, 38023, 38249, 41486, 41565, 41568, 41569, 43267, 43268, 43269}
 
@@ -144,6 +146,16 @@ def enrich_event(event, record, source):
     return event
 
 
+def height_index(catalog, gcat, meta):
+    """Perigee/apogee per reentered object, for the page's orbit-height filter (strip and globe)."""
+    rows = [(nid, gcat[nid]['orbit']) for nid in catalog['cols']['id'] if 'orbit' in gcat.get(nid, {})]
+    return {'schemaVersion': 1, 'kind': 'orbit-heights', 'source': source_record(meta),
+            'meaning': 'GCAT recorded orbit per NORAD ID, in km above the reference Earth; dated, often operational, not near reentry.',
+            'count': len(rows), 'cols': {'id': [n for n, _ in rows],
+                                         'perigee': [round(o['perigeeKm']) for _, o in rows],
+                                         'apogee': [round(o['apogeeKm']) for _, o in rows]}}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--snapshot', type=Path)
@@ -153,6 +165,7 @@ def main():
     catalog = json.loads(args.catalog.read_text())
     applied, disagree = enrich_catalog(catalog, gcat, meta)
     args.catalog.write_text(json.dumps(catalog, separators=(',', ':')) + '\n')
+    HEIGHTS.write_text(json.dumps(height_index(catalog, gcat, meta), separators=(',', ':')) + '\n')
     joined = sum(1 for nid in catalog['cols']['id'] if nid in gcat)
     orbits = sum(1 for nid in catalog['cols']['id'] if 'orbit' in gcat.get(nid, {}))
     print(f'{joined:,} of {len(catalog["cols"]["id"]):,} reentries found in GCAT; {orbits:,} with an orbit; '

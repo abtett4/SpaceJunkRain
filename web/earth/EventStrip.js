@@ -29,9 +29,9 @@ export function axisTicks(startMs, endMs) {
 }
 
 export class EventStrip {
-  // lanes: [{ key, label }]; marks: [{ ms, lane, kind: 'reentry' | 'launch' | 'failed', name }]
-  constructor(root, { onSeek, onPick }) {
-    Object.assign(this, { root, onSeek, onPick });
+  // lanes: [{ key, label, hidden }]; marks: [{ ms, lane, kind: 'reentry' | 'launch' | 'failed', name, dim }]
+  constructor(root, { onSeek, onPick, onToggle }) {
+    Object.assign(this, { root, onSeek, onPick, onToggle });
     this.startMs = 0; this.endMs = 1; this.lanes = []; this.marks = []; this.nowMs = 0;
     root.innerHTML = `
       <div class="strip-body">
@@ -92,7 +92,7 @@ export class EventStrip {
     if (!lane) return null;
     let best = null, bestDx = 6;
     for (const m of this.marks) {
-      if (m.lane !== lane.key) continue;
+      if (m.lane !== lane.key || m.dim) continue;
       const dx = Math.abs(this.frac(m.ms) * r.width - (e.clientX - r.left));
       if (dx < bestDx) { best = m; bestDx = dx; }
     }
@@ -101,11 +101,19 @@ export class EventStrip {
   set({ startMs, endMs, lanes, marks }) {
     Object.assign(this, { startMs, endMs, lanes, marks });
     this.input.max = String((endMs - startMs) / 1000);
+    // Lane names are show/hide toggles; counts are what is shown out of what exists.
+    const counts = new Map(lanes.map(l => [l.key, [0, 0]]));
+    for (const m of marks) { const c = counts.get(m.lane); if (c) { c[1]++; if (!m.dim) c[0]++; } }
     this.labelsEl.replaceChildren(...lanes.map(l => {
-      const row = document.createElement('div');
-      const count = marks.filter(m => m.lane === l.key).length;
-      row.innerHTML = `<span></span> <span class="n"></span>`;
-      row.children[0].textContent = l.label; row.children[1].textContent = count.toLocaleString();
+      const row = document.createElement('button');
+      row.type = 'button'; row.className = 'lane-toggle';
+      row.setAttribute('aria-pressed', String(!l.hidden));
+      row.title = `${l.hidden ? 'Show' : 'Hide'} ${l.label.toLowerCase()}`;
+      const [shown, total] = counts.get(l.key);
+      row.innerHTML = '<span class="box" aria-hidden="true"></span><span class="name"></span> <span class="n"></span>';
+      row.querySelector('.name').textContent = l.label;
+      row.querySelector('.n').textContent = l.hidden || shown === total ? total.toLocaleString() : `${shown.toLocaleString()} of ${total.toLocaleString()}`;
+      row.addEventListener('click', () => this.onToggle?.(l.key));
       return row;
     }));
     this.track.style.height = `${lanes.length * LANE_H}px`;
@@ -150,9 +158,10 @@ export class EventStrip {
     ctx.fillStyle = css.getPropertyValue('--border').trim() || '#999';
     this.lanes.forEach((_, i) => ctx.fillRect(0, (i + 1) * LANE_H - 1, w, 1));
     const ink = { reentry: css.getPropertyValue('--event-ink').trim(), launch: css.getPropertyValue('--launch-ink').trim(), failed: css.getPropertyValue('--fail-ink').trim() };
-    ctx.globalAlpha = 0.8;
+    const laneIndex = new Map(this.lanes.map((l, i) => [l.key, i]));
     for (const m of this.marks) {
-      const lane = this.lanes.findIndex(l => l.key === m.lane);
+      const lane = laneIndex.get(m.lane);
+      ctx.globalAlpha = m.dim ? 0.12 : 0.8;
       ctx.fillStyle = ink[m.kind];
       ctx.fillRect(Math.round(this.frac(m.ms) * w) - 1, lane * LANE_H + 5, 2, LANE_H - 10);
     }

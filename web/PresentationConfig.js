@@ -9,6 +9,8 @@ export const EVENT_COLORS = Object.freeze({ launch: '#56dce8', reentry: '#ffd166
 export const FAILED_LAUNCH_SCALE = 0.6;
 export const STYLE = Object.freeze({ color: EVENT_COLORS.reentry, markerRadiusEarth: 0.012, lineWidthEarth: 0.008,
   background: '#081b2c', atmosphereRadius: 1.018, pulseExpansion: 7, pulseRingWidth: 0.22 });
+// Orbit-height filter bounds: 0 means no lower limit; this value means no upper limit.
+export const HEIGHT_UNBOUNDED_KM = 100000;
 const field = (key, group, label, value, min, max, step, unit, help = '') =>
   Object.freeze({ key, group, label, value, min, max, step, unit, help });
 export const CONFIG_FIELDS = Object.freeze([
@@ -26,6 +28,11 @@ export const CONFIG_FIELDS = Object.freeze([
   field('widthTaper', 'Tracers & pulses', 'Width taper', 1, 0, 4, 0.25, 'number', 'Zero gives uniform width; higher values narrow more of the trail.'),
   field('opacityTaper', 'Tracers & pulses', 'Fade toward tail', 2, 0, 4, 0.25, 'number', 'Zero gives uniform opacity; higher values fade more of the trail.'),
   field('pulseOpacity', 'Tracers & pulses', 'Pulse opacity', 1, 0, 1, 0.05, 'percent'),
+  // What the globe and strip show. These have their own controls beside the strip.
+  ...[['showLaunches', 'Launches'], ['showPayloads', 'Payloads'], ['showRocketBodies', 'Rocket bodies'], ['showDebris', 'Debris'], ['showUnknown', 'Unknown']]
+    .map(([key, label]) => Object.freeze({ key, group: 'Show', label, value: true, kind: 'boolean' })),
+  field('minHeightKm', 'Show', 'Lowest orbit height', 0, 0, HEIGHT_UNBOUNDED_KM, 1, 'km', 'Reentries whose recorded orbit reaches this height or above.'),
+  field('maxHeightKm', 'Show', 'Highest orbit height', HEIGHT_UNBOUNDED_KM, 0, HEIGHT_UNBOUNDED_KM, 1, 'km', 'At the maximum there is no upper limit.'),
   field('earthBrightness', 'Earth', 'Surface brightness', 1, 0.25, 2, 0.05, 'scale'),
   field('nightLights', 'Earth', 'City lights', 1, 0, 2, 0.05, 'scale'),
   field('atmosphereOpacity', 'Earth', 'Decorative atmosphere', 1, 0, 1, 0.05, 'percent', 'Appearance only. Solar-weather data will have its own layer.'),

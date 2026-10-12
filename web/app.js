@@ -10,7 +10,7 @@ import { clockParts } from './DateText.js';
   try { storage = window.localStorage; } catch { /* session-only settings */ }
   const presentation = createPresentationStore(storage);
   const disposeConfiguration = mountConfigurationPanel(document.getElementById('config-fields'), presentation,
-    { exclude: ['skipQuietIntervals'] }); // that one sits in the playback bar
+    { exclude: ['skipQuietIntervals', 'showLaunches', 'showPayloads', 'showRocketBodies', 'showDebris', 'showUnknown', 'minHeightKm', 'maxHeightKm'] }); // these have their own controls
   const EPOCH_MS = Date.UTC(1957, 0, 1);
   const DAY_MS = 86400000;
   const YEAR = 365.25;

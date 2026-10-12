@@ -8,16 +8,16 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap">
-<link rel="stylesheet" href="style.css?v=20261012-perf5">
+<link rel="stylesheet" href="style.css?v=20261012-filter3">
 <!-- Start the large downloads at once instead of after the module graph has loaded. -->
 <script>
-  window.SJR_PREFETCH = Object.fromEntries(['data/decays.json', 'data/launches.json', 'data/history/all/index.json'].map(url => {
+  window.SJR_PREFETCH = Object.fromEntries(['data/decays.json', 'data/launches.json', 'data/history/all/index.json', 'data/orbit-heights.json'].map(url => {
     const json = fetch(url, { cache: 'no-cache' }).then(r => r.ok ? r.json() : Promise.reject(new Error(`Could not load ${url} (${r.status}).`)));
     json.catch(() => {}); // reported by whichever module uses it
     return [url, json];
   }));
 </script>
-<link rel="modulepreload" href="earth/EarthScene.js?v=20261012-perf5">
+<link rel="modulepreload" href="earth/EarthScene.js?v=20261012-filter3">
 <link rel="modulepreload" href="vendor/p5.esm.min.js">
 </head>
 <body>
@@ -146,8 +146,17 @@
       <select id="year-select" class="year-select" aria-label="Year"></select>
       <button id="year-next" type="button" aria-label="Next year">▶</button>
       <p id="strip-summary" class="strip-summary"></p>
+      <div class="height-filter" role="group" aria-labelledby="height-label">
+        <span id="height-label" class="height-label">Orbit height</span>
+        <span class="dual-range">
+          <input type="range" id="height-min" min="0" max="100" step="1" value="0" aria-label="Lowest orbit height">
+          <input type="range" id="height-max" min="0" max="100" step="1" value="100" aria-label="Highest orbit height">
+        </span>
+        <output id="height-out" for="height-min height-max">Any height</output>
+      </div>
     </div>
     <div id="event-strip" class="event-strip"></div>
+    <p class="strip-hint">Click a lane name to show or hide that kind. The height filter applies to reentries, using each object’s recorded orbit; objects with no recorded orbit are hidden while it is set.</p>
     <ul class="orbit-legend" aria-label="Key">
       <li><span class="key-trace" aria-hidden="true"></span>Reentry with orbital data · reference orbit</li>
       <li><span class="key-ring" aria-hidden="true"></span>Reentry without orbital data · ring</li>
@@ -165,6 +174,22 @@
       </details>
       <details id="orbit-about">
         <summary>About this view · evidence and limits</summary>
+        <table class="known-table">
+          <caption>Known versus illustrative</caption>
+          <thead><tr><th></th><th>Known from the sources</th><th>Illustrative (a display choice)</th></tr></thead>
+          <tbody>
+            <tr><th>Reentry day</th><td>All 35,692 (Space-Track)</td><td>—</td></tr>
+            <tr><th>Reentry time of day</th><td>4,108 (GCAT, same day as Space-Track)</td><td>31,584: a stable random time within the reported day</td></tr>
+            <tr><th>Reentry location</th><td>None</td><td>Never shown; no mark claims where an object came down</td></tr>
+            <tr><th>Orbit shape</th><td>35,140 (height and tilt from a recorded orbit, median 6 months before reentry)</td><td>Which way the orbit faces and where the object is on it</td></tr>
+            <tr><th>No orbit</th><td>—</td><td>552 rings at a random point (even by area)</td></tr>
+            <tr><th>Launch time</th><td>7,174 to the second or minute</td><td>17 given only a day: time assigned the same way</td></tr>
+            <tr><th>Launch location</th><td>7,191 at GCAT’s pad, site or air-launch drop zone: 4,753 within 1 km, 1,253 within 5 km, 1,181 within 25 km, 4 coarser; each card states its precision</td><td>—</td></tr>
+            <tr><th>Launch path</th><td>—</td><td>Only Dragon CRS-14 has an ascent arc, and it is illustrative</td></tr>
+            <tr><th>Sunlight, Earth’s rotation</th><td>Computed from the date and time shown</td><td>Imagery is a fixed composite, not that day’s clouds or lights</td></tr>
+            <tr><th>Marker size, trails</th><td>—</td><td>Exaggerated so they can be seen; a ring is hundreds of km across</td></tr>
+          </tbody>
+        </table>
         <p class="note"><strong>What the marks mean.</strong> An amber trace follows a reference orbit built from the object’s real inclination and perigee/apogee; its direction and phase are illustrative, and it does not model the descent or claim a reentry location. For most objects that orbit is the one GCAT records for it, dated and often from its working life rather than its last days, so the card says when it was recorded. Tiangong-1 at short windows replays its last known orbit (SGP4). A ring marks an object with no usable orbit, at a stable random point on the globe chosen evenly by area — not a reentry location. Launches are every orbital launch attempt in GCAT, shown as a ring at the launch pad (or at the launch site when GCAT has no pad coordinates); failed attempts are smaller and red. Dragon CRS-14 (April 2018) additionally has an illustrative ascent arc into its first recorded orbit; it is not a flight reconstruction.</p>
         <p class="note"><strong>Times.</strong> About 4,100 reentries have a time of day from GCAT, used only when GCAT and Space-Track agree on the day. The rest give only the day. Those objects get a stable, randomly assigned time within that UTC day; it is an animation anchor, not an estimated reentry time. Launch times keep GCAT’s precision, usually to the minute or second; the few given only to the day get an assigned time the same way.</p>
         <p id="quiet-playback-note" class="note">Quiet intervals skipped by default.</p>
@@ -250,27 +275,27 @@
 <script type="importmap">
 {
   "imports": {
-    "./DateText.js": "./DateText.js?v=20261012-perf5",
-    "./earth/EventStrip.js": "./earth/EventStrip.js?v=20261012-perf5",
-    "./earth/ReferenceLoop.js": "./earth/ReferenceLoop.js?v=20261012-perf5",
-    "./SimulationClock.js": "./SimulationClock.js?v=20261012-perf5",
-    "./OrbitalEventFeed.js": "./OrbitalEventFeed.js?v=20261012-perf5",
-    "./EventPlaybackLog.js": "./EventPlaybackLog.js?v=20261012-perf5",
-    "./DisplayPolicy.js": "./DisplayPolicy.js?v=20261012-perf5",
-    "./earth/LaunchTracer.js": "./earth/LaunchTracer.js?v=20261012-perf5",
-    "./PresentationConfig.js": "./PresentationConfig.js?v=20261012-perf5",
-    "./ConfigurationPanel.js": "./ConfigurationPanel.js?v=20261012-perf5",
-    "./earth/OrbitPanel.js": "./earth/OrbitPanel.js?v=20261012-perf5",
-    "./earth/HistoryChunks.js": "./earth/HistoryChunks.js?v=20261012-perf5",
-    "./earth/EventSequence.js": "./earth/EventSequence.js?v=20261012-perf5",
-    "./earth/Tracer.js": "./earth/Tracer.js?v=20261012-perf5",
-    "./earth/SurfacePulse.js": "./earth/SurfacePulse.js?v=20261012-perf5",
-    "./earth/TracerControls.js": "./earth/TracerControls.js?v=20261012-perf5",
-    "./earth/EarthScene.js": "./earth/EarthScene.js?v=20261012-perf5",
-    "./earth/EarthShader.js": "./earth/EarthShader.js?v=20261012-perf5"
+    "./DateText.js": "./DateText.js?v=20261012-filter3",
+    "./earth/EventStrip.js": "./earth/EventStrip.js?v=20261012-filter3",
+    "./earth/ReferenceLoop.js": "./earth/ReferenceLoop.js?v=20261012-filter3",
+    "./SimulationClock.js": "./SimulationClock.js?v=20261012-filter3",
+    "./OrbitalEventFeed.js": "./OrbitalEventFeed.js?v=20261012-filter3",
+    "./EventPlaybackLog.js": "./EventPlaybackLog.js?v=20261012-filter3",
+    "./DisplayPolicy.js": "./DisplayPolicy.js?v=20261012-filter3",
+    "./earth/LaunchTracer.js": "./earth/LaunchTracer.js?v=20261012-filter3",
+    "./PresentationConfig.js": "./PresentationConfig.js?v=20261012-filter3",
+    "./ConfigurationPanel.js": "./ConfigurationPanel.js?v=20261012-filter3",
+    "./earth/OrbitPanel.js": "./earth/OrbitPanel.js?v=20261012-filter3",
+    "./earth/HistoryChunks.js": "./earth/HistoryChunks.js?v=20261012-filter3",
+    "./earth/EventSequence.js": "./earth/EventSequence.js?v=20261012-filter3",
+    "./earth/Tracer.js": "./earth/Tracer.js?v=20261012-filter3",
+    "./earth/SurfacePulse.js": "./earth/SurfacePulse.js?v=20261012-filter3",
+    "./earth/TracerControls.js": "./earth/TracerControls.js?v=20261012-filter3",
+    "./earth/EarthScene.js": "./earth/EarthScene.js?v=20261012-filter3",
+    "./earth/EarthShader.js": "./earth/EarthShader.js?v=20261012-filter3"
   }
 }
 </script>
-<script type="module" src="app.js?v=20261012-perf5"></script>
+<script type="module" src="app.js?v=20261012-filter3"></script>
 </body>
 </html>

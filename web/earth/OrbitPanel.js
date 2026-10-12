@@ -4,7 +4,7 @@ import { validateHistoryIndex, loadHistoryChunk } from './HistoryChunks.js';
 import { loadSequence, configureSequence, sequenceRange, sequenceAt } from './EventSequence.js';
 import { OrbitalEventFeed } from '../OrbitalEventFeed.js';
 import { mountEventPlaybackLog } from '../EventPlaybackLog.js';
-import { DEFAULT_PLAYBACK_RATE } from '../PresentationConfig.js';
+import { DEFAULT_PLAYBACK_RATE, HEIGHT_UNBOUNDED_KM } from '../PresentationConfig.js';
 import { EventStrip } from './EventStrip.js';
 import { clockParts, longDate, shortDay, MONTH_ABBR } from '../DateText.js';
 export { selectMode } from './EventSequence.js';
@@ -25,10 +25,14 @@ const kindText = s => {
 };
 const shownAs = s => {
   const orbit = s.event.attributes.orbitReference ?? s.event.attributes.orbitNearEvent, known = Number.isFinite;
-  const site = s.event.attributes.launchSite;
-  const at = site?.coordinates?.precision === 'site' ? 'launch site' : 'launch pad';
+  const site = s.event.attributes.launchSite, c = site?.coordinates;
+  // GCAT states how well each location is known; say it rather than imply survey precision.
+  const within = km => km == null ? '' : km < 1 ? ' · located within 1 km' : ` · located to ±${Math.round(km)} km`;
+  const launchPlace = c?.precision === 'release-area'
+    ? `Ring at the air-launch release area · ${site.place}${within(c.uncertaintyKm)} · carried by ${site.carrier} from ${site.takeoff}`
+    : `Ring at the ${c?.precision === 'site' ? 'launch site (no pad coordinates)' : 'launch pad'}${site?.place ? ` · ${site.place}` : ''}${within(c?.uncertaintyKm)}${site?.padUncertain ? ' · pad not certain' : ''}`;
   const how = { propagated: 'Last known orbit, replayed', representative: 'Reference orbit, illustrative path', symbolic: 'Ring · no orbital data',
-    launch: s.launchTracer ? 'Illustrative ascent from the launch pad' : `Ring at the ${at}${site?.place ? ` · ${site.place}` : ''}` }[s.mode];
+    launch: s.launchTracer ? 'Illustrative ascent from the launch pad' : launchPlace }[s.mode];
   const facts = known(orbit?.inclinationDeg) && known(orbit?.perigeeKm) && known(orbit?.apogeeKm)
     ? ` · ${orbit.inclinationDeg.toFixed(1)}°, ${Math.round(orbit.perigeeKm)}–${Math.round(orbit.apogeeKm)} km` : '';
   // GCAT orbits are often operational, years before reentry; say when it was recorded.
@@ -52,7 +56,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
   let prefetched = null, transitioning = false, continuationStart = null;
   const PASSAGE_RATE = DEFAULT_PLAYBACK_RATE;
   let scene, unsubscribeSettings, unsubscribe, sequence, settings = presentation.values, selected = null, pinned = null, revision = 0;
-  let nowSignature = '', hasStarted = false, failed = false, stripYear = null, lastPanelMs = -Infinity;
+  let nowSignature = '', hasStarted = false, failed = false, stripYear = null, lastPanelMs = -Infinity, visibleEvents = [];
   const listeners = new AbortController();
   const tooFast = () => clock.rate > GLOBE_MAX_RATE;
   const playRate = () => tooFast() ? PASSAGE_RATE : clock.rate;
@@ -95,24 +99,44 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     const year = stripYear;
     return [Math.max(Date.UTC(year, 0, 1), clock.minMs), Math.min(Date.UTC(year + 1, 0, 1), clock.maxMs)];
   };
+  // ---- what to show: kinds (lane toggles) and an orbit-height range ----
+  const SHOW = { LAUNCH: 'showLaunches', PAYLOAD: 'showPayloads', 'ROCKET BODY': 'showRocketBodies', DEBRIS: 'showDebris', UNKNOWN: 'showUnknown' };
+  let heights = null; // NORAD ID -> [perigee, apogee] km, GCAT recorded orbit
+  const heightsReady = (early('data/orbit-heights.json') ?? fetch(new URL('data/orbit-heights.json', document.baseURI), { cache: 'no-cache' })
+    .then(r => r.ok ? r.json() : null)).then(index => {
+      if (index) heights = new Map(index.cols.id.map((id, i) => [id, [index.cols.perigee[i], index.cols.apogee[i]]]));
+    }).catch(() => {});
+  const heightActive = () => settings.minHeightKm > 0 || settings.maxHeightKm < HEIGHT_UNBOUNDED_KM;
+  // A reentry passes if its recorded orbit reaches into the chosen band (perigee..apogee overlaps it).
+  const inHeight = norad => {
+    if (!heightActive()) return true;
+    const h = heights?.get(norad);
+    return Boolean(h) && h[1] >= settings.minHeightKm && h[0] <= (settings.maxHeightKm >= HEIGHT_UNBOUNDED_KM ? Infinity : settings.maxHeightKm);
+  };
+  const markShown = m => settings[SHOW[m.lane]] && (m.lane === 'LAUNCH' || inHeight(m.norad));
+  const isShown = s => settings[SHOW[laneOf(s)]] && (s.event.eventKind === 'launch' || inHeight(s.event.object.noradId));
+  const filterKey = () => [...Object.values(SHOW).map(k => settings[k] ? 1 : 0), settings.minHeightKm, settings.maxHeightKm, Boolean(heights)].join(',');
   let stripKey = '';
   const refreshStrip = () => {
     const [startMs, endMs] = stripRange();
     // In the full catalog the strip shows a whole year, so a new month in the same year changes nothing.
-    const key = historical() ? `year|${startMs}|${endMs}|${Boolean(launchIndex)}` : `example|${startMs}|${endMs}|${sequence?.events.length}|${picker.value}`;
+    const key = (historical() ? `year|${startMs}|${endMs}|${Boolean(launchIndex)}` : `example|${startMs}|${endMs}|${sequence?.events.length}|${picker.value}`) + `|${filterKey()}`;
     if (key === stripKey) return;
     stripKey = key;
     const launches = historical() ? launchMarks(startMs, endMs)
       : (sequence?.events ?? []).filter(s => s.event.eventKind === 'launch' && s.endMs >= startMs && s.endMs <= endMs)
         .map(s => ({ ms: s.endMs, lane: 'LAUNCH', kind: isFailedLaunch(s) ? 'failed' : 'launch', name: s.event.object.name, state: s }));
     const marks = [...launches, ...catalogMarks(startMs, endMs)];
+    let hidden = 0;
+    for (const m of marks) { m.dim = !markShown(m); hidden += m.dim; }
     // A fixed set of lanes keeps the strip the same height from year to year.
-    strip.set({ startMs, endMs, lanes: LANES.map(([key, label]) => ({ key, label })), marks });
+    strip.set({ startMs, endMs, lanes: LANES.map(([key, label]) => ({ key, label, hidden: !settings[SHOW[key]] })), marks });
     const reentries = marks.length - launches.length, fails = launches.filter(m => m.kind === 'failed').length;
     const plural = (n, one, many) => `${n.toLocaleString()} ${n === 1 ? one : many}`;
-    text('strip-summary', historical()
+    text('strip-summary', (historical()
       ? `${plural(reentries, 'reentry', 'reentries')} · ${plural(launches.length, 'launch', 'launches')}${fails ? ` (${fails} failed)` : ''} in ${stripYear}`
-      : shortDay(startMs) === shortDay(endMs) ? longDate(startMs) : `${shortDay(startMs)} to ${longDate(endMs)}`);
+      : shortDay(startMs) === shortDay(endMs) ? longDate(startMs) : `${shortDay(startMs)} to ${longDate(endMs)}`)
+      + (hidden ? ` · ${(marks.length - hidden).toLocaleString()} shown` : ''));
   };
 
   const focus = direction => {
@@ -148,7 +172,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     text('sel-source', `${s.event.object.noradId ? `NORAD ${s.event.object.noradId}` : `GCAT ${s.event.object.objectId}`} · source data`);
   };
   const renderNow = (samples, nowMs) => {
-    const active = samples.filter(v => v.sample).map(v => v.state);
+    const active = samples.filter(v => v.sample && visibleEvents.includes(v.state)).map(v => v.state);
     const signature = active.map(s => s.event.eventId).join('|');
     if (signature !== nowSignature) {
       nowSignature = signature;
@@ -165,19 +189,19 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
       if (active.length > 6) { const li = document.createElement('li'); li.className = 'now-more'; li.textContent = `and ${active.length - 6} more`; shown.push(li); }
       el('now-list').replaceChildren(...shown);
     }
-    const next = sequence.events.find(s => s.endMs > nowMs && !active.includes(s));
+    const next = visibleEvents.find(s => s.endMs > nowMs && !active.includes(s));
     const nextText = next ? `${active.length ? 'Next' : 'Quiet. Next'}: |${next.event.object.name}|, ${clockParts(next.endMs).day}`
-      : active.length ? '' : 'Nothing more this month.';
+      : active.length ? '' : visibleEvents.length ? 'Nothing more this month.' : 'Nothing shown this month with the current filters.';
     if (el('now-next').dataset.text !== nextText) {
       el('now-next').dataset.text = nextText;
       const [before, name = '', after = ''] = nextText.split('|'), span = document.createElement('span');
       span.className = 'now-name'; span.textContent = name;
       el('now-next').replaceChildren(before, ...(name ? [span, after] : []));
     }
-    const auto = active[0] ?? next ?? sequence.events.at(-1);
-    selected = pinned ?? auto;
+    const auto = active[0] ?? next ?? visibleEvents.at(-1);
+    selected = pinned ?? auto ?? null;
     showCard(selected, pinned ? 'Selected' : active.includes(selected) ? 'In progress' : 'Next up');
-    strip.setSelected(selected.endMs, laneOf(selected));
+    if (selected) strip.setSelected(selected.endMs, laneOf(selected)); else strip.setSelected(null);
   };
   const update = ({ nowMs, playing = clock.playing }) => {
     if (tooFast() && playing) return; // The globe waits; the strip and charts keep moving.
@@ -202,16 +226,21 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     scene.configureAppearance(values);
     if (!sequence) return;
     configureSequence(sequence, values);
-    scene.tracers = sequence.events.flatMap(s => s.active ? [s.active] : []);
-    scene.pulses = sequence.events.flatMap(s => s.pulse ? [s.pulse] : []);
+    visibleEvents = sequence.events.filter(isShown);
+    if (pinned && !visibleEvents.includes(pinned)) pinned = null;
+    nowSignature = '';
+    scene.tracers = visibleEvents.flatMap(s => s.active ? [s.active] : []);
+    scene.pulses = visibleEvents.flatMap(s => s.pulse ? [s.pulse] : []);
     const [startMs, endMs] = range();
-    clock.setPlaybackWindows(values.skipQuietIntervals ? sequence.events.flatMap(s => [
+    // Quiet skipping jumps between the events that are shown; hidden ones don't hold playback.
+    clock.setPlaybackWindows(values.skipQuietIntervals ? visibleEvents.flatMap(s => [
       [s.endMs,s.endMs],
       ...(s.active ? [[s.active.startMs,s.active.endMs]] : []),
       ...(s.pulse ? [[s.pulse.visibleStartMs,s.pulse.visibleEndMs]] : [])
     ]) : null, [startMs,endMs]);
     text('quiet-playback-note', values.skipQuietIntervals ? 'Quiet intervals are skipped: playback jumps between event windows.' : 'Quiet intervals are included: playback preserves elapsed historical time.');
-    if (!historical()) refreshStrip();
+    refreshStrip();
+    showHeights();
     update(clock);
   };
   const jumpTo = s => {
@@ -385,6 +414,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
 
   // ---- controls that work even before (or without) the globe ----
   const strip = new EventStrip(el('event-strip'), {
+    onToggle: lane => presentation.update({ [SHOW[lane]]: !presentation.values[SHOW[lane]] }),
     onSeek: (ms, final) => {
       clock.pause(); clock.seek(ms);
       if (final && historical() && historyIndex && sequence && (ms < range()[0] || ms >= range()[1])) loadAt(ms);
@@ -411,6 +441,28 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     if (state.reason === 'rate' && sequence && settings && scene) applySettings(settings);
   });
   pause.addEventListener('click', play, { signal: listeners.signal });
+  // Orbit-height range: two thumbs on a log scale, 100 km to 100,000 km; the ends mean no limit.
+  const nice = km => { const step = 10 ** (Math.floor(Math.log10(km)) - 1); return Math.round(km / step) * step; }; // two significant figures
+  const toKm = pos => pos <= 0 ? 0 : pos >= 100 ? HEIGHT_UNBOUNDED_KM : nice(10 ** (2 + 3 * pos / 100));
+  const toPos = km => km <= 0 ? 0 : km >= HEIGHT_UNBOUNDED_KM ? 100 : Math.round((Math.log10(km) - 2) / 3 * 100);
+  const kmText = km => `${km.toLocaleString()} km`;
+  const showHeights = () => {
+    const lo = settings.minHeightKm, hi = settings.maxHeightKm, open = hi >= HEIGHT_UNBOUNDED_KM;
+    if (document.activeElement !== el('height-min')) el('height-min').value = String(toPos(lo));
+    if (document.activeElement !== el('height-max')) el('height-max').value = String(toPos(hi));
+    el('height-out').textContent = !lo && open ? 'Any height' : !lo ? `Below ${kmText(hi)}` : open ? `Above ${kmText(lo)}` : `${kmText(lo)} – ${kmText(hi)}`;
+    el('height-min').setAttribute('aria-valuetext', lo ? kmText(lo) : 'No lower limit');
+    el('height-max').setAttribute('aria-valuetext', open ? 'No upper limit' : kmText(hi));
+  };
+  for (const [id, other, key] of [['height-min', 'height-max', 'minHeightKm'], ['height-max', 'height-min', 'maxHeightKm']]) {
+    el(id).addEventListener('input', () => {
+      // Keep the thumbs from crossing.
+      const pos = Number(el(id).value), limit = Number(el(other).value);
+      if (key === 'minHeightKm' && pos > limit) el(id).value = String(limit);
+      if (key === 'maxHeightKm' && pos < limit) el(id).value = String(limit);
+      presentation.update({ [key]: toKm(Number(el(id).value)) });
+    }, { signal: listeners.signal });
+  }
   // Skip quiet intervals: a shared setting, surfaced in the playback bar.
   const skip = el('skip-quiet');
   const unsubscribeSkip = presentation.subscribe(values => { skip.checked = values.skipQuietIntervals; });
@@ -445,7 +497,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     if (scene.imageryError) text('earth-render-status', 'Earth imagery unavailable; showing a plain globe.');
     unsubscribe = clock.subscribe(state => {
       if (sequence && settings.skipQuietIntervals && state.reason === 'advance' && Number.isFinite(state.skippedToMs)) {
-        const direction = skipFocusDirection(sequence,state.skippedToMs,state.nowMs);
+        const direction = skipFocusDirection({ ...sequence, events: visibleEvents },state.skippedToMs,state.nowMs);
         if (direction) {
           scene.clearInspection();
           // Quiet skips reframe longitude only; preserve the user's viewing latitude.
@@ -474,7 +526,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     window.addEventListener('pagehide', e => {
       if (!e.persisted) { revision++; if (provenanceUrl) URL.revokeObjectURL(provenanceUrl); loadController?.abort(); prefetched?.controller.abort(); listeners.abort(); unsubscribePlayState(); unsubscribeSkip(); strip.dispose(); disposeEventLog(); events.dispose(); clock.setPlaybackWindows(null); unsubscribeSettings?.(); unsubscribe(); scene.dispose(); }
     });
-    await launchesReady;
+    await Promise.all([launchesReady, heightsReady]);
     await load();
     // Integration seam: collaborators receive the same clock, evidence feed, settings, and Earth host.
     return Object.freeze({ clock, events, settings: presentation,

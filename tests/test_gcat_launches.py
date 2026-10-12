@@ -10,8 +10,8 @@ from gcat_launches import launch_event, orbital_launches, parse_time  # noqa: E4
 
 UTC = dt.timezone.utc
 LAUNCH = '#Launch_Tag\tLaunch_Date\tLV_Type\tFlight_ID\tFlight\tMission\tLaunch_Site\tLaunch_Pad\tAgency\tLaunchCode\n# Updated test\n'
-LP = '#Site\tCode\tUCode\tType\tStateCode\tTStart\tTStop\tShortName\tName\tLocation\tLongitude\tLatitude\n'
-SITES = '#Site\tCode\tUCode\tType\tStateCode\tTStart\tTStop\tShortName\tName\tLocation\tLongitude\tLatitude\n'
+LP = '#Site\tCode\tUCode\tType\tStateCode\tTStart\tTStop\tShortName\tName\tLocation\tLongitude\tLatitude\tError\n'
+SITES = '#Site\tCode\tUCode\tType\tStateCode\tTStart\tTStop\tShortName\tName\tLocation\tLongitude\tLatitude\tError\n'
 
 
 class GcatLaunchTests(unittest.TestCase):
@@ -29,21 +29,38 @@ class GcatLaunchTests(unittest.TestCase):
                 + '1957 ALP\t1957 Oct  4 1928:34\tSputnik 8K71PS\tM1-PS\tPS-1\tPS-1\tNIIP-5\tLC1\tMVS\tOS\n'
                 + '1957-F01\t1957 Dec  6 1644:35\tVanguard\tTV-3\tVanguard TV3\t-\tCC\tLC18A\tNRL\tOF\n'
                 + '1957-S01\t1957 Dec  7\tAerobee\t-\t-\t-\tCC\tLC18A\tNRL\tSS\n')
-            (d / 'lp.tsv').write_text(LP + 'GIK-5\tLC1\t-\tLP\t-\t1957\t*\tGIK-5 LC1\tPad 1, Baykonur\t-\t63.3423\t45.9203\n')
-            (d / 'sites.tsv').write_text(SITES + 'NIIP-5\t-\tGIK-5\tLS\t-\t1956\t1989\tBaykonur\tNIIP-5\t-\t63.0\t46.0\n'
-                                         + 'GIK-5\t-\tGIK-5\tLS\t-\t1989\t*\tBaykonur\tGIK-5\t-\t63.0\t46.0\n'
-                                         + 'CC\t-\tCC\tLS\t-\t1950\t*\tCanaveral\tCape Canaveral\t-\t-80.6\t28.5\n')
+            (d / 'lp.tsv').write_text(LP + 'GIK-5\tLC1\t-\tLP\t-\t1957\t*\tGIK-5 LC1\tPad 1, Baykonur\t-\t63.3423\t45.9203\t0.0001\n')
+            (d / 'sites.tsv').write_text(SITES + 'NIIP-5\t-\tGIK-5\tLS\t-\t1956\t1989\tBaykonur\tNIIP-5\t-\t63.0\t46.0\t0.02\n'
+                                         + 'GIK-5\t-\tGIK-5\tLS\t-\t1989\t*\tBaykonur\tGIK-5\t-\t63.0\t46.0\t0.02\n'
+                                         + 'CC\t-\tCC\tLS\t-\t1950\t*\tCanaveral\tCape Canaveral\t-\t-80.6\t28.5\t0.05\n')
             launches = orbital_launches(d)
         self.assertEqual([l['tag'] for l in launches], ['1957-ALP', '1957-F01'])  # suborbital dropped
         sputnik, vanguard = launches
         self.assertEqual((sputnik['site']['precision'], sputnik['site']['latitudeDeg']), ('pad', 45.9203))
         self.assertEqual((vanguard['site']['precision'], vanguard['site']['place']), ('site', 'Canaveral'))
         self.assertEqual(vanguard['outcome'], 'failure')
+        self.assertAlmostEqual(sputnik['site']['uncertaintyKm'], 0.011, places=3)
+        self.assertAlmostEqual(vanguard['site']['uncertaintyKm'], 5.56, places=2)
         event = launch_event(vanguard, {'url': 'https://planet4589.org/space/gcat/'})
         self.assertEqual(event['eventId'], '1957-F01:launch:1957-12-06')
         self.assertEqual(event['eventTime']['intervalUtc'], ['1957-12-06T16:44:35Z', '1957-12-06T16:44:36Z'])
         self.assertIsNone(event['object']['noradId'])
         self.assertEqual(event['orbitalData'], {})
+
+
+    def test_air_launch_is_placed_at_the_release_area_not_the_runway(self):
+        header = LAUNCH.replace('\tLaunchCode\n', '\tLaunchCode\tPlatform\tAscent_Site\tAscent_Pad\n', 1)
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            (d / 'launch.tsv').write_text(header + '1990-028\t1990 Apr  5 1910:17\tPegasus\tF1\tPegsat\t-\tEAFB\tRW04/22\tDARPA\tOS\tNB-52-008\tWTR\tPAWA\n')
+            (d / 'lp.tsv').write_text(LP + 'EAFB\tRW04/22\t-\tLP\t-\t-\t*\tRunway\tRunway 04/22, Edwards\tEdwards\t-117.88\t34.9\t0.001\n'
+                                      + 'WTR\tPAWA\t-\tLP\t-\t-\t*\tPAWA\tPoint Arguello Warning Area Drop Zone\tPacific Ocean\t-123.0\t36.0\t0.02\n')
+            (d / 'sites.tsv').write_text(SITES)
+            [pegasus] = orbital_launches(d)
+        site = pegasus['site']
+        self.assertEqual((site['precision'], site['latitudeDeg'], site['longitudeDeg']), ('release-area', 36.0, -123.0))
+        self.assertEqual((site['carrier'], site['takeoff']), ('NB-52-008', 'Edwards'))
+        self.assertAlmostEqual(site['uncertaintyKm'], 2.224, places=3)
 
 
 if __name__ == '__main__':

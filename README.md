@@ -48,6 +48,17 @@ Every orbital mark says what kind of evidence is behind it:
 | **Launch** (cyan) | Every GCAT orbital launch attempt (7,191) | A ring at the GCAT launch pad (7,108) or launch site (83), at GCAT's time (usually to the minute or second). Dragon CRS-14 also has an illustrative ascent arc. |
 | **Failed launch** (small, red) | GCAT attempts that did not reach orbit (524) | Same placement as launches. |
 
+Launch locations carry GCAT's own coordinate uncertainty: 4,753 within 1 km, 1,253 within 5 km,
+1,181 within 25 km and 4 coarser. Air launches (57) sit at GCAT's drop zone, not the carrier's
+runway. The event card states each launch's precision, and **About this view** on the page has a
+full known-versus-illustrative table.
+
+**Show / hide:** click a lane name on the strip to show or hide launches, payloads, rocket bodies,
+debris or unknown objects; the orbit-height range shows only reentries whose recorded orbit
+(perigee to apogee) overlaps the chosen band. Both are saved settings (`showLaunches` …
+`showUnknown`, `minHeightKm`, `maxHeightKm`) that collaborators can read; the event feed itself
+is not filtered.
+
 4,108 reentries have a time of day from GCAT, used only where GCAT and Space-Track agree on the day. The other date-only reentries get stable random display times within their reported UTC day. These are
 animation anchors, not estimated reentry times. Missing size, owner, mission, location and
 lifetime-orbit data stays explicitly unknown.
