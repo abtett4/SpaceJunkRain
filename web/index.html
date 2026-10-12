@@ -8,7 +8,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap">
-<link rel="stylesheet" href="style.css?v=20261012-gcat6">
+<link rel="stylesheet" href="style.css?v=20261012-perf5">
+<!-- Start the large downloads at once instead of after the module graph has loaded. -->
+<script>
+  window.SJR_PREFETCH = Object.fromEntries(['data/decays.json', 'data/launches.json', 'data/history/all/index.json'].map(url => {
+    const json = fetch(url, { cache: 'no-cache' }).then(r => r.ok ? r.json() : Promise.reject(new Error(`Could not load ${url} (${r.status}).`)));
+    json.catch(() => {}); // reported by whichever module uses it
+    return [url, json];
+  }));
+</script>
+<link rel="modulepreload" href="earth/EarthScene.js?v=20261012-perf5">
+<link rel="modulepreload" href="vendor/p5.esm.min.js">
 </head>
 <body>
 <main class="viz-root">
@@ -240,27 +250,27 @@
 <script type="importmap">
 {
   "imports": {
-    "./DateText.js": "./DateText.js?v=20261012-gcat6",
-    "./earth/EventStrip.js": "./earth/EventStrip.js?v=20261012-gcat6",
-    "./earth/ReferenceLoop.js": "./earth/ReferenceLoop.js?v=20261012-gcat6",
-    "./SimulationClock.js": "./SimulationClock.js?v=20261012-gcat6",
-    "./OrbitalEventFeed.js": "./OrbitalEventFeed.js?v=20261012-gcat6",
-    "./EventPlaybackLog.js": "./EventPlaybackLog.js?v=20261012-gcat6",
-    "./DisplayPolicy.js": "./DisplayPolicy.js?v=20261012-gcat6",
-    "./earth/LaunchTracer.js": "./earth/LaunchTracer.js?v=20261012-gcat6",
-    "./PresentationConfig.js": "./PresentationConfig.js?v=20261012-gcat6",
-    "./ConfigurationPanel.js": "./ConfigurationPanel.js?v=20261012-gcat6",
-    "./earth/OrbitPanel.js": "./earth/OrbitPanel.js?v=20261012-gcat6",
-    "./earth/HistoryChunks.js": "./earth/HistoryChunks.js?v=20261012-gcat6",
-    "./earth/EventSequence.js": "./earth/EventSequence.js?v=20261012-gcat6",
-    "./earth/Tracer.js": "./earth/Tracer.js?v=20261012-gcat6",
-    "./earth/SurfacePulse.js": "./earth/SurfacePulse.js?v=20261012-gcat6",
-    "./earth/TracerControls.js": "./earth/TracerControls.js?v=20261012-gcat6",
-    "./earth/EarthScene.js": "./earth/EarthScene.js?v=20261012-gcat6",
-    "./earth/EarthShader.js": "./earth/EarthShader.js?v=20261012-gcat6"
+    "./DateText.js": "./DateText.js?v=20261012-perf5",
+    "./earth/EventStrip.js": "./earth/EventStrip.js?v=20261012-perf5",
+    "./earth/ReferenceLoop.js": "./earth/ReferenceLoop.js?v=20261012-perf5",
+    "./SimulationClock.js": "./SimulationClock.js?v=20261012-perf5",
+    "./OrbitalEventFeed.js": "./OrbitalEventFeed.js?v=20261012-perf5",
+    "./EventPlaybackLog.js": "./EventPlaybackLog.js?v=20261012-perf5",
+    "./DisplayPolicy.js": "./DisplayPolicy.js?v=20261012-perf5",
+    "./earth/LaunchTracer.js": "./earth/LaunchTracer.js?v=20261012-perf5",
+    "./PresentationConfig.js": "./PresentationConfig.js?v=20261012-perf5",
+    "./ConfigurationPanel.js": "./ConfigurationPanel.js?v=20261012-perf5",
+    "./earth/OrbitPanel.js": "./earth/OrbitPanel.js?v=20261012-perf5",
+    "./earth/HistoryChunks.js": "./earth/HistoryChunks.js?v=20261012-perf5",
+    "./earth/EventSequence.js": "./earth/EventSequence.js?v=20261012-perf5",
+    "./earth/Tracer.js": "./earth/Tracer.js?v=20261012-perf5",
+    "./earth/SurfacePulse.js": "./earth/SurfacePulse.js?v=20261012-perf5",
+    "./earth/TracerControls.js": "./earth/TracerControls.js?v=20261012-perf5",
+    "./earth/EarthScene.js": "./earth/EarthScene.js?v=20261012-perf5",
+    "./earth/EarthShader.js": "./earth/EarthShader.js?v=20261012-perf5"
   }
 }
 </script>
-<script type="module" src="app.js?v=20261012-gcat6"></script>
+<script type="module" src="app.js?v=20261012-perf5"></script>
 </body>
 </html>

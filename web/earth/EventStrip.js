@@ -121,6 +121,10 @@ export class EventStrip {
   setTime(nowMs) {
     this.nowMs = nowMs;
     const pct = Math.max(0, Math.min(1, this.frac(nowMs))) * 100;
+    // Skip DOM writes until the playhead moves a visible amount (or the range changes).
+    const key = `${pct.toFixed(2)}|${this.startMs}|${this.endMs}`;
+    if (key === this.timeKey) return;
+    this.timeKey = key;
     this.progress.style.width = `${pct}%`;
     this.playhead.style.left = `${pct}%`;
     this.playhead.hidden = nowMs < this.startMs || nowMs > this.endMs;

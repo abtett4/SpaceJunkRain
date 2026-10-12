@@ -32,7 +32,8 @@ import { clockParts } from './DateText.js';
   const pretty = (s) => s.replace(/[A-Z0-9/-]+/g, titleWord)
     .replace(/\bDEB\b/, 'debris').replace(/\bR\/B\b/, 'rocket body');
 
-  const data = await (await fetch('data/decays.json', { cache: 'no-store' })).json();
+  // Started early by the inline script in index.html; revalidated rather than refetched.
+  const data = await (window.SJR_PREFETCH?.['data/decays.json'] ?? fetch('data/decays.json', { cache: 'no-cache' }).then((r) => r.json()));
   const { meta, families, names, cols, events } = data;
   const N = cols.d.length;
   const D = Float64Array.from(cols.d);
@@ -250,6 +251,9 @@ import { clockParts } from './DateText.js';
   const wrap = document.getElementById('main-wrap');
   const main = setupCanvas('main'), hist = setupCanvas('hist');
   const base = document.createElement('canvas'); const bctx = base.getContext('2d');
+  // Axes, lane labels and share bars don't move with the playhead: drawn once per view/hover/size.
+  const back = document.createElement('canvas'); const kctx = back.getContext('2d');
+  let backKey = '', backVersion = 0, histKey = '';
   let M = { l: 64, r: 16, t: 34, b: 26 };
   const H = { l: 64, r: 16, t: 8, b: 22 };
   const PX = new Float32Array(N), PY = new Float32Array(N);
@@ -295,6 +299,7 @@ import { clockParts } from './DateText.js';
     size(main); size(hist);
     base.width = main.c.width; base.height = main.c.height;
     bctx.setTransform(main.dpr, 0, 0, main.dpr, 0, 0);
+    back.width = main.c.width; back.height = main.c.height; backVersion++;
     spatial = new Map();
     for (let i = 0; i < N; i++) {
       PX[i] = xOf(D[i], main, M);
@@ -323,7 +328,7 @@ import { clockParts } from './DateText.js';
     }
     bctx.globalAlpha = 1;
   }
-  function rebuild() { readColors(); bctx.clearRect(0, 0, main.w, main.h); drawnTo = 0; buildHistogram(); draw(); }
+  function rebuild() { readColors(); backVersion++; bctx.clearRect(0, 0, main.w, main.h); drawnTo = 0; buildHistogram(); draw(); }
 
   // ---- histogram -------------------------------------------------------------
   let bins = [], binMax = 1;
@@ -625,12 +630,21 @@ import { clockParts } from './DateText.js';
     if (revealed < drawnTo) { bctx.clearRect(0, 0, main.w, main.h); drawnTo = 0; }
     if (revealed > drawnTo) { paintPoints(drawnTo, revealed); drawnTo = revealed; }
 
+    const key = `${backVersion}|${state.view}|${state.family}|${state.hover?.lane ?? ''}|${state.showAgg}`;
+    if (key !== backKey) {
+      backKey = key;
+      kctx.setTransform(1, 0, 0, 1, 0, 0); kctx.clearRect(0, 0, back.width, back.height);
+      kctx.setTransform(main.dpr, 0, 0, main.dpr, 0, 0);
+      const screen = main.ctx; main.ctx = kctx; // the axis and lane painters draw on main.ctx
+      try {
+        drawXAxis(main, M, state.view === 'parent');
+        if (state.view === 'parent') drawLanes();
+        else drawYTicks(main, M, Y_TICKS.map(([v, l]) => [yLife(v), l]));
+      } finally { main.ctx = screen; }
+    }
     const ctx = main.ctx;
     ctx.clearRect(0, 0, main.w, main.h);
-    drawXAxis(main, M, state.view === 'parent');
-    if (state.view === 'parent') drawLanes();
-    else drawYTicks(main, M, Y_TICKS.map(([v, l]) => [yLife(v), l]));
-    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(base, 0, 0); ctx.restore();
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(back, 0, 0); ctx.drawImage(base, 0, 0); ctx.restore();
     if (state.playhead < TIME_END) drawRain();
     if (state.notes && state.view === 'parent') drawLaneNotes();
     else if (state.notes && state.playhead >= TIME_END) drawLifeNotes();
@@ -647,15 +661,49 @@ import { clockParts } from './DateText.js';
       ctx.beginPath(); ctx.arc(PX[h.point], PY[h.point], radius(h.point) + 3, 0, 6.2832); ctx.stroke();
       ctx.lineWidth = 1;
     }
-    drawHist();
+    // The histogram changes only as the playhead crosses a pixel or the filters change.
+    const hk = `${backVersion}|${state.view}|${state.family}|${[...state.hiddenTypes]}|${state.notes}|${state.hover?.bin ?? ''}|${Math.round(xOf(state.playhead, main, M) * 2)}`;
+    if (hk !== histKey) { histKey = hk; drawHist(); }
 
-    let shown = 0;
-    for (let i = 0; i < revealed; i++) if (inFamily(i) && typeShown(i)) shown++;
+    setText(countEl, fmtInt(shownUpTo(revealed)));
+    updateClockText();
+  }
+
+  // ---- per-frame economy ----------------------------------------------------
+  // The date readout changes every tick; the charts usually don't. At hour-scale speeds the
+  // playhead crosses one chart pixel every few seconds, so most ticks only update the text.
+  const clockEls = ['clock-year', 'clock-day', 'clock-time'].map((id) => document.getElementById(id));
+  const countEl = document.getElementById('now-count');
+  const setText = (el, text) => { if (el.textContent !== text) el.textContent = text; };
+  function updateClockText() {
     const when = clockParts(clock.nowMs), today = state.playhead >= TIME_END;
-    document.getElementById('clock-year').textContent = when.year;
-    document.getElementById('clock-day').textContent = today ? 'Today' : when.day;
-    document.getElementById('clock-time').textContent = today ? '' : when.time;
-    document.getElementById('now-count').textContent = fmtInt(shown);
+    setText(clockEls[0], when.year);
+    setText(clockEls[1], today ? 'Today' : when.day);
+    setText(clockEls[2], today ? '' : when.time);
+  }
+  // Objects shown so far, counted incrementally while playback only moves forward.
+  let shownTo = 0, shownCount = 0, shownFilter = '';
+  function shownUpTo(n) {
+    const filter = `${state.view}|${state.family}|${[...state.hiddenTypes].join(',')}`;
+    if (filter !== shownFilter || n < shownTo) { shownFilter = filter; shownTo = 0; shownCount = 0; }
+    for (let i = shownTo; i < n; i++) if (inFamily(i) && typeShown(i)) shownCount++;
+    shownTo = n;
+    return shownCount;
+  }
+  let lastFrameKey = '';
+  function frameKey(now) {
+    const flashDays = 0.4 / state.secPerYear * YEAR, upTo = upperBound(D, state.playhead + 1e-9);
+    const raining = state.playhead < TIME_END && upperBound(D, state.playhead - flashDays) < upTo;
+    let glowing = false;
+    for (const t of eventFlash.values()) if (now - t < 1200) { glowing = true; break; }
+    const h = state.hover;
+    return `${Math.round(xOf(state.playhead, main, M) * 2)}|${upTo}|${raining || glowing ? now : 0}|${h ? `${h.point}/${h.event}/${h.lane}/${h.bin}` : ''}`;
+  }
+  function drawIfChanged(now = performance.now()) {
+    const key = frameKey(now);
+    if (key === lastFrameKey) { updateClockText(); return; }
+    lastFrameKey = key;
+    draw(now);
   }
 
   function drawHist() {
@@ -704,7 +752,7 @@ import { clockParts } from './DateText.js';
         requestAnimationFrame(() => requestAnimationFrame(() => pulse.classList.remove('on')));
       }
     } else if (reason === 'seek') eventFlash.clear();
-    draw();
+    drawIfChanged();
   });
 
   // ---- hover & scrub -------------------------------------------------------

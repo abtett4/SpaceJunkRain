@@ -11,11 +11,43 @@ const freeze = value => {
   if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); }
   return value;
 };
+const yieldToPage = () => globalThis.scheduler?.yield ? globalThis.scheduler.yield() : new Promise(resolve => {
+  if (typeof MessageChannel !== 'function') return setTimeout(resolve, 0);
+  const channel = new MessageChannel(); channel.port1.onmessage = () => { channel.port1.close(); resolve(); }; channel.port2.postMessage(0);
+});
+
+// Lookups into the timeline catalog, built once per catalog object: NORAD ID -> row, and the
+// rounded display times for range membership (binary search when the catalog is sorted).
+const timelineIndexes = new WeakMap();
+function timelineIndex(timeline) {
+  let index = timelineIndexes.get(timeline);
+  if (!index) {
+    const epoch = Date.parse(timeline.meta.epoch), d = timeline.cols.d;
+    const ms = Float64Array.from(d, v => Math.round(epoch + v * 86400000));
+    let sorted = true;
+    for (let i = 1; i < ms.length && sorted; i++) sorted = ms[i - 1] <= ms[i];
+    index = { row: new Map(timeline.cols.id.map((id, i) => [id, i])), ms, sorted };
+    timelineIndexes.set(timeline, index);
+  }
+  return index;
+}
+const lowerBound = (values, x) => { let lo = 0, hi = values.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (values[mid] < x) lo = mid + 1; else hi = mid; } return lo; };
+function idsBetween(timeline, start, end) {
+  const { ms, sorted } = timelineIndex(timeline), ids = timeline.cols.id;
+  if (!sorted) return ids.filter((id, i) => start <= ms[i] && ms[i] < end);
+  return ids.slice(lowerBound(ms, start), lowerBound(ms, end));
+}
+
 export async function loadSequence(manifest, timeline, fetchAsset) {
   if (manifest.schemaVersion !== 3 || !Array.isArray(manifest.events)
     || !manifest.events.length || manifest.events.length > 50) throw new Error('Unsupported event collection; rebuild with the current exporters.');
   const ids = new Set(), eventIds = new Set(), objectKinds = new Set();
-  const events = await Promise.all(manifest.events.map(async input => {
+  // Preparing 50 events with orbit loops takes tens of milliseconds; give the page a turn every
+  // ten events so a prefetch during playback never blocks a whole frame.
+  const gates = [Promise.resolve()];
+  for (let g = 1; g * 10 < manifest.events.length; g++) gates.push(gates[g - 1].then(yieldToPage));
+  const events = await Promise.all(manifest.events.map(async (input, k) => {
+    if (k >= 10) await gates[Math.floor(k / 10)];
     // Own an immutable copy. Rendering and settings never decorate the input records.
     const event = freeze(structuredClone(input)), nid = event.object.noradId, launch = event.eventKind === 'launch';
     if (event.schemaVersion !== 2 || event.presentation) throw new Error('Event records must contain evidence, not presentation settings.');
@@ -24,7 +56,7 @@ export async function loadSequence(manifest, timeline, fetchAsset) {
     if (eventIds.has(event.eventId) || objectKinds.has(`${nid}:${event.eventKind}`)) throw new Error('Duplicate object/event kind in collection.');
     eventIds.add(event.eventId); objectKinds.add(`${nid}:${event.eventKind}`);
     if (!launch) ids.add(nid);
-    const index = timeline.cols.id.indexOf(nid), endMs = displayAnchor(event);
+    const index = timelineIndex(timeline).row.get(nid) ?? -1, endMs = displayAnchor(event);
     const timelineMs = Date.parse(timeline.meta.epoch) + timeline.cols.d[index] * 86400000;
     const [lower, upper] = event.eventTime.intervalUtc.map(Date.parse), day = Date.parse(`${event.eventTime.date}T00:00:00Z`);
     if (index < 0 || !Number.isFinite(endMs) || !Number.isFinite(day) || !Number.isFinite(lower) || !Number.isFinite(upper)
@@ -94,7 +126,7 @@ export async function loadSequence(manifest, timeline, fetchAsset) {
   if (sample) {
     const [start,end]=sample.intervalUtc.map(Date.parse);
     // Catalog fractional days can drift below an exact split by a fraction of a millisecond.
-    const expected=timeline.cols.id.filter((id,i)=> { const t=Math.round(Date.parse(timeline.meta.epoch)+timeline.cols.d[i]*86400000); return start<=t && t<end; });
+    const expected=idsBetween(timeline,start,end);
     if (!Number.isFinite(start) || !Number.isFinite(end) || start>=end || end-start>31*86400000
       || sample.eventCount!==events.length || sample.reentryCount !== undefined && sample.reentryCount !== ids.size
       || sample.selectedLaunchCount !== undefined && sample.selectedLaunchCount !== events.length-ids.size

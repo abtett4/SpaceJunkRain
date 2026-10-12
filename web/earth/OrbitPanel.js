@@ -52,7 +52,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
   let prefetched = null, transitioning = false, continuationStart = null;
   const PASSAGE_RATE = DEFAULT_PLAYBACK_RATE;
   let scene, unsubscribeSettings, unsubscribe, sequence, settings = presentation.values, selected = null, pinned = null, revision = 0;
-  let nowSignature = '', hasStarted = false, failed = false, stripYear = null;
+  let nowSignature = '', hasStarted = false, failed = false, stripYear = null, lastPanelMs = -Infinity;
   const listeners = new AbortController();
   const tooFast = () => clock.rate > GLOBE_MAX_RATE;
   const playRate = () => tooFast() ? PASSAGE_RATE : clock.rate;
@@ -73,8 +73,9 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
   };
   // Every orbital launch attempt (GCAT), for the strip's launch lane.
   let launchIndex = null;
-  const launchesReady = fetch(new URL('data/launches.json', document.baseURI), { cache: 'no-cache' })
-    .then(r => r.ok ? r.json() : null).then(index => {
+  const early = name => window.SJR_PREFETCH?.[name]; // started by index.html before the modules loaded
+  const launchesReady = (early('data/launches.json') ?? fetch(new URL('data/launches.json', document.baseURI), { cache: 'no-cache' })
+    .then(r => r.ok ? r.json() : null)).then(index => {
       if (!index) return;
       launchIndex = { ms: Float64Array.from(index.cols.t, t => EPOCH_MS + t * 1000), ...index };
       const src = launchIndex.source;
@@ -94,8 +95,13 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     const year = stripYear;
     return [Math.max(Date.UTC(year, 0, 1), clock.minMs), Math.min(Date.UTC(year + 1, 0, 1), clock.maxMs)];
   };
+  let stripKey = '';
   const refreshStrip = () => {
     const [startMs, endMs] = stripRange();
+    // In the full catalog the strip shows a whole year, so a new month in the same year changes nothing.
+    const key = historical() ? `year|${startMs}|${endMs}|${Boolean(launchIndex)}` : `example|${startMs}|${endMs}|${sequence?.events.length}|${picker.value}`;
+    if (key === stripKey) return;
+    stripKey = key;
     const launches = historical() ? launchMarks(startMs, endMs)
       : (sequence?.events ?? []).filter(s => s.event.eventKind === 'launch' && s.endMs >= startMs && s.endMs <= endMs)
         .map(s => ({ ms: s.endMs, lane: 'LAUNCH', kind: isFailedLaunch(s) ? 'failed' : 'launch', name: s.event.object.name, state: s }));
@@ -185,6 +191,10 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
       el('now-next').replaceChildren('Press Play to show this date on the globe.'); delete el('now-next').dataset.text;
       return;
     }
+    // The globe redraws every frame; the text beside it only needs about ten updates a second.
+    const t = performance.now();
+    if (playing && t - lastPanelMs < 100) return;
+    lastPanelMs = t;
     renderNow(sequenceAt(sequence, nowMs), nowMs);
   };
   const applySettings = values => {
@@ -282,7 +292,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
       let manifest, loaded;
       if (isHistory) {
         if (!historyIndex) {
-          const index = validateHistoryIndex(await fetchJson(manifestUrl, controller.signal));
+          const index = validateHistoryIndex(await (early(HISTORY)?.catch(() => fetchJson(manifestUrl, controller.signal)) ?? fetchJson(manifestUrl, controller.signal)));
           if (ticket !== revision) return;
           historyIndex = index;
           text('history-coverage', `Coverage: ${index.reentryCount.toLocaleString()} catalog reentries from ${index.chunks[0].id.slice(0,4)} to ${index.chunks.at(-1).id.slice(0,4)}, plus one curated launch. Limited to the supplied catalog snapshot; launch coverage is not complete.`);

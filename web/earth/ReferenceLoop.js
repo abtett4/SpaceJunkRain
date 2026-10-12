@@ -21,7 +21,8 @@ export function referenceLoop({ perigeeKm: low, apogeeKm: high, inclinationDeg: 
   const trace = new Array(SAMPLES + 1);
   for (let k = 0; k < SAMPLES; k++) {
     const mean = (phase + 2 * Math.PI * k / SAMPLES) % (2 * Math.PI);
-    let E = e < 0.8 ? mean : Math.PI;
+    // A standard starter (M + e sin M) converges in a few steps to the same root the Python uses.
+    let E = e < 0.8 ? mean + e * Math.sin(mean) : Math.PI;
     for (let n = 0; n < 30; n++) {
       const change = (E - e * Math.sin(E) - mean) / (1 - e * Math.cos(E));
       E -= change;

@@ -1,5 +1,7 @@
 import { DEFAULTS, STYLE } from '../PresentationConfig.js';
 import P5 from '../vendor/p5.esm.min.js';
+// The friendly-error checks validate every drawing call; they cost several percent per frame.
+P5.disableFriendlyErrors = true;
 import { Tracer } from './Tracer.js';
 import { CameraController } from './CameraController.js';
 import { earthState, earthRotation } from './EarthOrientation.js';
