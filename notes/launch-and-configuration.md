@@ -96,7 +96,7 @@ selection and data filters retain their existing controls. Color has no picker: 
 It can later derive color from other sourced attributes. The decorative atmosphere is separate from the
 solar collaborator's eventual data-driven overlay.
 
-Defaults: four-hour launch/reentry windows; five-minute trail history; pulses up to four
+Defaults: four-hour launch/reentry windows; 22-minute trail history (five minutes before 2026-10-12); full orbit paths off; pulses up to four
 hours; width and marker scale 3×. A pulse's full fade fits inside the shorter of its own
 duration and the event window. Reference-orbit history remains at most one revolution;
 Tiangong's SGP4 samples are never stretched. The source epoch and event anchors never move

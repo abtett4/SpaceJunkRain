@@ -64,11 +64,11 @@ test('sample preferences have their own defaults and never replace single-event 
   const original = values.get(SETTINGS_KEY);
   const opts = { key: SAMPLE_SETTINGS_KEY, defaults: { reentryLeadSeconds: DEFAULTS.reentryLeadSeconds, trailSeconds: DEFAULTS.trailSeconds } };
   assert.equal(readSettings(storage, 172800, opts).reentryLeadSeconds, 14400);
-  assert.equal(readSettings(storage, 172800, opts).trailSeconds, 300);
+  assert.equal(readSettings(storage, 172800, opts).trailSeconds, DEFAULTS.trailSeconds);
   writeSettings(storage, { ...settings, reentryLeadSeconds: 43200 }, false, SAMPLE_SETTINGS_KEY);
   assert.equal(readSettings(storage, 172800, opts).reentryLeadSeconds, 43200);
   writeSettings(storage, settings, true, SAMPLE_SETTINGS_KEY);
   assert.equal(readSettings(storage, 172800, opts).reentryLeadSeconds, 14400);
-  assert.equal(readSettings(storage, 172800, opts).trailSeconds, 300);
+  assert.equal(readSettings(storage, 172800, opts).trailSeconds, DEFAULTS.trailSeconds);
   assert.equal(values.get(SETTINGS_KEY), original);
 });

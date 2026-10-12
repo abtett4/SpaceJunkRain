@@ -20,7 +20,7 @@ export const CONFIG_FIELDS = Object.freeze([
   Object.freeze({ key: 'skipQuietIntervals', group: 'Playback', label: 'Skip quiet intervals', value: true, kind: 'boolean', help: 'During passage playback, jump over gaps between configured event windows. Turn off to preserve elapsed historical time.' }),
   field('reentryLeadSeconds', 'Event windows', 'Before each reentry', 14400, 30, 172800, 30, 'seconds'),
   field('launchFollowSeconds', 'Event windows', 'After each launch', 14400, 30, 172800, 30, 'seconds'),
-  field('trailSeconds', 'Event windows', 'Visible trail history', 300, 0, 7200, 30, 'seconds', 'Zero shows the head only. Reference trails show at most one revolution.'),
+  field('trailSeconds', 'Event windows', 'Visible trail history', 1320, 0, 7200, 30, 'seconds', 'Zero shows the head only. Reference trails show at most one revolution.'),
   field('pulseSeconds', 'Event windows', 'Surface pulse duration', 14400, 30, 14400, 30, 'seconds', 'Display time, shortened to fit the event window. Launch-pad pulses also fit within the illustrative ascent. Four simulated hours last about 1.3 seconds at the default playback speed.'),
   field('widthScale', 'Tracers & pulses', 'Trail width', 3, 0.5, 3, 0.25, 'scale'),
   field('markerScale', 'Tracers & pulses', 'Marker & pulse size', 3, 0.5, 3, 0.25, 'scale'),
@@ -28,7 +28,7 @@ export const CONFIG_FIELDS = Object.freeze([
   field('widthTaper', 'Tracers & pulses', 'Width taper', 1, 0, 4, 0.25, 'number', 'Zero gives uniform width; higher values narrow more of the trail.'),
   field('opacityTaper', 'Tracers & pulses', 'Fade toward tail', 2, 0, 4, 0.25, 'number', 'Zero gives uniform opacity; higher values fade more of the trail.'),
   field('pulseOpacity', 'Tracers & pulses', 'Pulse opacity', 1, 0, 1, 0.05, 'percent'),
-  Object.freeze({ key: 'showOrbitPaths', group: 'Tracers & pulses', label: 'Show each full orbit faintly', value: true, kind: 'boolean', help: 'Helps when zoomed out to high orbits. The path’s orientation is illustrative, like the tracer.' }),
+  Object.freeze({ key: 'showOrbitPaths', group: 'Tracers & pulses', label: 'Show each full orbit faintly', value: false, kind: 'boolean', help: 'Helps when zoomed out to high orbits. The path’s orientation is illustrative, like the tracer.' }),
   // What the globe and strip show. These have their own controls beside the strip.
   ...[['showLaunches', 'Launches'], ['showPayloads', 'Payloads'], ['showRocketBodies', 'Rocket bodies'], ['showDebris', 'Debris'], ['showUnknown', 'Unknown']]
     .map(([key, label]) => Object.freeze({ key, group: 'Show', label, value: true, kind: 'boolean' })),
