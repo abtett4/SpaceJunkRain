@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap">
-<link rel="stylesheet" href="style.css?v=20261011-orbital-ui">
+<link rel="stylesheet" href="style.css?v=20261012-gcat5">
 </head>
 <body>
 <main class="viz-root">
@@ -27,6 +27,36 @@
     <div class="tile"><span class="label">Busiest month</span><span class="value" id="t-peak">–</span><span class="foot" id="t-peak-foot"></span></div>
   </section>
 
+  <section class="sources" id="data-sources" aria-labelledby="sources-title">
+    <h2 id="sources-title">Data sources</h2>
+    <div class="source-grid">
+      <article>
+        <p class="source-what">Reentries and catalogued objects</p>
+        <p class="source-name"><a href="https://www.space-track.org">USSPACECOM via Space-Track.org</a></p>
+        <p>Satellite catalog (SATCAT) and historical decay messages: every catalogued object that has come down, with its day, type, size and launch. Retrieved <span id="src-satcat-date">–</span>.</p>
+        <p class="source-terms">Redistribution approved with citation</p>
+      </article>
+      <article>
+        <p class="source-what">Launches</p>
+        <p class="source-name"><a href="https://planet4589.org/space/gcat/">GCAT · Jonathan McDowell</a></p>
+        <p>Every orbital launch attempt since 1957 (<span id="src-launch-count">–</span>, of which <span id="src-launch-failed">–</span> failed): time, vehicle, outcome and launch-pad coordinates. Updated <span id="src-gcat-date">–</span>.</p>
+        <p class="source-terms">CC BY 4.0 · cite “J. McDowell, planet4589.org”</p>
+      </article>
+      <article>
+        <p class="source-what">Orbits</p>
+        <p class="source-name"><a href="https://www.space-track.org">USSPACECOM via Space-Track.org</a></p>
+        <p>General-perturbations element history for the few objects drawn with an orbit (Tiangong-1, six April 2018 reentries, Dragon CRS-14). Everything else is a ring.</p>
+        <p class="source-terms">Same terms as the catalog</p>
+      </article>
+      <article>
+        <p class="source-what">Earth</p>
+        <p class="source-name"><a href="https://visibleearth.nasa.gov/images/74218/december-blue-marble-next-generation">NASA Blue Marble &amp; Black Marble</a></p>
+        <p>Day imagery (December 2004 mosaic) and city lights (2016 composite). Fixed images, not the weather or lights on the date shown.</p>
+        <p class="source-terms"><a href="assets/earth/README.md">Imagery credits</a></p>
+      </article>
+    </div>
+  </section>
+
   <div class="orbit-heading">
     <h2 id="orbit-title">Every reentry, on the globe</h2>
     <p id="orbit-name">Press Play to watch each object come down on its reentry day.</p>
@@ -40,6 +70,11 @@
       <span class="clock-rest"><span id="clock-day" class="clock-day"></span><span id="clock-time" class="clock-time"></span></span>
     </p>
     <p class="clock-count"><span id="now-count"></span><span class="clock-count-label">objects down so far</span></p>
+    <span class="transport-right">
+    <span class="has-tip">
+      <label class="toggle"><input type="checkbox" id="skip-quiet" aria-describedby="skip-quiet-tip"> Skip quiet intervals</label>
+      <span class="tip" id="skip-quiet-tip" role="tooltip">Jump straight from one event to the next instead of playing through the empty hours between them. Turn off to keep real elapsed time.</span>
+    </span>
     <label class="speed">Speed
       <select id="speed">
         <optgroup label="Globe and charts">
@@ -54,6 +89,7 @@
           <option value="1">1 s / year</option>
         </optgroup>
       </select></label>
+    </span>
   </div>
 
   <section class="orbit-panel" aria-labelledby="orbit-title">
@@ -64,19 +100,32 @@
         <p id="globe-speed-note" class="globe-overlay" hidden>The globe waits at year-scale speeds. Choose an hour-scale speed to watch it.</p>
       </div>
       <div class="orbit-side">
-        <div class="now-box">
-          <p class="box-title">Coming down now</p>
-          <ul id="now-list" aria-label="Events in progress"></ul>
-          <p id="now-next" class="now-next"></p>
+        <div class="side-tabs" role="tablist" aria-label="Beside the globe">
+          <button type="button" role="tab" id="tab-now" aria-controls="panel-now" aria-selected="true">Now</button>
+          <button type="button" role="tab" id="tab-appearance" aria-controls="panel-appearance" aria-selected="false" tabindex="-1">Appearance</button>
         </div>
-        <div class="event-card" id="event-card" hidden>
-          <p class="box-title" id="sel-label">Selected</p>
-          <p class="sel-name" id="sel-name"></p>
-          <p class="sel-kind" id="sel-kind"></p>
-          <p class="sel-date" id="sel-date"></p>
-          <p class="sel-note" id="sel-time-note"></p>
-          <p class="sel-shown" id="sel-shown"></p>
-          <p class="sel-source"><a id="sel-source" href="data/tracers.json">Source data</a></p>
+        <div class="side-panel" id="panel-now" role="tabpanel" aria-labelledby="tab-now">
+          <div class="now-box">
+            <p class="box-title">Coming down now</p>
+            <ul id="now-list" aria-label="Events in progress"></ul>
+            <p id="now-next" class="now-next"></p>
+          </div>
+          <div class="event-card" id="event-card" hidden>
+            <p class="box-title" id="sel-label">Selected</p>
+            <p class="sel-name" id="sel-name"></p>
+            <p class="sel-kind" id="sel-kind"></p>
+            <p class="sel-date" id="sel-date"></p>
+            <p class="sel-note" id="sel-time-note"></p>
+            <p class="sel-shown" id="sel-shown"></p>
+            <p class="sel-source"><a id="sel-source" href="data/tracers.json">Source data</a></p>
+          </div>
+        </div>
+        <div class="side-panel tracer-config" id="panel-appearance" role="tabpanel" aria-labelledby="tab-appearance" hidden>
+          <div id="config-fields"></div>
+          <div class="config-notes">
+            <p id="tracer-window-limit" class="note">Settings apply to all previews and newly loaded events. Source limits can shorten a window.</p>
+            <p class="note">Colors follow event kind: cyan launches, small red failed launches and amber reentries. Marker sizes and pulses are exaggerated for visibility.</p>
+          </div>
         </div>
       </div>
     </div>
@@ -92,29 +141,21 @@
       <li><span class="key-trace" aria-hidden="true"></span>Reentry with orbital data · reference orbit</li>
       <li><span class="key-ring" aria-hidden="true"></span>Reentry without orbital data · ring</li>
       <li><span class="key-ring key-launch" aria-hidden="true"></span>Launch</li>
+      <li><span class="key-ring key-failed" aria-hidden="true"></span>Failed launch</li>
       <li class="legend-note">Paths, ring positions and marker sizes are illustrative.</li>
     </ul>
 
     <div class="orbit-more">
-      <details id="event-playback-log" hidden>
+      <details id="event-playback-log">
         <summary>Events reached during playback · <span data-event-count>0</span></summary>
         <p data-event-status role="status" aria-live="polite">No events reached in playback yet.</p>
         <ol aria-label="Five most recent events reached during playback"></ol>
         <p class="note">Only events in the loaded month are listed. Scrubbing or changing months clears this list without triggering events. Sound is not enabled yet.</p>
       </details>
-      <details class="tracer-config" id="tracer-config">
-        <summary>Settings · appearance and event windows</summary>
-        <div id="config-fields"></div>
-        <div class="config-notes">
-          <p id="tracer-window-limit" class="note">Settings apply to all previews and newly loaded events. Source limits can shorten a window.</p>
-          <p class="note">Colors follow event kind: cyan launches and amber reentries. Marker sizes and pulses are exaggerated for visibility.</p>
-          <p class="note">Changing settings keeps the clock in place. Default speed is 3 simulated hours per second.</p>
-        </div>
-      </details>
       <details id="orbit-about">
         <summary>About this view · evidence and limits</summary>
-        <p class="note"><strong>What the marks mean.</strong> An amber trace follows a reference orbit built from the object’s real inclination and perigee/apogee; its direction and phase are illustrative, and it does not model the descent or claim a reentry location. Tiangong-1 at short windows replays its last known orbit (SGP4). A ring marks an object with no usable orbital history, at a stable random point on the globe chosen evenly by area — not a reentry location. The one curated launch (Dragon CRS-14, April 2018) starts at its sourced pad; the ascent arc is illustrative, not a flight reconstruction.</p>
-        <p class="note"><strong>Times.</strong> Most decay records give only the day. Those objects get a stable, randomly assigned time within that UTC day; it is an animation anchor, not an estimated reentry time. Launch times keep their reported minute.</p>
+        <p class="note"><strong>What the marks mean.</strong> An amber trace follows a reference orbit built from the object’s real inclination and perigee/apogee; its direction and phase are illustrative, and it does not model the descent or claim a reentry location. Tiangong-1 at short windows replays its last known orbit (SGP4). A ring marks an object with no usable orbital history, at a stable random point on the globe chosen evenly by area — not a reentry location. Launches are every orbital launch attempt in GCAT, shown as a ring at the launch pad (or at the launch site when GCAT has no pad coordinates); failed attempts are smaller and red. Dragon CRS-14 (April 2018) additionally has an illustrative ascent arc into its first recorded orbit; it is not a flight reconstruction.</p>
+        <p class="note"><strong>Times.</strong> Most decay records give only the day. Those objects get a stable, randomly assigned time within that UTC day; it is an animation anchor, not an estimated reentry time. Launch times keep GCAT’s precision, usually to the minute or second; the few given only to the day get an assigned time the same way.</p>
         <p id="quiet-playback-note" class="note">Quiet intervals skipped by default.</p>
         <p id="history-coverage" class="note"></p>
         <p class="note">The globe loads one month at a time (dense months in parts of at most 50 events) and continues automatically through months and years. Event windows are clipped at those boundaries. At year-scale speeds the globe waits and only the charts animate.</p>
@@ -186,6 +227,7 @@
     <ul>
       <li>Decay dates come from the SATCAT and Space-Track's historical decay messages, which record each one to the day only. Each dot sits on its reported day. When only the date is known, a reproducible random time within that UTC day drives the timeline and orbit replay; it is not an estimated reentry time. Within a row, dots are spread up and down only so they don't overlap.</li>
       <li>A "source" is everything from one launch (its international designator, e.g. 1999-025). Debris usually keeps its parent's designator, so a breakup shows up as a burst within one source.</li>
+      <li>Launches are every orbital launch attempt in J. McDowell's GCAT (planet4589.org, CC BY 4.0), placed at the launch pad GCAT gives, or at the launch site when it gives no pad.</li>
       <li>"Still in orbit" counts every tracked object, working satellites included. Only tracked objects appear here, roughly softball-sized and up in low orbit. Collision dates and altitudes are hand-curated.</li>
     </ul>
     <p class="credit-small">Builds on <em>Space Junk Rain</em> (2019), a SuperCollider sonification by Gerald Robinson and Alan Tett for ATLS 4519. Design after Edward Tufte, <em>The Visual Display of Quantitative Information</em>.</p>
@@ -197,26 +239,26 @@
 <script type="importmap">
 {
   "imports": {
-    "./DateText.js": "./DateText.js?v=20261011-orbital-ui",
-    "./earth/EventStrip.js": "./earth/EventStrip.js?v=20261011-orbital-ui",
-    "./SimulationClock.js": "./SimulationClock.js?v=20261011-orbital-ui",
-    "./OrbitalEventFeed.js": "./OrbitalEventFeed.js?v=20261011-orbital-ui",
-    "./EventPlaybackLog.js": "./EventPlaybackLog.js?v=20261011-orbital-ui",
-    "./DisplayPolicy.js": "./DisplayPolicy.js?v=20261011-orbital-ui",
-    "./earth/LaunchTracer.js": "./earth/LaunchTracer.js?v=20261011-orbital-ui",
-    "./PresentationConfig.js": "./PresentationConfig.js?v=20261011-orbital-ui",
-    "./ConfigurationPanel.js": "./ConfigurationPanel.js?v=20261011-orbital-ui",
-    "./earth/OrbitPanel.js": "./earth/OrbitPanel.js?v=20261011-orbital-ui",
-    "./earth/HistoryChunks.js": "./earth/HistoryChunks.js?v=20261011-orbital-ui",
-    "./earth/EventSequence.js": "./earth/EventSequence.js?v=20261011-orbital-ui",
-    "./earth/Tracer.js": "./earth/Tracer.js?v=20261011-orbital-ui",
-    "./earth/SurfacePulse.js": "./earth/SurfacePulse.js?v=20261011-orbital-ui",
-    "./earth/TracerControls.js": "./earth/TracerControls.js?v=20261011-orbital-ui",
-    "./earth/EarthScene.js": "./earth/EarthScene.js?v=20261011-orbital-ui",
-    "./earth/EarthShader.js": "./earth/EarthShader.js?v=20261011-orbital-ui"
+    "./DateText.js": "./DateText.js?v=20261012-gcat5",
+    "./earth/EventStrip.js": "./earth/EventStrip.js?v=20261012-gcat5",
+    "./SimulationClock.js": "./SimulationClock.js?v=20261012-gcat5",
+    "./OrbitalEventFeed.js": "./OrbitalEventFeed.js?v=20261012-gcat5",
+    "./EventPlaybackLog.js": "./EventPlaybackLog.js?v=20261012-gcat5",
+    "./DisplayPolicy.js": "./DisplayPolicy.js?v=20261012-gcat5",
+    "./earth/LaunchTracer.js": "./earth/LaunchTracer.js?v=20261012-gcat5",
+    "./PresentationConfig.js": "./PresentationConfig.js?v=20261012-gcat5",
+    "./ConfigurationPanel.js": "./ConfigurationPanel.js?v=20261012-gcat5",
+    "./earth/OrbitPanel.js": "./earth/OrbitPanel.js?v=20261012-gcat5",
+    "./earth/HistoryChunks.js": "./earth/HistoryChunks.js?v=20261012-gcat5",
+    "./earth/EventSequence.js": "./earth/EventSequence.js?v=20261012-gcat5",
+    "./earth/Tracer.js": "./earth/Tracer.js?v=20261012-gcat5",
+    "./earth/SurfacePulse.js": "./earth/SurfacePulse.js?v=20261012-gcat5",
+    "./earth/TracerControls.js": "./earth/TracerControls.js?v=20261012-gcat5",
+    "./earth/EarthScene.js": "./earth/EarthScene.js?v=20261012-gcat5",
+    "./earth/EarthShader.js": "./earth/EarthShader.js?v=20261012-gcat5"
   }
 }
 </script>
-<script type="module" src="app.js?v=20261011-orbital-ui"></script>
+<script type="module" src="app.js?v=20261012-gcat5"></script>
 </body>
 </html>

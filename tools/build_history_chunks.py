@@ -1,6 +1,7 @@
 """Build bounded monthly passages from the local catalog; no downloads or invented orbits.
 
-The pilot is 2018; --all-history exports the complete catalog in compressed passages.
+The pilot is 2018; --all-history exports the complete catalog in compressed passages, plus
+every orbital launch attempt from the latest GCAT snapshot (tools/fetch_gcat.py).
 Dense months are split without dividing simultaneous anchors. Existing evidence is reused.
 """
 import argparse
@@ -15,9 +16,10 @@ from pathlib import Path
 from build_tracers import ROOT, build_fallback_manifest, stamp
 from event_time import EPOCH, iso, display_anchor
 from mixed_sample import encoded
+from gcat_launches import launch_event, load as load_gcat, source_record
 
 
-def build_chunks(catalog_path, enriched_path, output, year=2018, extra_paths=()):
+def build_chunks(catalog_path, enriched_path, output, year=2018, extra_paths=(), launches=(), launch_source=None):
     raw = catalog_path.read_bytes()
     catalog = json.loads(raw)
     enriched = json.loads(enriched_path.read_text())
@@ -55,8 +57,13 @@ def build_chunks(catalog_path, enriched_path, output, year=2018, extra_paths=())
                 event, _ = build_fallback_manifest(nid, [], {**catalog, 'cols': {k: [v[i]] for k,v in catalog['cols'].items()}}, {'catalog': source,
                     'gpHistory': {'status': 'not-queried', 'note': 'Orbital history not fetched for this historical passage.'}})
             events.append(event)
-        events.extend(copy.deepcopy(e) for e in evidence.values() if e['eventKind'] == 'launch'
-                      and start <= stamp(e['eventTime']['intervalUtc'][0]) < end)
+        curated = [copy.deepcopy(e) for e in evidence.values() if e['eventKind'] == 'launch'
+                   and start <= stamp(e['eventTime']['intervalUtc'][0]) < end]
+        events.extend(curated)
+        # GCAT launches, except where a hand-curated record already covers that launch.
+        families = {e['object']['launchFamily'] for e in curated}
+        events.extend(launch_event(l, launch_source) for l in launches
+                      if start <= l['start'] < end and l['tag'] not in families)
         if not events:
             continue
         for event in events:
@@ -93,14 +100,18 @@ def build_chunks(catalog_path, enriched_path, output, year=2018, extra_paths=())
             sample = {'id': key, 'title': f'{start.strftime("%B %Y")} · historical passage' + (f' · part {part+1}/{len(groups)}' if len(groups)>1 else ''),
                       'intervalUtc': [iso(part_start), iso(part_end)], 'eventCount': len(events),
                       'reentryCount': len(reentries), 'selectedLaunchCount': len(events)-len(reentries),
+                      'launchCount': len(events)-len(reentries),
+                      'failedLaunchCount': sum(e['attributes'].get('launchOutcome', {}).get('value') == 'failure' for e in events),
                       'playbackRate': 7200, 'coverage': coverage,
                       'objectTypes': {k: sum(e['attributes']['objectType']['value'] == k for e in reentries)
                                       for k in catalog['meta']['types']},
-                      'selection': ('All catalog reentries in this interval; only already curated launches. Orbital coverage is partial.' if len(groups)>1 else 'All catalog reentries in this month; only already curated launches. Orbital coverage is partial.')}
+                      'selection': ('All catalog reentries in this ' + ('interval' if len(groups)>1 else 'month') + '; '
+                                    + ('every GCAT orbital launch attempt' if launches else 'only already curated launches') + '. Orbital coverage is partial.')}
             payload = encoded({'schemaVersion': 3, 'sample': sample, 'events': events})
             files[f'{key}.json'] = payload
             chunks.append({'id': key, 'asset': f'{key}.json', 'intervalUtc': sample['intervalUtc'],
                            'eventCount': len(events), 'reentryCount': len(reentries),
+                           'launchCount': sample['launchCount'], 'failedLaunchCount': sample['failedLaunchCount'],
                            'bytes': len(payload), 'sha256': hashlib.sha256(payload).hexdigest()})
     if not chunks:
         raise ValueError('No catalog events in the selected year.')
@@ -111,13 +122,18 @@ def build_chunks(catalog_path, enriched_path, output, year=2018, extra_paths=())
     return files
 
 
-def build_full_history(catalog_path, enriched_path, output):
+def build_full_history(catalog_path, enriched_path, output, gcat_snapshot=None):
     catalog = json.loads(catalog_path.read_text())
-    years = sorted({(EPOCH+dt.timedelta(days=d)).year for d in catalog['cols']['d']})
+    launches, meta = load_gcat(gcat_snapshot)
+    end = EPOCH + dt.timedelta(days=max(catalog['cols']['d']) + 1)
+    launches = [l for l in launches if EPOCH <= l['start'] < max(end, dt.datetime.now(dt.timezone.utc))]
+    source = source_record(meta)
+    years = sorted({(EPOCH+dt.timedelta(days=d)).year for d in catalog['cols']['d']} | {l['start'].year for l in launches})
     files, chunks = {}, []
     for year in years:
         yearly = build_chunks(catalog_path,enriched_path,output,year,
-            extra_paths=[catalog_path.parent/'fallbacks/stale/tracers.json'])
+            extra_paths=[catalog_path.parent/'fallbacks/stale/tracers.json'],
+            launches=[l for l in launches if l['start'].year == year], launch_source=source)
         index = json.loads(yearly.pop('index.json'))
         for chunk in index['chunks']:
             original = yearly[chunk['asset']]
@@ -129,7 +145,9 @@ def build_full_history(catalog_path, enriched_path, output):
     files['index.json'] = encoded({'schemaVersion':1,'kind':'monthly-event-index','year':None,
         'catalog':index['catalog'],'defaultChunk':'2018-04','chunks':chunks,
         'reentryCount':sum(c['reentryCount'] for c in chunks),'eventCount':sum(c['eventCount'] for c in chunks),
-        'scope':'All reentries in the supplied catalog; curated launches only. One bounded passage loaded at a time.'})
+        'launchCount':sum(c['launchCount'] for c in chunks),'failedLaunchCount':sum(c['failedLaunchCount'] for c in chunks),
+        'launchSource':source,
+        'scope':'All reentries in the supplied catalog and every GCAT orbital launch attempt. One bounded passage loaded at a time.'})
     return files
 
 
@@ -140,9 +158,10 @@ def main():
     parser.add_argument('--catalog', type=Path, default=ROOT/'web/data/decays.json')
     parser.add_argument('--enriched', type=Path, default=ROOT/'web/data/samples/april-2018-launch/tracers.json')
     parser.add_argument('--output', type=Path)
+    parser.add_argument('--gcat', type=Path, help='GCAT snapshot directory (default: latest in data/raw/gcat)')
     args = parser.parse_args()
     args.output = args.output or ROOT / 'web/data/history' / ('all' if args.all_history else str(args.year))
-    files = build_full_history(args.catalog,args.enriched,args.output) if args.all_history else build_chunks(args.catalog, args.enriched, args.output, args.year)
+    files = build_full_history(args.catalog,args.enriched,args.output,args.gcat) if args.all_history else build_chunks(args.catalog, args.enriched, args.output, args.year)
     args.output.mkdir(parents=True, exist_ok=True)
     for name, data in files.items():
         (args.output/name).write_bytes(data)

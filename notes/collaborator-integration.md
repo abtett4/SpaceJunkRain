@@ -26,6 +26,17 @@ required geometry. Starting another load clears it immediately. The feed current
 **only the selected preview**, not the complete historical catalog. Failed preview loads
 leave an empty feed rather than publishing stale events from the preceding collection.
 
+## Launch records (added 2026-10-12)
+
+Passages now include every GCAT orbital launch attempt, so launch crossings are far more
+common. The batch and record shapes are unchanged (`eventKind: 'launch'`, unique `eventId`,
+separate `displayTimeMs`). New for GCAT launch records: `object.noradId` is `null` (a launch is
+not a catalogued object; use `object.objectId`, the launch designator, e.g. `2018-022`),
+`attributes.launchOutcome.value` is `'success'` or `'failure'`, and `attributes.launchVehicle`,
+`attributes.agency` and `attributes.launchSite` (with `coordinates.precision` `'pad'` or
+`'site'`) are present. `sources.gcat` carries the citation and snapshot hash. The curated
+Dragon CRS-14 record is unchanged and still has its NORAD ID.
+
 ## Crossing contract
 
 A batch contains `reason`, `previousMs`, `nowMs`, `rate`, `playing`, `revision`,

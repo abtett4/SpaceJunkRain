@@ -4,7 +4,9 @@ export const DEFAULT_PLAYBACK_RATE = 3 * 60 * 60; // simulated seconds per real 
 import { readSettings, SETTINGS_KEY as LEGACY_SINGLE, SAMPLE_SETTINGS_KEY as LEGACY_SAMPLE } from './earth/TracerControls.js';
 export const CONFIG_KEY = 'sjr-presentation-v1';
 // Fixed event-kind palette; intentionally no color picker.
-export const EVENT_COLORS = Object.freeze({ launch: '#56dce8', reentry: '#ffd166' });
+export const EVENT_COLORS = Object.freeze({ launch: '#56dce8', reentry: '#ffd166', failedLaunch: '#ff4b1f' });
+// Failed launch attempts are drawn smaller, so they read as distinct from successes.
+export const FAILED_LAUNCH_SCALE = 0.6;
 export const STYLE = Object.freeze({ color: EVENT_COLORS.reentry, markerRadiusEarth: 0.012, lineWidthEarth: 0.008,
   background: '#081b2c', atmosphereRadius: 1.018, pulseExpansion: 7, pulseRingWidth: 0.22 });
 const field = (key, group, label, value, min, max, step, unit, help = '') =>

@@ -12,7 +12,8 @@ The page has two parts that run on one shared simulation clock:
    reentry day and the share already down shown on the right. **Time in orbit** plots decay date
    against lifespan on a log scale. A row appears for any launch with 150+ reentered debris
    pieces, plus every launch linked in `data/events.json`.
-2. **Orbital view.** A textured 3D Earth replays reentries (amber) and one sourced launch (cyan)
+2. **Orbital view.** A textured 3D Earth replays reentries (amber) and every orbital launch attempt
+   since 1957 from GCAT (cyan; failed attempts small and red)
    as tracers or surface pulses. By default it steps through the **full historical catalog**:
    35,692 reentries in 1,132 passages (1957–2026), each passage at most 50 events, at three
    simulated hours per second, skipping quiet gaps.
@@ -44,7 +45,8 @@ Every orbital mark says what kind of evidence is behind it:
 | **SGP4 replay** | Tiangong-1 (NORAD 37820), event windows ≤ 2 h | Last-known orbital estimate from prepared element sets. Not an observed descent or impact path. |
 | **Reference loop** | An object with a usable reference orbit | Real inclination and perigee/apogee. Node, periapsis direction and phase are illustrative. No drag or descent is modelled. |
 | **Surface pulse** | No usable orbital history | A stable, randomly chosen display point (uniform over the sphere). Not a reentry location. |
-| **Launch** (cyan) | Dragon CRS-14, the one curated launch | Sourced pad and minute. The ascent arc into a reference orbit is illustrative. |
+| **Launch** (cyan) | Every GCAT orbital launch attempt (7,191) | A ring at the GCAT launch pad (7,108) or launch site (83), at GCAT's time (usually to the minute or second). Dragon CRS-14 also has an illustrative ascent arc. |
+| **Failed launch** (small, red) | GCAT attempts that did not reach orbit (524) | Same placement as launches. |
 
 Date-only reentries get stable random display times within their reported UTC day. These are
 animation anchors, not estimated reentry times. Missing size, owner, mission, location and
@@ -114,6 +116,7 @@ python -m venv .venv
 | Full-catalog passages `web/data/history/all/` | `python3 tools/build_history_chunks.py --all-history` · [historical loading](notes/historical-loading.md) |
 | April 2018 sample | `python tools/build_tracers.py --sample data/samples/april-2018.json --output-dir web/data/samples/april-2018` |
 | Dragon CRS-14 launch | `tools/build_launch.py` · [launch and configuration](notes/launch-and-configuration.md#reproduce) |
+| GCAT launches `web/data/launches.json` (+ in the passages above) | `python tools/fetch_gcat.py` (snapshot in `data/raw/gcat/<date>/`), then `python tools/gcat_launches.py` and rebuild the passages |
 | Tiangong-1 and Iridium fallbacks | `tools/propagate.py`, `tools/build_tracers.py` · [orbital view reference](notes/orbital-reference.md) |
 | Geography `web/data/geography.json` (not used by the page since the place lookup was removed) | `tools/fetch_geography.py`, `tools/build_geography.py` · [credits](web/assets/earth/README.md) |
 
@@ -135,6 +138,15 @@ acquisition tests and skips the orbital ones.
 
 ## Data and citation
 
+The page lists every source in a **Data sources** section directly under the summary tiles.
+
+**Launches:** J. McDowell, *GCAT: General Catalog of Artificial Space Objects*,
+[planet4589.org](https://planet4589.org/space/gcat/), CC BY 4.0. `launch.tsv`, `lp.tsv` and
+`sites.tsv`; orbital attempts only (LaunchCode `OS`/`OF`). Pads resolve through GCAT's site
+renames (e.g. NIIP-5 → GIK-5); the record states whether a launch sits at its pad or its site.
+Keep this citation with `web/data/launches.json` and the history passages.
+
+**Reentries:** 
 Data: U.S. Space Command (USSPACECOM), via [Space-Track.org](https://www.space-track.org):
 satellite catalog (SATCAT) and satellite decay and reentry data. USSPACECOM gives blanket
 approval to redistribute this basic SSA data, and to publish analysis based on it, on condition

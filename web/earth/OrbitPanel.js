@@ -17,15 +17,18 @@ const EPOCH_MS = Date.UTC(1957, 0, 1), DAY_MS = 86400000;
 const LANES = [['LAUNCH', 'Launches'], ['PAYLOAD', 'Payloads'], ['ROCKET BODY', 'Rocket bodies'], ['DEBRIS', 'Debris'], ['UNKNOWN', 'Unknown']];
 const laneOf = s => s.event.eventKind === 'launch' ? 'LAUNCH' : s.event.attributes.objectType.value ?? 'UNKNOWN';
 const capital = t => t[0].toUpperCase() + t.slice(1);
+const isFailedLaunch = s => s.event.attributes.launchOutcome?.value === 'failure';
 const kindText = s => {
   const a = s.event.attributes;
-  if (s.event.eventKind === 'launch') return `Launch${a.launchSite?.name ? ` · ${a.launchSite.name}` : ''}`;
+  if (s.event.eventKind === 'launch') return `${isFailedLaunch(s) ? 'Failed launch' : 'Launch'}${a.launchVehicle?.value ? ` · ${a.launchVehicle.value}` : a.launchSite?.name ? ` · ${a.launchSite.name}` : ''}`;
   return `${capital((a.objectType.value ?? 'unknown object').toLowerCase())} reentry`;
 };
 const shownAs = s => {
   const orbit = s.event.attributes.orbitReference ?? s.event.attributes.orbitNearEvent, known = Number.isFinite;
+  const site = s.event.attributes.launchSite;
+  const at = site?.coordinates?.precision === 'site' ? 'launch site' : 'launch pad';
   const how = { propagated: 'Last known orbit, replayed', representative: 'Reference orbit, illustrative path', symbolic: 'Ring · no orbital data',
-    launch: s.launchTracer ? 'Illustrative ascent from the launch pad' : 'Ring at the launch site' }[s.mode];
+    launch: s.launchTracer ? 'Illustrative ascent from the launch pad' : `Ring at the ${at}${site?.place ? ` · ${site.place}` : ''}` }[s.mode];
   const facts = known(orbit?.inclinationDeg) && known(orbit?.perigeeKm) && known(orbit?.apogeeKm)
     ? ` · ${orbit.inclinationDeg.toFixed(1)}°, ${Math.round(orbit.perigeeKm)}–${Math.round(orbit.apogeeKm)} km` : '';
   return how + facts;
@@ -60,6 +63,24 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
       kind: 'reentry', name: timeline.names[timeline.cols.nm[i]], norad: timeline.cols.id[i] });
     return marks;
   };
+  // Every orbital launch attempt (GCAT), for the strip's launch lane.
+  let launchIndex = null;
+  const launchesReady = fetch(new URL('data/launches.json', document.baseURI), { cache: 'no-cache' })
+    .then(r => r.ok ? r.json() : null).then(index => {
+      if (!index) return;
+      launchIndex = { ms: Float64Array.from(index.cols.t, t => EPOCH_MS + t * 1000), ...index };
+      const src = launchIndex.source;
+      text('src-launch-count', launchIndex.count.toLocaleString());
+      text('src-launch-failed', launchIndex.failures.toLocaleString());
+      text('src-gcat-date', src.updated?.replace(/^Updated\s+/, '').replace(/\s+\S+$/, '') ?? src.retrievedAt.slice(0, 10));
+    }).catch(() => {});
+  const launchMarks = (startMs, endMs) => {
+    if (!launchIndex) return [];
+    const marks = [];
+    launchIndex.ms.forEach((ms, i) => { if (ms >= startMs && ms < endMs) marks.push({ ms, lane: 'LAUNCH',
+      kind: launchIndex.cols.ok[i] ? 'launch' : 'failed', name: launchIndex.cols.name[i] + (launchIndex.cols.ok[i] ? '' : ' (failed)'), tag: launchIndex.cols.tag[i] }); });
+    return marks;
+  };
   const stripRange = () => {
     if (!historical()) return range();
     const year = stripYear;
@@ -67,16 +88,16 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
   };
   const refreshStrip = () => {
     const [startMs, endMs] = stripRange();
-    const launches = (sequence?.events ?? []).filter(s => s.event.eventKind === 'launch' && s.endMs >= startMs && s.endMs <= endMs)
-      .map(s => ({ ms: s.endMs, lane: 'LAUNCH', kind: 'launch', name: s.event.object.name, state: s }));
+    const launches = historical() ? launchMarks(startMs, endMs)
+      : (sequence?.events ?? []).filter(s => s.event.eventKind === 'launch' && s.endMs >= startMs && s.endMs <= endMs)
+        .map(s => ({ ms: s.endMs, lane: 'LAUNCH', kind: isFailedLaunch(s) ? 'failed' : 'launch', name: s.event.object.name, state: s }));
     const marks = [...launches, ...catalogMarks(startMs, endMs)];
-    const year = String(stripYear);
-    const launchYear = historical() && historyIndex.chunks.some(c => c.id.startsWith(year) && c.eventCount > c.reentryCount);
-    const lanes = LANES.filter(([key]) => marks.some(m => m.lane === key) || (key === 'LAUNCH' && launchYear)).map(([key, label]) => ({ key, label }));
-    strip.set({ startMs, endMs, lanes, marks });
-    const reentries = marks.length - launches.length;
+    // A fixed set of lanes keeps the strip the same height from year to year.
+    strip.set({ startMs, endMs, lanes: LANES.map(([key, label]) => ({ key, label })), marks });
+    const reentries = marks.length - launches.length, fails = launches.filter(m => m.kind === 'failed').length;
+    const plural = (n, one, many) => `${n.toLocaleString()} ${n === 1 ? one : many}`;
     text('strip-summary', historical()
-      ? `${reentries.toLocaleString()} reentr${reentries === 1 ? 'y' : 'ies'} in ${year}`
+      ? `${plural(reentries, 'reentry', 'reentries')} · ${plural(launches.length, 'launch', 'launches')}${fails ? ` (${fails} failed)` : ''} in ${stripYear}`
       : shortDay(startMs) === shortDay(endMs) ? longDate(startMs) : `${shortDay(startMs)} to ${longDate(endMs)}`);
   };
 
@@ -108,7 +129,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     text('sel-date', `${longDate(s.endMs)} · ${time}`);
     text('sel-time-note', s.anchorBasis === 'illustrative' ? 'Day reported; time of day assigned for display' : '');
     text('sel-shown', shownAs(s));
-    text('sel-source', `NORAD ${s.event.object.noradId} · source data`);
+    text('sel-source', `${s.event.object.noradId ? `NORAD ${s.event.object.noradId}` : `GCAT ${s.event.object.objectId}`} · source data`);
   };
   const renderNow = (samples, nowMs) => {
     const active = samples.filter(v => v.sample).map(v => v.state);
@@ -121,7 +142,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
         button.innerHTML = '<span class="now-name"></span><span class="now-kind"></span>';
         button.children[0].textContent = s.event.object.name;
         button.children[1].textContent = kindText(s).replace(/ reentry$/, '');
-        button.className = s.event.eventKind;
+        button.className = `${s.event.eventKind}${isFailedLaunch(s) ? ' failed' : ''}`;
         button.addEventListener('click', () => jumpTo(s));
         li.append(button); return li;
       });
@@ -350,7 +371,8 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     },
     onPick: async mark => {
       if (mark.state) { jumpTo(mark.state); return; }
-      const find = () => sequence?.events.find(s => s.event.eventKind === 'reentry' && s.event.object.noradId === mark.norad);
+      const find = () => sequence?.events.find(s => mark.tag ? s.event.eventKind === 'launch' && s.event.object.launchFamily === mark.tag
+        : s.event.eventKind === 'reentry' && s.event.object.noradId === mark.norad);
       if (!find() && historical() && historyIndex) await loadAt(mark.ms);
       const s = find();
       if (s) jumpTo(s); else { clock.pause(); clock.seek(mark.ms); }
@@ -369,6 +391,23 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     if (state.reason === 'rate' && sequence && settings && scene) applySettings(settings);
   });
   pause.addEventListener('click', play, { signal: listeners.signal });
+  // Skip quiet intervals: a shared setting, surfaced in the playback bar.
+  const skip = el('skip-quiet');
+  const unsubscribeSkip = presentation.subscribe(values => { skip.checked = values.skipQuietIntervals; });
+  skip.addEventListener('change', () => presentation.update({ skipQuietIntervals: skip.checked }), { signal: listeners.signal });
+  // Now | Appearance tabs beside the globe, so appearance changes are visible as they are made.
+  const tabs = [['tab-now', 'panel-now'], ['tab-appearance', 'panel-appearance']];
+  const showTab = id => tabs.forEach(([tab, panel]) => {
+    const on = tab === id;
+    el(tab).setAttribute('aria-selected', String(on)); el(tab).tabIndex = on ? 0 : -1; el(panel).hidden = !on;
+  });
+  for (const [tab] of tabs) {
+    el(tab).addEventListener('click', () => showTab(tab), { signal: listeners.signal });
+    el(tab).addEventListener('keydown', e => {
+      if (!['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+      const other = tabs.find(([t]) => t !== tab)[0]; showTab(other); el(other).focus();
+    }, { signal: listeners.signal });
+  }
   const goYear = year => {
     if (!historyIndex || !historical()) return;
     chunkId = historyIndex.chunks.find(c => c.id.startsWith(year)).id; load();
@@ -413,8 +452,9 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     unsubscribeSettings = presentation.subscribe(applySettings);
     picker.addEventListener('change', () => load(), { signal: listeners.signal });
     window.addEventListener('pagehide', e => {
-      if (!e.persisted) { revision++; if (provenanceUrl) URL.revokeObjectURL(provenanceUrl); loadController?.abort(); prefetched?.controller.abort(); listeners.abort(); unsubscribePlayState(); strip.dispose(); disposeEventLog(); events.dispose(); clock.setPlaybackWindows(null); unsubscribeSettings?.(); unsubscribe(); scene.dispose(); }
+      if (!e.persisted) { revision++; if (provenanceUrl) URL.revokeObjectURL(provenanceUrl); loadController?.abort(); prefetched?.controller.abort(); listeners.abort(); unsubscribePlayState(); unsubscribeSkip(); strip.dispose(); disposeEventLog(); events.dispose(); clock.setPlaybackWindows(null); unsubscribeSettings?.(); unsubscribe(); scene.dispose(); }
     });
+    await launchesReady;
     await load();
     // Integration seam: collaborators receive the same clock, evidence feed, settings, and Earth host.
     return Object.freeze({ clock, events, settings: presentation,

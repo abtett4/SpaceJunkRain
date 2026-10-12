@@ -29,7 +29,7 @@ export function axisTicks(startMs, endMs) {
 }
 
 export class EventStrip {
-  // lanes: [{ key, label }]; marks: [{ ms, lane, kind: 'reentry' | 'launch', name }]
+  // lanes: [{ key, label }]; marks: [{ ms, lane, kind: 'reentry' | 'launch' | 'failed', name }]
   constructor(root, { onSeek, onPick }) {
     Object.assign(this, { root, onSeek, onPick });
     this.startMs = 0; this.endMs = 1; this.lanes = []; this.marks = []; this.nowMs = 0;
@@ -145,7 +145,7 @@ export class EventStrip {
     for (const t of axisTicks(this.startMs, this.endMs)) ctx.fillRect(Math.round(this.frac(t.ms) * w), 0, 1, h);
     ctx.fillStyle = css.getPropertyValue('--border').trim() || '#999';
     this.lanes.forEach((_, i) => ctx.fillRect(0, (i + 1) * LANE_H - 1, w, 1));
-    const ink = { reentry: css.getPropertyValue('--event-ink').trim(), launch: css.getPropertyValue('--launch-ink').trim() };
+    const ink = { reentry: css.getPropertyValue('--event-ink').trim(), launch: css.getPropertyValue('--launch-ink').trim(), failed: css.getPropertyValue('--fail-ink').trim() };
     ctx.globalAlpha = 0.8;
     for (const m of this.marks) {
       const lane = this.lanes.findIndex(l => l.key === m.lane);

@@ -1,8 +1,9 @@
 // Data-to-visualization boundary. Event records contain evidence, never these choices.
 // A different renderer can consume the same records and supply another resolver.
-import { DEFAULTS, STYLE, EVENT_COLORS } from './PresentationConfig.js';
+import { DEFAULTS, STYLE, EVENT_COLORS, FAILED_LAUNCH_SCALE } from './PresentationConfig.js';
 export const DISPLAY_LIMIT_SECONDS = 172800;
-export const eventAppearance = event => ({ color: EVENT_COLORS[event.eventKind] ?? STYLE.color });
+export const failedLaunch = event => event.eventKind === 'launch' && event.attributes?.launchOutcome?.value === 'failure';
+export const eventAppearance = event => ({ color: failedLaunch(event) ? EVENT_COLORS.failedLaunch : EVENT_COLORS[event.eventKind] ?? STYLE.color });
 export const selectMode = (seconds, propagatedSeconds, hasReference) =>
   propagatedSeconds && seconds <= propagatedSeconds ? 'propagated' : hasReference ? 'representative' : 'symbolic';
 
@@ -17,7 +18,7 @@ export function resolveVisualization(event, available, input) {
     tracer: launch ? (available.reference ? (available.launchSite ? 'launch' : 'representative') : null)
       : mode === 'propagated' ? 'propagated' : mode === 'representative' ? 'representative' : null,
     pulse: launch && available.launchSite ? 'site' : mode === 'symbolic' || launch && !available.reference ? 'symbolic' : null,
-    markerRadiusEarth: STYLE.markerRadiusEarth * settings.markerScale,
+    markerRadiusEarth: STYLE.markerRadiusEarth * settings.markerScale * (failedLaunch(event) ? FAILED_LAUNCH_SCALE : 1),
     lineWidthEarth: STYLE.lineWidthEarth * settings.widthScale,
     trailSeconds: settings.trailSeconds, opacity: settings.tracerOpacity,
     widthTaper: settings.widthTaper, opacityTaper: settings.opacityTaper,

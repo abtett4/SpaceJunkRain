@@ -18,6 +18,8 @@ export async function loadSequence(manifest, timeline, fetchAsset) {
     // Own an immutable copy. Rendering and settings never decorate the input records.
     const event = freeze(structuredClone(input)), nid = event.object.noradId, launch = event.eventKind === 'launch';
     if (event.schemaVersion !== 2 || event.presentation) throw new Error('Event records must contain evidence, not presentation settings.');
+    // GCAT launches are launch-level records (no catalogued object), validated on their own terms.
+    if (launch && event.sources?.gcat) return loadGcatLaunch(event, eventIds);
     if (eventIds.has(event.eventId) || objectKinds.has(`${nid}:${event.eventKind}`)) throw new Error('Duplicate object/event kind in collection.');
     eventIds.add(event.eventId); objectKinds.add(`${nid}:${event.eventKind}`);
     if (!launch) ids.add(nid);
@@ -81,7 +83,7 @@ export async function loadSequence(manifest, timeline, fetchAsset) {
       available,
       pulses,launchTracer,propagated:geometry ? makeTracer(geometry,false):null,representative };
   }));
-  events.sort((a,b)=>a.endMs-b.endMs || a.event.object.noradId-b.event.object.noradId);
+  events.sort((a,b)=>a.endMs-b.endMs || (a.event.object.noradId ?? 0)-(b.event.object.noradId ?? 0) || (a.event.eventId < b.event.eventId ? -1 : 1));
   const sample=manifest.sample ? freeze(structuredClone(manifest.sample)):null;
   if (events.length>1 && !sample) throw new Error('Multiple events require a bounded sample.');
   if (sample) {
@@ -95,6 +97,28 @@ export async function loadSequence(manifest, timeline, fetchAsset) {
       || sample.playbackRate!==7200) throw new Error('Sample interval, membership, or playback policy is invalid.');
   }
   return {events,sample,maxSeconds:Math.max(...events.map(s=>s.maxSeconds))};
+}
+
+// An orbital launch attempt from GCAT: a pulse at its sourced pad (or site), no orbit drawn.
+function loadGcatLaunch(event, eventIds) {
+  const t = event.eventTime, [lower, upper] = t.intervalUtc.map(Date.parse), day = Date.parse(`${t.date}T00:00:00Z`);
+  const endMs = displayAnchor(event), site = event.attributes.launchSite?.coordinates;
+  const outcome = event.attributes.launchOutcome?.value;
+  if (eventIds.has(event.eventId) || event.eventId !== `${event.object.objectId}:launch:${t.date}`
+    || !['day', 'reported-time'].includes(t.precision) || !Number.isFinite(endMs) || !Number.isFinite(lower) || !Number.isFinite(upper)
+    || lower < day || lower >= day + 86400000 || upper <= lower || endMs < day || endMs >= day + 86400000
+    || t.precision === 'day' && (lower !== day || upper !== day + 86400000)
+    || t.precision === 'reported-time' && upper - lower !== t.resolutionSeconds * 1000
+    || !['success', 'failure'].includes(outcome) || !event.sources.gcat.url || Object.keys(event.orbitalData ?? {}).length
+    || site?.basis !== 'reported' || !Number.isFinite(site.latitudeDeg) || Math.abs(site.latitudeDeg) > 90
+    || !Number.isFinite(site.longitudeDeg) || Math.abs(site.longitudeDeg) > 180) throw new Error('Invalid GCAT launch record.');
+  eventIds.add(event.eventId);
+  const times = { startTime: new Date(endMs).toISOString(), endTime: new Date(endMs).toISOString(), anchorEdge: 'start',
+    durationSeconds: DEFAULTS.pulseSeconds, ...eventAppearance(event) };
+  return { event, endMs, loop: null, maxSeconds: DISPLAY_LIMIT_SECONDS, delaySeconds: 0,
+    anchorBasis: t.precision === 'day' ? 'illustrative' : 'reported',
+    available: freeze({ reference: false, propagatedSeconds: null, launchSite: true, launchGapSeconds: 0 }),
+    pulses: { symbolic: null, site: new SurfacePulse({ ...site, ...times }) }, launchTracer: null, propagated: null, representative: null };
 }
 
 export function configureSequence(sequence, input, policy=resolveVisualization) {

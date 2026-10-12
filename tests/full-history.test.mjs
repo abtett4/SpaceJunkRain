@@ -30,7 +30,10 @@ test('full history has complete nonduplicated membership, valid geometry and eve
   assert(sequenceAt(sequence,b).every(s=>s.reached));
   total+=reached;maxEvents=Math.max(maxEvents,sequence.events.length);feed.dispose();clock.dispose();
  }
- assert.equal(total,catalog.cols.id.length+1);assert.equal(launches,1);assert.equal(index.reentryCount,catalog.cols.id.length);
+ // Every catalog reentry plus every GCAT orbital launch attempt (the curated Dragon record replaces its GCAT twin).
+ const gcat=JSON.parse(readFileSync(new URL('../web/data/launches.json',import.meta.url)));
+ assert.equal(total,catalog.cols.id.length+gcat.count);assert.equal(launches,gcat.count);assert.equal(index.launchCount,gcat.count);
+ assert.equal(index.reentryCount,catalog.cols.id.length);
  assert.equal(maxEvents,50);
  console.log(JSON.stringify({passages:index.chunks.length,reentries:total-launches,launches,validationMs:Math.round(performance.now()-start)}));
 });

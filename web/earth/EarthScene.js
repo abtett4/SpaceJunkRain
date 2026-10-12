@@ -78,7 +78,7 @@ export class EarthScene {
             this.canvas = canvas.elt;
             canvas.elt.setAttribute('aria-label', 'Earth event preview and geographic explorer');
             canvas.elt.setAttribute('aria-describedby', 'globe-help');
-            this.camera = new CameraController(canvas.elt, () => p.redraw(), {
+            this.camera = new CameraController(canvas.elt, () => this.requestRedraw(), {
               hover: point => { this.pointer = point; this.refreshInspection(); },
               inspect: point => {
                 this.pinned = this.pick(point); this.pointer = null; this.refreshInspection();
@@ -90,7 +90,7 @@ export class EarthScene {
             p.noLoop();
             this.resize = new ResizeObserver(() => {
               p.resizeCanvas(element.clientWidth, element.clientHeight || 380);
-              p.redraw();
+              this.requestRedraw();
             });
             this.resize.observe(element);
             this.shader = p.createShader(earthVertex, earthFragment);
@@ -116,10 +116,21 @@ export class EarthScene {
     this.tracers.push(tracer);
     return tracer;
   }
-  configureAppearance(settings) { this.settings = settings; this.p.redraw(); }
+  // p5 2.x draws asynchronously and ignores a redraw requested mid-frame, so a camera or
+  // time change made during a busy load could be lost. Queue one more frame instead.
+  requestRedraw() {
+    if (!this.p || this.disposed) return;
+    if (this.drawing) { this.redrawQueued = true; return; }
+    this.drawing = true;
+    Promise.resolve(this.p.redraw()).finally(() => {
+      this.drawing = false;
+      if (this.redrawQueued) { this.redrawQueued = false; this.requestRedraw(); }
+    });
+  }
+  configureAppearance(settings) { this.settings = settings; this.requestRedraw(); }
   setTime(timeMs) {
     if (timeMs !== this.timeMs) this.state = earthState(timeMs);
-    this.timeMs = timeMs; this.p.redraw();
+    this.timeMs = timeMs; this.requestRedraw();
   }
   surfaceToWorld(normal, timeMs = this.timeMs) {
     return transform(timeMs === this.timeMs ? this.state.rotation : earthRotation(timeMs), normal);
@@ -139,15 +150,15 @@ export class EarthScene {
     const direction = this.surfaceToWorld(latLonToVector(lat, lon));
     this.camera.yaw = Math.atan2(direction[0], direction[2]);
     this.camera.pitch = Math.max(-1.4, Math.min(1.4, Math.asin(-direction[1])));
-    this.pinned = { lat, lon }; this.pointer = null; this.p.redraw();
+    this.pinned = { lat, lon }; this.pointer = null; this.requestRedraw();
   }
   // Future data layers receive this scene's clock and transforms. No independent timer.
   // A layer supplies draw(frame) and optionally dispose(); removal owns disposal.
   addLayer(layer) {
     if (typeof layer?.draw !== 'function') throw new Error('Earth layer requires draw(frame).');
     this.layers.add(layer);
-    this.p.redraw();
-    return () => { if (this.layers.delete(layer)) { layer.dispose?.(); this.p.redraw(); } };
+    this.requestRedraw();
+    return () => { if (this.layers.delete(layer)) { layer.dispose?.(); this.requestRedraw(); } };
   }
   draw(p) {
     if (!this.camera || !this.mesh) return;

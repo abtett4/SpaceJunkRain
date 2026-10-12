@@ -9,7 +9,8 @@ import { clockParts } from './DateText.js';
   let storage;
   try { storage = window.localStorage; } catch { /* session-only settings */ }
   const presentation = createPresentationStore(storage);
-  const disposeConfiguration = mountConfigurationPanel(document.getElementById('config-fields'), presentation);
+  const disposeConfiguration = mountConfigurationPanel(document.getElementById('config-fields'), presentation,
+    { exclude: ['skipQuietIntervals'] }); // that one sits in the playback bar
   const EPOCH_MS = Date.UTC(1957, 0, 1);
   const DAY_MS = 86400000;
   const YEAR = 365.25;
@@ -160,6 +161,7 @@ import { clockParts } from './DateText.js';
     `satellite decay and reentry data, retrieved ${retrieved}. ` +
     `${fmtInt(meta.decayed)} reentered objects from ${fmtInt(families.length)} launches.`;
   document.getElementById('tb-date').textContent = retrieved;
+  document.getElementById('src-satcat-date').textContent = retrieved;
   document.getElementById('tb-span').textContent = `1957–${yearOf(todayDay)}`;
 
   const famSel = document.getElementById('family');

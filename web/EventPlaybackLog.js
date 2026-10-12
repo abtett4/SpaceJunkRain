@@ -8,7 +8,6 @@ export function mountEventPlaybackLog(container, feed) {
   const clear = state => {
     if (!['collection','seek','initial'].includes(state.reason)) return;
     count = 0; recent = []; list.replaceChildren();
-    container.hidden = !state.eventCount;
     summary.textContent = '0';
     status.textContent = state.reason === 'seek'
       ? 'Clock moved. Press Play to pass through events.'

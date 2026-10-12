@@ -1,9 +1,11 @@
 import { formatDuration } from './earth/TracerControls.js';
 // Controls derive from the same schema as defaults, bounds and saved preferences.
-export function mountConfigurationPanel(root, store) {
+// `exclude` leaves out fields that have their own control elsewhere on the page.
+export function mountConfigurationPanel(root, store, { exclude = [] } = {}) {
   const listeners = new AbortController(), inputs = new Map(), groups = new Map();
+  const fields = store.fields.filter(f => !exclude.includes(f.key));
   root.replaceChildren();
-  for (const field of store.fields) {
+  for (const field of fields) {
     if (!groups.has(field.group)) {
       const set = document.createElement('fieldset'), legend = document.createElement('legend');
       legend.textContent = field.group;
@@ -34,7 +36,7 @@ export function mountConfigurationPanel(root, store) {
   reset.addEventListener('click', () => store.reset(), { signal: listeners.signal });
   actions.append(reset, note); root.append(actions);
   const unsubscribe = store.subscribe(values => {
-    for (const field of store.fields) {
+    for (const field of fields) {
       const { input, output } = inputs.get(field.key), value = values[field.key];
       const formatted = field.choices || field.kind === 'boolean' ? '' : field.unit === 'seconds' ? formatDuration(value) : field.unit === 'percent' ? `${Math.round(value * 100)}%`
         : field.unit === 'scale' ? `${value}×` : `${value}`;
