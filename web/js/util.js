@@ -43,7 +43,7 @@ export const fmtInt = (n) => n.toLocaleString('en-US');
 
 // ---- names -------------------------------------------------------------------
 // SATCAT names are all caps; set them in mixed case, keeping real acronyms and designators.
-const ACRONYMS = new Set(['ISS', 'USA', 'PSLV', 'GSLV', 'SL', 'CZ', 'NOAA', 'DMSP', 'GPS', 'OPS', 'ESSA',
+const ACRONYMS = new Set(['ISS', 'CRS', 'USA', 'PSLV', 'GSLV', 'SL', 'CZ', 'NOAA', 'DMSP', 'GPS', 'OPS', 'ESSA',
   'ATS', 'OAO', 'OGO', 'TDRS', 'GOES', 'HST', 'UK', 'II', 'III', 'IV', 'VI', 'H', 'NRO', 'KH', 'NOSS', 'SJ', 'HJ',
   'YG', 'KZ', 'BD', 'TJS', 'CBERS', 'SPOT', 'ERS', 'DEB', 'R/B']);
 const titleWord = (w) => w.split('-').map((p) =>

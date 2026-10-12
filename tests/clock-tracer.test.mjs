@@ -1,3 +1,4 @@
+import { displayAnchor } from '../web/js/DisplayPolicy.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -41,12 +42,13 @@ test('changing speed does not apply the new rate retroactively', () => {
   assert.throws(() => clock.seek(NaN));
 });
 
-test('axis adaptation preserves lengths and handedness, with north upwards', () => {
+test('axis adaptation preserves lengths with north up and correct display handedness', () => {
   assert.deepEqual(toScene([0, 0, 1], 1), [0, -1, 0]);
   assert.equal(Math.hypot(...toScene([3, 4, 12], 1)), 13);
   const a = toScene([1, 0, 0], 1), b = toScene([0, 1, 0], 1);
   const cross = [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
-  assert.deepEqual(cross.map(v => v || 0), toScene([0, 0, 1], 1));
+  // p5 screen Y is down: a display reflection, not a physical frame rotation.
+  assert.deepEqual(cross.map(v => -v || 0), toScene([0, 0, 1], 1));
 });
 
 test('replay preserves original sample times and disappears outside its interval', () => {
@@ -55,8 +57,8 @@ test('replay preserves original sample times and disappears outside its interval
   assert.equal(tracer.sample(tracer.startMs - 1), null);
   assert.equal(tracer.sample(tracer.endMs + 1), null);
   assert.equal(tracer.sample(tracer.startMs + 15000).sourceMs, Date.parse('2000-01-01T00:00:15Z'));
-  assert.deepEqual(tracer.sample(tracer.startMs + 15000).head.map(v => v || 0), [0.5, 0, 0.5]);
-  assert.deepEqual(tracer.sample(tracer.endMs).head.map(v => v || 0), [0, 0, 1]);
+  assert.deepEqual(tracer.sample(tracer.startMs + 15000).head.map(v => v || 0), [0.5, 0, -0.5]);
+  assert.deepEqual(tracer.sample(tracer.endMs).head.map(v => v || 0), [0, 0, -1]);
 });
 
 test('exported Tiangong event joins the catalog anchor and its original geometry', () => {
@@ -66,9 +68,9 @@ test('exported Tiangong event joins the catalog anchor and its original geometry
   const catalog = json('../web/data/decays.json');
   const i = catalog.cols.id.indexOf(event.object.noradId);
   const catalogMs = Math.round(Date.parse(catalog.meta.epoch) + catalog.cols.d[i] * 86400000);
-  assert.equal(catalogMs, Date.parse(event.presentation.displayAnchorUtc));
-  const tracer = new Tracer({ positions: geometry.trace, startTime: event.presentation.startTime,
-    endTime: event.presentation.endTime, radiusKm: geometry.referenceSphereRadiusKm });
+  assert.equal(catalogMs, displayAnchor(event));
+  const tracer = new Tracer({ positions: geometry.trace, startTime: new Date(displayAnchor(event) - 7200000).toISOString(),
+    endTime: new Date(displayAnchor(event)).toISOString(), radiusKm: geometry.referenceSphereRadiusKm });
   assert.equal(tracer.sample(catalogMs).sourceMs, Date.parse(geometry.trace.at(-1)[0]));
   assert.equal(catalog.cols.p[i], 0);
   for (let ms = tracer.startMs; ms <= tracer.endMs; ms += 5000) {

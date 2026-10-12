@@ -4,10 +4,7 @@
     "id": "april-2018-passage",
     "title": "An eight-day passage",
     "intervalUtc": ["2018-04-02T00:00:00Z", "2018-04-10T00:00:00Z"],
-    "playbackRate": 7200,
-    "defaultLeadSeconds": 14400,
-    "defaultTrailSeconds": 300,
-    "surfacePulseSeconds": 14400
+    "playbackRate": 7200
   },
   "inputs": [
     {"noradId": 37820, "manifest": "web/data/tracers.json"},

@@ -37,11 +37,12 @@ class MixedSampleTests(unittest.TestCase):
         self.assertEqual(self.spec, before)
         self.assertEqual(len(doc["events"]), 12)
         self.assertEqual(doc["sample"]["objectTypes"], {"DEBRIS": 5, "PAYLOAD": 6, "ROCKET BODY": 1, "UNKNOWN": 0})
-        anchors = [e["presentation"]["displayAnchorUtc"] for e in doc["events"]]
+        anchors = [self.catalog["cols"]["d"][self.catalog["cols"]["id"].index(e["object"]["noradId"])] for e in doc["events"]]
         self.assertEqual(anchors, sorted(anchors))
         self.assertEqual(assets["trajectories/37820.json"], (ROOT / "web/data/trajectories/37820.json").read_bytes())
         for event in doc["events"]:
-            if name := event["presentation"]["geometryAsset"]:
+            if event["orbitalData"]:
+                name = next(iter(event["orbitalData"].values()))["asset"]
                 self.assertEqual(hashlib.sha256(assets[name]).hexdigest(), event["geometryProvenance"]["assetSha256"])
 
     def test_empty_query_and_unqueried_inputs_are_distinct_and_location_stays_unknown(self):
@@ -51,13 +52,11 @@ class MixedSampleTests(unittest.TestCase):
         empty = next(e for e in doc["events"] if e["object"]["noradId"] == 31777)
         self.assertEqual(empty["sources"]["gpHistory"]["rowCount"], 0)
         for event in doc["events"]:
-            if event["presentation"]["mode"] == "symbolic-event":
-                self.assertEqual(event["presentation"]["surfacePulse"]["durationSeconds"], 14400)
+            if not event["orbitalData"]:
+                self.assertNotIn("presentation", event)
                 self.assertIsNone(event["attributes"]["eventLocation"]["value"])
-                self.assertIsNone(event["presentation"]["geometryAsset"])
                 if event != empty:
                     self.assertEqual(event["sources"]["gpHistory"]["status"], "not-queried")
-                    self.assertIn("not fetched", event["presentation"]["modeReason"])
 
     def test_missing_and_duplicate_membership_fail_instead_of_changing_the_sample(self):
         for entries in [self.spec["inputs"][:-1], self.spec["inputs"] + [self.spec["inputs"][0]]]:
@@ -95,7 +94,7 @@ class MixedSampleTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             path = pathlib.Path(temp)
             doc = json.loads((ROOT / "web/data/tracers.json").read_text())
-            asset = doc["events"][0]["presentation"]["geometryAsset"]
+            asset = doc["events"][0]["orbitalData"]["propagated"]["asset"]
             (path / asset).parent.mkdir(parents=True)
             (path / asset).write_text("{}")
             (path / "tracers.json").write_text(json.dumps(doc))

@@ -1,257 +1,599 @@
-// One event or a bounded passage, using the timeline's existing simulation clock.
-import { mountTracerControls, formatDuration, SAMPLE_SETTINGS_KEY } from './TracerControls.js';
+import { skipFocusDirection } from './SkipFocus.js';
+import { validateHistoryIndex, loadHistoryChunk } from './HistoryChunks.js';
+// The orbital view: the globe, the event strip and the shared Play, all on the timeline's clock.
 import { loadSequence, configureSequence, sequenceRange, sequenceAt } from './EventSequence.js';
+import { OrbitalEventFeed } from '../OrbitalEventFeed.js';
+import { mountEventPlaybackLog } from '../EventPlaybackLog.js';
+import { DEFAULT_PLAYBACK_RATE, HEIGHT_UNBOUNDED_KM } from '../PresentationConfig.js';
+import { EventStrip } from './EventStrip.js';
+import { clockParts, longDate, shortDay, MONTH_ABBR } from '../DateText.js';
+import { pretty as prettyCaps } from '../util.js';
+// SATCAT names are all caps and go through the site's pretty(); GCAT names are already mixed case.
+const pretty = name => name && name === name.toUpperCase() ? prettyCaps(name) : name;
+import { mountConfigurationPanel } from '../ConfigurationPanel.js';
 export { selectMode } from './EventSequence.js';
 
-const modeName = mode => ({ propagated: 'SGP4 replay', representative: 'Reference orbit', symbolic: 'No orbital data · pulse' })[mode];
-const dateText = ms => new Date(Math.round(ms)).toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, ' UTC');
-const shortDate = ms => dateText(ms).slice(5, 16) + ' UTC';
+// Above one simulated day per second, months can't load fast enough; the globe waits and
+// only the charts animate.
+export const GLOBE_MAX_RATE = 86400;
+const HISTORY = 'data/history/all/index.json';
+const EPOCH_MS = Date.UTC(1957, 0, 1), DAY_MS = 86400000;
+const LANES = [['LAUNCH', 'Launches'], ['PAYLOAD', 'Payloads'], ['ROCKET BODY', 'Rocket bodies'], ['DEBRIS', 'Debris'], ['UNKNOWN', 'Unknown']];
+const laneOf = s => s.event.eventKind === 'launch' ? 'LAUNCH' : s.event.attributes.objectType.value ?? 'UNKNOWN';
+const capital = t => t[0].toUpperCase() + t.slice(1);
+const isFailedLaunch = s => s.event.attributes.launchOutcome?.value === 'failure';
+const kindText = s => {
+  const a = s.event.attributes;
+  if (s.event.eventKind === 'launch') return `${isFailedLaunch(s) ? 'Failed launch' : 'Launch'}${a.launchVehicle?.value ? ` · ${a.launchVehicle.value}` : a.launchSite?.name ? ` · ${a.launchSite.name}` : ''}`;
+  return `${capital((a.objectType.value ?? 'unknown object').toLowerCase())} reentry`;
+};
+const shownAs = s => {
+  const orbit = s.event.attributes.orbitReference ?? s.event.attributes.orbitNearEvent, known = Number.isFinite;
+  const site = s.event.attributes.launchSite, c = site?.coordinates;
+  // GCAT states how well each location is known; say it rather than imply survey precision.
+  const within = km => km == null ? '' : km < 1 ? ' · located within 1 km' : ` · located to ±${Math.round(km)} km`;
+  const launchPlace = c?.precision === 'release-area'
+    ? `Ring at the air-launch release area · ${site.place}${within(c.uncertaintyKm)} · carried by ${site.carrier} from ${site.takeoff}`
+    : `Ring at the ${c?.precision === 'site' ? 'launch site (no pad coordinates)' : 'launch pad'}${site?.place ? ` · ${site.place}` : ''}${within(c?.uncertaintyKm)}${site?.padUncertain ? ' · pad not certain' : ''}`;
+  const heading = s.event.attributes.ascentHeading?.value;
+  const from = { 'launch-record': 'launch record', 'upper-stage': 'upper stage', payload: 'payload' }[orbit?.from];
+  const ascent = `Illustrative ascent${heading ? `, heading ${heading}` : ''} from the ${c?.precision === 'release-area' ? 'release area' : 'pad'}`
+    + `${site?.place ? ` · ${site.place}` : ''}${within(c?.uncertaintyKm)}${from ? ` · orbit from the ${from}` : ''}`;
+  const how = { propagated: 'Last known orbit, replayed', representative: 'Reference orbit, illustrative path', symbolic: 'Ring · no orbital data',
+    launch: s.launchTracer ? ascent : launchPlace }[s.mode];
+  const facts = known(orbit?.inclinationDeg) && known(orbit?.perigeeKm) && known(orbit?.apogeeKm)
+    ? ` · ${orbit.inclinationDeg.toFixed(1)}°, ${Math.round(orbit.perigeeKm)}–${Math.round(orbit.apogeeKm)} km` : '';
+  // GCAT orbits are often operational, years before reentry; say when it was recorded.
+  const when = s.mode === 'representative' && orbit?.source === 'gcat' && orbit.epochUtc ? `, recorded ${MONTH_ABBR[new Date(orbit.epochUtc).getUTCMonth()]} ${orbit.epochUtc.slice(0, 4)}` : '';
+  return how + facts + when;
+};
+// One short line for the globe's info box: what the object is and whose it is.
+const NO_SATELLITE_NOUN = new Set(['space station', 'crewed spacecraft', 'cargo spacecraft', 'planetary probe', 'calibration target', 'target']);
+export const describeObject = (s, familyName) => {
+  const a = s.event.attributes;
+  if (s.event.eventKind === 'launch') {
+    const site = a.launchSite;
+    return [`${isFailedLaunch(s) ? 'Failed launch' : 'Launch'} from ${site?.place ?? site?.name ?? 'an unknown site'}`, site?.country].filter(Boolean).join(', ');
+  }
+  const m = a.mission?.value, type = a.objectType.value, country = a.ownerCountry?.value;
+  const what = type === 'PAYLOAD' ? ([m?.class, m?.category].filter(Boolean).join(' ') + (NO_SATELLITE_NOUN.has(m?.category) ? '' : ' satellite')).trim()
+    : type === 'ROCKET BODY' ? 'rocket stage' : type === 'DEBRIS' ? `debris${familyName ? ` from ${pretty(familyName)}` : ''}` : 'unidentified object';
+  return capital(what) + (country ? ` · ${country}` : '');
+};
+// Mass, length and owner, from GCAT where it has them: '8,500 kg · 10.4 m long · China · PLA GAD'.
+const objectFacts = s => {
+  const a = s.event.attributes, size = a.physicalSize?.value ?? {};
+  return [size.massKg && `${Math.round(size.massKg).toLocaleString()} kg`, size.lengthM && `${size.lengthM} m long`,
+    a.ownerCountry?.value, a.owner?.value !== a.ownerCountry?.value && a.owner?.value].filter(Boolean).join(' · ');
+};
 
-export async function mountOrbitPanel(clock, timeline, onReplay) {
+// hooks.play is set to this panel's passage-aware play/pause; the Earth sheet routes Animate to it.
+export async function mountOrbitPanel(clock, timeline, onReplay, presentation, hooks = {}) {
   const el = id => document.getElementById(id);
   const text = (id, value) => { if (el(id).textContent !== value) el(id).textContent = value; };
-  const status = el('orbit-status'), slider = el('orbit-scrub'), replay = el('orbit-replay'), pause = el('orbit-pause');
-  const picker = el('orbit-example'), objectPicker = el('orbit-object');
-  let scene, controls, unsubscribe, sequence, settings, selected, revision = 0, firstLoad = true;
-  let scoreButtons = [], activeSignature = '', hasStarted = false;
+  const events = new OrbitalEventFeed(clock);
+  const disposeEventLog = mountEventPlaybackLog(el('event-playback-log'), events);
+  const status = el('orbit-status'), picker = el('orbit-example');
+  // Appearance controls beside the globe; filters and skipping have their own controls.
+  const disposeConfiguration = mountConfigurationPanel(el('config-fields'), presentation,
+    { exclude: ['skipQuietIntervals', 'showLaunches', 'showPayloads', 'showRocketBodies', 'showDebris', 'showUnknown', 'minHeightKm', 'maxHeightKm'] });
+  let historyIndex = null, chunkId = null, loadController = null, provenanceUrl = null;
+  let prefetched = null, transitioning = false, continuationStart = null;
+  const PASSAGE_RATE = DEFAULT_PLAYBACK_RATE;
+  let scene, unsubscribeSettings, unsubscribe, sequence, settings = presentation.values, selected = null, pinned = null, revision = 0;
+  let nowSignature = '', hasStarted = false, failed = false, stripYear = null, lastPanelMs = -Infinity, visibleEvents = [];
   const listeners = new AbortController();
-  const range = () => sequenceRange(sequence, settings);
+  const tooFast = () => clock.rate > GLOBE_MAX_RATE;
+  const playRate = () => tooFast() ? PASSAGE_RATE : clock.rate;
+  const historical = () => picker.value === HISTORY;
+  const range = () => {
+    const [start,end] = sequenceRange(sequence,settings);
+    return [Math.max(continuationStart ?? start,clock.minMs),Math.min(end,clock.maxMs)];
+  };
+
+  const familyNames = new Map(timeline.families.map(f => [f.key, f.name]));
+  // ---- catalog reentries for the event strip (decays.json is sorted by display time) ----
+  const catMs = Float64Array.from(timeline.cols.d, d => EPOCH_MS + d * DAY_MS);
+  const lowerBound = ms => { let lo = 0, hi = catMs.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (catMs[mid] < ms) lo = mid + 1; else hi = mid; } return lo; };
+  const catalogMarks = (startMs, endMs) => {
+    const marks = [];
+    for (let i = lowerBound(startMs), end = lowerBound(endMs); i < end; i++) marks.push({ ms: catMs[i], lane: timeline.meta.types[timeline.cols.k[i]],
+      kind: 'reentry', name: pretty(timeline.names[timeline.cols.nm[i]]), norad: timeline.cols.id[i] });
+    return marks;
+  };
+  // Every orbital launch attempt (GCAT), for the strip's launch lane.
+  let launchIndex = null;
+  const early = name => window.SJR_PREFETCH?.[name]; // started by index.html before the modules loaded
+  const launchesReady = (early('data/launches.json') ?? fetch(new URL('data/launches.json', document.baseURI), { cache: 'no-cache' })
+    .then(r => r.ok ? r.json() : null)).then(index => {
+      if (!index) return;
+      launchIndex = { ms: Float64Array.from(index.cols.t, t => EPOCH_MS + t * 1000), ...index };
+      const src = launchIndex.source;
+    }).catch(() => {});
+  const launchMarks = (startMs, endMs) => {
+    if (!launchIndex) return [];
+    const marks = [];
+    launchIndex.ms.forEach((ms, i) => { if (ms >= startMs && ms < endMs) marks.push({ ms, lane: 'LAUNCH',
+      kind: launchIndex.cols.ok[i] ? 'launch' : 'failed', name: launchIndex.cols.name[i] + (launchIndex.cols.ok[i] ? '' : ' (failed)'), tag: launchIndex.cols.tag[i] }); });
+    return marks;
+  };
+  const stripRange = () => {
+    if (!historical()) return range();
+    const year = stripYear;
+    return [Math.max(Date.UTC(year, 0, 1), clock.minMs), Math.min(Date.UTC(year + 1, 0, 1), clock.maxMs)];
+  };
+  // ---- what to show: kinds (lane toggles) and an orbit-height range ----
+  const SHOW = { LAUNCH: 'showLaunches', PAYLOAD: 'showPayloads', 'ROCKET BODY': 'showRocketBodies', DEBRIS: 'showDebris', UNKNOWN: 'showUnknown' };
+  let heights = null; // NORAD ID -> [perigee, apogee] km, GCAT recorded orbit
+  const heightsReady = (early('data/orbit-heights.json') ?? fetch(new URL('data/orbit-heights.json', document.baseURI), { cache: 'no-cache' })
+    .then(r => r.ok ? r.json() : null)).then(index => {
+      if (index) heights = new Map(index.cols.id.map((id, i) => [id, [index.cols.perigee[i], index.cols.apogee[i]]]));
+    }).catch(() => {});
+  const heightActive = () => settings.minHeightKm > 0 || settings.maxHeightKm < HEIGHT_UNBOUNDED_KM;
+  // A reentry passes if its recorded orbit reaches into the chosen band (perigee..apogee overlaps it).
+  const inHeight = norad => {
+    if (!heightActive()) return true;
+    const h = heights?.get(norad);
+    return Boolean(h) && h[1] >= settings.minHeightKm && h[0] <= (settings.maxHeightKm >= HEIGHT_UNBOUNDED_KM ? Infinity : settings.maxHeightKm);
+  };
+  const markShown = m => settings[SHOW[m.lane]] && (m.lane === 'LAUNCH' || inHeight(m.norad));
+  const isShown = s => settings[SHOW[laneOf(s)]] && (s.event.eventKind === 'launch' || inHeight(s.event.object.noradId));
+  const filterKey = () => [...Object.values(SHOW).map(k => settings[k] ? 1 : 0), settings.minHeightKm, settings.maxHeightKm, Boolean(heights)].join(',');
+  let stripKey = '';
+  const refreshStrip = () => {
+    const [startMs, endMs] = stripRange();
+    // In the full catalog the strip shows a whole year, so a new month in the same year changes nothing.
+    const key = (historical() ? `year|${startMs}|${endMs}|${Boolean(launchIndex)}` : `example|${startMs}|${endMs}|${sequence?.events.length}|${picker.value}`) + `|${filterKey()}`;
+    if (key === stripKey) return;
+    stripKey = key;
+    const launches = historical() ? launchMarks(startMs, endMs)
+      : (sequence?.events ?? []).filter(s => s.event.eventKind === 'launch' && s.endMs >= startMs && s.endMs <= endMs)
+        .map(s => ({ ms: s.endMs, lane: 'LAUNCH', kind: isFailedLaunch(s) ? 'failed' : 'launch', name: pretty(s.event.object.name), state: s }));
+    const marks = [...launches, ...catalogMarks(startMs, endMs)];
+    let hidden = 0;
+    for (const m of marks) { m.dim = !markShown(m); hidden += m.dim; }
+    // A fixed set of lanes keeps the strip the same height from year to year.
+    strip.set({ startMs, endMs, lanes: LANES.map(([key, label]) => ({ key, label, hidden: !settings[SHOW[key]] })), marks });
+    const reentries = marks.length - launches.length, fails = launches.filter(m => m.kind === 'failed').length;
+    const plural = (n, one, many) => `${n.toLocaleString()} ${n === 1 ? one : many}`;
+    text('strip-summary', (historical()
+      ? `${plural(reentries, 'reentry', 'reentries')} · ${plural(launches.length, 'launch', 'launches')}${fails ? ` (${fails} failed)` : ''} in ${stripYear}`
+      : shortDay(startMs) === shortDay(endMs) ? longDate(startMs) : `${shortDay(startMs)} to ${longDate(endMs)}`)
+      + (hidden ? ` · ${(marks.length - hidden).toLocaleString()} shown` : ''));
+  };
+
   const focus = direction => {
+    scene.clearInspection();
     scene.camera.yaw = Math.atan2(direction[0], direction[2]);
     scene.camera.pitch = Math.max(-1.4, Math.min(1.4, Math.asin(-direction[1] / Math.hypot(...direction))));
   };
   const clearScene = () => { scene.tracers = []; scene.pulses = []; scene.setTime(clock.nowMs); };
   const fail = error => {
-    sequence = selected = null;
+    sequence = selected = pinned = null;
+    events.replace([]);
+    clock.setPlaybackWindows(null);
     if (scene) clearScene();
-    controls?.dispose();
-    for (const id of ['symbolic-event', 'orbit-trace-key', 'sample-summary', 'sample-score', 'orbit-inspector']) el(id).hidden = true;
-    el('tracer-fields').disabled = slider.disabled = replay.disabled = pause.disabled = true;
-    status.textContent = `Orbit preview unavailable: ${error.message} The timeline is still available.`;
+    el('event-card').hidden = true;
+    el('now-list').replaceChildren();
+    failed = true;
+    status.textContent = `The globe is unavailable: ${error.message} The charts below still work.`;
   };
-  const inspect = () => {
-    if (!selected) return;
-    const { event, mode, endMs } = selected, p = event.presentation, a = event.attributes;
-    const orbit = a.orbitReference ?? a.orbitNearEvent;
-    const known = Number.isFinite;
-    text('orbit-object-name', `${event.object.name} · NORAD ${event.object.noradId}`);
-    text('orbit-object-mode', modeName(mode));
-    text('orbit-anchor', `${dateText(endMs)} · ${p.anchorBasis === 'illustrative' ? 'assigned time within the reported day' : 'reported timestamp'}`);
-    text('orbit-attributes', `${a.objectType.value ?? 'Unknown class'} · `
-      + (known(orbit?.inclinationDeg) ? `${orbit.inclinationDeg.toFixed(2)}° reference inclination · ` : 'Inclination unknown · ')
-      + (known(orbit?.perigeeKm) && known(orbit?.apogeeKm) ? `${Math.round(orbit.perigeeKm)}–${Math.round(orbit.apogeeKm)} km reference perigee/apogee` : 'Orbital heights unknown')
-      + ` · ${a.radarSize.value ?? 'Unknown'} radar-size proxy · catalog country ${a.catalogCountry.value ?? 'unknown'}`);
-    text('orbit-evidence', (orbit?.epochUtc ? `Reference epoch: ${orbit.epochUtc}. ` : '')
-      + (p.modeReason ?? 'Historical element descriptors are separate from the assigned event time.'));
-    text('orbit-explanation', mode === 'propagated'
-      ? 'Prepared SGP4 samples replay at their original rate. The assigned event time is illustrative; no reentry location is claimed.'
-      : mode === 'representative'
-        ? 'This repeating ellipse uses reference height and inclination. Node direction and phase are illustrative. It does not model atmospheric descent or the object’s position at reentry.'
-        : 'One surface pulse, without a tracer. The random display point persists across replays and reloads. It is sampled evenly by surface area, not from a reentry probability model. The actual reentry location is unknown.');
-    objectPicker.value = event.eventId;
+
+  // ---- the selected-event card: what it is, when, and how it is drawn ----
+  const showCard = (s, label) => {
+    el('event-card').hidden = !s;
+    if (!s) return;
+    text('sel-label', label);
+    text('sel-name', pretty(s.event.object.name));
+    text('sel-kind', kindText(s));
+    const { time } = clockParts(s.endMs);
+    text('sel-date', `${longDate(s.endMs)} · ${time}`);
+    text('sel-time-note', s.anchorBasis === 'illustrative' ? 'Day reported; time of day assigned for display'
+      : s.event.eventTime.source === 'gcat' && s.event.eventKind === 'reentry' ? 'Time of day from GCAT' : '');
+    text('sel-shown', shownAs(s));
+    text('sel-facts', objectFacts(s));
+    text('sel-source', `${s.event.object.noradId ? `NORAD ${s.event.object.noradId}` : `GCAT ${s.event.object.objectId}`} · source data`);
+  };
+  const renderNow = (samples, nowMs) => {
+    const active = samples.filter(v => v.sample && visibleEvents.includes(v.state)).map(v => v.state);
+    const signature = active.map(s => s.event.eventId).join('|');
+    if (signature !== nowSignature) {
+      nowSignature = signature;
+      const shown = active.slice(0, 6).map(s => {
+        const li = document.createElement('li'), button = document.createElement('button');
+        button.type = 'button';
+        button.innerHTML = '<span class="now-name"></span><span class="now-kind"></span>';
+        button.children[0].textContent = pretty(s.event.object.name);
+        button.children[1].textContent = kindText(s).replace(/ reentry$/, '');
+        button.className = `${s.event.eventKind}${isFailedLaunch(s) ? ' failed' : ''}`;
+        button.addEventListener('click', () => jumpTo(s));
+        li.append(button); return li;
+      });
+      if (active.length > 6) { const li = document.createElement('li'); li.className = 'now-more'; li.textContent = `and ${active.length - 6} more`; shown.push(li); }
+      el('now-list').replaceChildren(...shown);
+    }
+    const next = visibleEvents.find(s => s.endMs > nowMs && !active.includes(s));
+    const nextText = next ? `${active.length ? 'Next' : 'Quiet. Next'}: |${pretty(next.event.object.name)}|, ${clockParts(next.endMs).day}`
+      : active.length ? '' : visibleEvents.length ? 'Nothing more this month.' : 'Nothing shown this month with the current filters.';
+    if (el('now-next').dataset.text !== nextText) {
+      el('now-next').dataset.text = nextText;
+      const [before, name = '', after = ''] = nextText.split('|'), span = document.createElement('span');
+      span.className = 'now-name'; span.textContent = name;
+      el('now-next').replaceChildren(before, ...(name ? [span, after] : []));
+    }
+    renderInfo(active, next);
+    const auto = active[0] ?? next ?? visibleEvents.at(-1);
+    selected = pinned ?? auto ?? null;
+    showCard(selected, pinned ? 'Selected' : active.includes(selected) ? 'In progress' : 'Next up');
+    if (selected) strip.setSelected(selected.endMs, laneOf(selected)); else strip.setSelected(null);
+  };
+  let infoSignature = '';
+  const renderInfo = (active, next) => {
+    const shownItems = active.length ? active.slice(0, 4) : next ? [next] : [];
+    const signature = (active.length ? 'a' : 'n') + shownItems.map(s => s.event.eventId).join('|') + (active.length > 4 ? active.length : '');
+    if (signature === infoSignature) return;
+    infoSignature = signature;
+    el('globe-info').replaceChildren(...shownItems.map(s => {
+      const li = document.createElement('li');
+      li.className = `${s.event.eventKind}${isFailedLaunch(s) ? ' failed' : ''}${active.length ? '' : ' info-next'}`;
+      li.innerHTML = '<span class="info-dot" aria-hidden="true"></span><span class="info-name"></span><span class="info-what"></span>';
+      li.querySelector('.info-name').textContent = (active.length ? '' : 'Next: ') + pretty(s.event.object.name);
+      li.querySelector('.info-what').textContent = describeObject(s, familyNames.get(s.event.object.launchFamily));
+      return li;
+    }), ...(active.length > 4 ? [Object.assign(document.createElement('li'), { className: 'info-next', textContent: `and ${active.length - 4} more` })] : []));
   };
   const update = ({ nowMs, playing = clock.playing }) => {
+    if (tooFast() && playing) return; // The globe waits; the strip and charts keep moving.
+    scene.setTime(nowMs); // Earth and future overlays follow time even without orbital data.
     if (!sequence || !settings) return;
-    const [startMs, endMs] = range();
-    scene.setTime(nowMs);
-    slider.value = Math.max(0, Math.min(Number(slider.max), (nowMs - startMs) / 1000));
-    slider.setAttribute('aria-valuetext', nowMs >= startMs && nowMs <= endMs ? dateText(nowMs) : 'Outside preview interval');
-    text('orbit-clock', dateText(nowMs));
-    pause.textContent = playing ? '❚❚ Pause' : '▶ Resume';
-    const samples = sequenceAt(sequence, nowMs), active = samples.filter(s => s.sample);
-    if (sequence.sample) {
-      const reached = samples.filter(s => s.reached).length;
-      text('sample-progress', `${active.length} active · ${reached} / ${samples.length} events reached`);
-      const signature = active.map(s => s.state.event.eventId).join('|');
-      if (activeSignature !== signature) {
-        activeSignature = signature;
-        el('sample-active').replaceChildren(...active.map(({ state: s }) => {
-          const li = document.createElement('li');
-          li.textContent = `${s.event.object.name} · ${s.event.attributes.objectType.value.toLowerCase()}`;
-          return li;
-        }));
-      }
-      text('sample-quiet', active.length ? '' : nowMs < startMs || nowMs > endMs ? 'Outside this passage. Choose Replay passage.' : 'A quiet interval in the catalog.');
-      const next = sequence.events.find(s => s.endMs > nowMs);
-      text('sample-next', nowMs >= endMs ? 'Passage complete. Replay to watch it again.' : next
-        ? `Next event: ${next.event.object.name} · ${shortDate(next.endMs)}` : 'All sample events reached.');
-      const progress = Math.max(0, Math.min(100, (nowMs - startMs) / (endMs - startMs) * 100));
-      el('sample-score').style.setProperty('--progress', `${progress}%`);
-      for (const { state: s, button } of scoreButtons) {
-        const view = samples.find(v => v.state === s);
-        button.classList.toggle('reached', view.reached);
-        button.classList.toggle('active', Boolean(view.sample));
-        button.setAttribute('aria-pressed', String(s === selected));
-      }
-      text('orbit-sample', 'One clock for the passage and full catalog below. Event dots use reported days with assigned times; spacing between days is preserved.');
-      const pulseCount = active.filter(s => s.state.mode === 'symbolic').length;
-      text('symbolic-state', `${pulseCount} pulse${pulseCount === 1 ? '' : 's'} active · no tracers for these events`);
-    } else {
-      const s = sequence.events[0], sample = samples[0].sample;
-      text('symbolic-state', sample ? 'Pulse active · no tracer' : nowMs >= s.endMs ? 'Pulse complete' : 'Choose Replay pulse to view this event');
-      text('orbit-sample', s.mode === 'symbolic'
-        ? 'No orbital data representation · persistent random display point; actual reentry location unknown.'
-        : sample ? s.mode === 'propagated' ? `Orbit sample: ${dateText(sample.sourceMs)}`
-          : `Illustrative repeating orbit · reference epoch ${s.loop.referenceEpochUtc} · no event-time position claim.`
-          : 'Outside the selected tracer window. Choose Replay to focus the shared clock.');
+    const [start, end] = range();
+    if (historical() && (nowMs < start || nowMs > end) && !transitioning) {
+      // The charts or the strip moved the clock past the loaded month; don't describe it.
+      selected = null; nowSignature = '';
+      el('now-list').replaceChildren(); el('event-card').hidden = true; strip.setSelected(null);
+      el('globe-info').replaceChildren(); infoSignature = '';
+      el('now-next').replaceChildren('Press Play to show this date on the globe.'); delete el('now-next').dataset.text;
+      return;
     }
+    // The globe redraws every frame; the text beside it only needs about ten updates a second.
+    const t = performance.now();
+    if (playing && t - lastPanelMs < 100) return;
+    lastPanelMs = t;
+    renderNow(sequenceAt(sequence, nowMs), nowMs);
   };
   const applySettings = values => {
     settings = values;
+    scene.configureAppearance(values);
+    if (!sequence) return;
     configureSequence(sequence, values);
-    scene.tracers = sequence.events.flatMap(s => s.active ? [s.active] : []);
-    scene.pulses = sequence.events.flatMap(s => s.mode === 'symbolic' ? [s.pulse] : []);
-    const counts = { propagated: 0, representative: 0, symbolic: 0 };
-    sequence.events.forEach(s => counts[s.mode]++);
-    el('symbolic-event').hidden = !counts.symbolic;
-    el('orbit-trace-key').hidden = !sequence.sample || !scene.tracers.length;
-    el('tracer-history').disabled = el('tracer-width').disabled = !scene.tracers.length;
-    status.textContent = sequence.sample
-      ? `${counts.propagated ? `${counts.propagated} SGP4 replay · ` : ''}${counts.representative} reference orbits · ${counts.symbolic} surface pulses`
-      : selected.mode === 'propagated' ? 'Last-known orbit replay · reentry location unknown'
-        : selected.mode === 'representative' ? 'Representative orbit · illustrative loop, not an event-time reconstruction'
-          : 'Orbital geometry unavailable in this input';
+    visibleEvents = sequence.events.filter(isShown);
+    if (pinned && !visibleEvents.includes(pinned)) pinned = null;
+    nowSignature = '';
+    scene.tracers = visibleEvents.flatMap(s => s.active ? [s.active] : []);
+    scene.pulses = visibleEvents.flatMap(s => s.pulse ? [s.pulse] : []);
     const [startMs, endMs] = range();
-    slider.max = (endMs - startMs) / 1000;
-    const seconds = sequence.sample ? (endMs - startMs) / 1000 / sequence.sample.playbackRate
-      : selected.mode === 'symbolic' ? (selected.endMs - selected.pulse.visibleStartMs) / 1000 / 300 : values.reentryLeadSeconds / 300;
-    replay.textContent = `▶ Replay${sequence.sample ? ' passage' : selected.mode === 'symbolic' ? ' pulse' : ''} · ${formatDuration(seconds)}`;
-    text('tracer-window-times', `${sequence.sample ? 'Passage' : 'Display window'}: ${dateText(startMs)} to ${dateText(endMs)}`);
-    inspect();
+    // Quiet skipping jumps between the events that are shown; hidden ones don't hold playback.
+    clock.setPlaybackWindows(values.skipQuietIntervals ? visibleEvents.flatMap(s => [
+      [s.endMs,s.endMs],
+      ...(s.active ? [[s.active.startMs,s.active.endMs]] : []),
+      ...(s.pulse ? [[s.pulse.visibleStartMs,s.pulse.visibleEndMs]] : [])
+    ]) : null, [startMs,endMs]);
+    text('quiet-playback-note', values.skipQuietIntervals ? 'Quiet intervals are skipped: playback jumps between event windows.' : 'Quiet intervals are included: playback preserves elapsed historical time.');
+    refreshStrip();
+    showHeights();
     update(clock);
   };
   const jumpTo = s => {
     if (!sequence || !settings || !s) return;
-    selected = s; inspect();
+    pinned = selected = s;
     const [start, end] = range();
-    const target = s.mode === 'symbolic' ? (s.pulse.visibleStartMs + s.endMs) / 2
+    const target = s.mode === 'launch' ? s.endMs + Math.min((s.launchTracer?.ascentMs ?? 600000) / 2, s.view.seconds * 1000 / 2) : s.mode === 'symbolic' ? (s.pulse.visibleStartMs + s.endMs) / 2
       : s.endMs - Math.min(settings.reentryLeadSeconds / 2, 3600) * 1000;
     clock.pause(); clock.seek(Math.max(start, Math.min(end, target)));
-    if (s.pulse) focus(s.pulse.normal);
-    else { const head = s.active.sample(clock.nowMs)?.head; if (head) focus(head); }
+    if (s.pulse) focus(scene.surfaceToWorld(s.pulse.normal));
+    else { const head = s.active?.sample(clock.nowMs)?.head; if (head) focus(head); }
     scene.setTime(clock.nowMs);
+    update(clock);
   };
-  const makeScore = () => {
-    scoreButtons = [];
-    const lanes = el('sample-lanes'); lanes.replaceChildren();
-    const [start, end] = range();
-    for (const [type, label] of [['PAYLOAD', 'Payloads'], ['ROCKET BODY', 'Rocket bodies'], ['DEBRIS', 'Debris'], ['UNKNOWN', 'Unknown']]) {
-      const entries = sequence.events.filter(s => s.event.attributes.objectType.value === type);
-      if (!entries.length) continue;
-      const row = document.createElement('div'); row.className = 'sample-lane';
-      const name = document.createElement('span'); name.textContent = `${label} · ${entries.length}`;
-      const track = document.createElement('div'); track.className = 'sample-track';
-      for (const s of entries) {
-        const button = document.createElement('button'); button.type = 'button'; button.className = 'sample-event';
-        button.style.left = `${(s.endMs - start) / (end - start) * 100}%`;
-        button.title = `${s.event.object.name} · ${shortDate(s.endMs)} · assigned time`;
-        button.setAttribute('aria-label', `Preview ${s.event.object.name}, NORAD ${s.event.object.noradId}, ${shortDate(s.endMs)}`);
-        button.addEventListener('click', () => jumpTo(s));
-        track.append(button); scoreButtons.push({ state: s, button });
-      }
-      row.append(name, track); lanes.append(row);
-    }
-    el('sample-dates').replaceChildren(...Array.from({length:5}, (_,i) => {
-      const label = document.createElement('span'); label.textContent = new Date(start+(end-start)*i/4).toISOString().slice(5,10); return label;
-    }));
-  };
-  const fetchJson = async url => {
-    const response = await fetch(url, { cache: 'no-cache' });
+
+  // ---- loading: the full catalog one month (passage) at a time, or one fixed example ----
+  const fetchText = async (url, signal) => {
+    const response = await fetch(url, { cache: 'no-cache', signal });
     if (!response.ok) throw new Error(`Could not load ${url.pathname} (${response.status}).`);
-    return response.json();
+    return response.text();
   };
-  const load = async () => {
+  const fetchJson = async (url, signal) => JSON.parse(await fetchText(url, signal));
+  const chunkIndex = () => historyIndex ? historyIndex.chunks.findIndex(c => c.id === chunkId) : -1;
+  const nextChunk = () => historyIndex?.chunks[chunkIndex() + 1];
+  // The passage containing ms, or the first one after it (quiet months have no passage).
+  const chunkAt = ms => historyIndex.chunks.find(c => Date.parse(c.intervalUtc[1]) > ms) ?? historyIndex.chunks.at(-1);
+  const years = () => [...new Set(historyIndex.chunks.map(c => c.id.slice(0, 4)))];
+  const showYear = () => {
+    const year = String(stripYear), list = years(), i = list.indexOf(year);
+    el('year-select').value = year;
+    el('year-prev').disabled = i <= 0;
+    el('year-next').disabled = i >= list.length - 1;
+  };
+  const prepareHistory = async (chunk, signal) => {
+    const indexUrl = new URL(HISTORY, document.baseURI);
+    const manifest = await loadHistoryChunk(chunk,indexUrl,async url=>{
+      const response=await fetch(url,{cache:'no-cache',signal});
+      if (!response.ok) throw new Error(`Could not load historical passage (${response.status}).`);
+      return response.arrayBuffer();
+    });
+    const manifestUrl=new URL(chunk.asset,indexUrl), cache=new Map();
+    const loaded=await loadSequence(manifest,timeline,name=>{
+      if (!cache.has(name)) cache.set(name,fetchJson(new URL(name,manifestUrl),signal));
+      return cache.get(name);
+    });
+    return {manifest,manifestUrl,loaded};
+  };
+  const prefetchNext = () => {
+    const next=nextChunk();
+    if (!next || Date.parse(next.intervalUtc[0])>=clock.maxMs) { prefetched=null; return; }
+    const controller=new AbortController();
+    const promise=prepareHistory(next,controller.signal);
+    promise.catch(()=>{}); // Surface a failure only if/when this passage is needed.
+    prefetched={id:next.id,controller,promise};
+  };
+  const load = async (options = {}) => {
+    const automatic = options.automatic === true;
+    const ready = automatic ? prefetched : null;
+    if (!automatic) { prefetched?.controller.abort(); transitioning=false; continuationStart=null; }
+    prefetched=null;
     const ticket = ++revision;
-    clock.pause(); controls?.dispose(); sequence = selected = settings = null;
-    clearScene(); activeSignature = ''; scoreButtons = []; hasStarted = false;
-    for (const id of ['sample-score', 'sample-summary', 'orbit-inspector', 'symbolic-event', 'orbit-trace-key']) el(id).hidden = true;
-    el('sample-active').replaceChildren();
-    el('tracer-fields').disabled = slider.disabled = replay.disabled = pause.disabled = true;
-    status.textContent = 'Loading preview…';
+    if (provenanceUrl) { URL.revokeObjectURL(provenanceUrl); provenanceUrl=null; }
+    loadController?.abort();
+    const controller = loadController = new AbortController();
+    if (ready) controller.signal.addEventListener('abort',()=>ready.controller.abort(),{once:true});
+    const isHistory = historical();
+    failed = false;
+    if (!automatic) {
+      clock.pause(); sequence = selected = pinned = null;
+      events.replace([]); clock.setPlaybackWindows(null); clearScene();
+      el('event-card').hidden = true; el('now-list').replaceChildren(); el('now-next').replaceChildren(); delete el('now-next').dataset.text;
+    }
+    nowSignature = ''; hasStarted = false;
+    if (!automatic) status.textContent = 'Loading…';
     try {
-      const manifestUrl = new URL(picker.value, document.baseURI), cache = new Map();
-      const manifest = await fetchJson(manifestUrl);
-      const loaded = await loadSequence(manifest, timeline, name => {
-        if (!cache.has(name)) cache.set(name, fetchJson(new URL(name, manifestUrl)));
-        return cache.get(name);
-      });
+      let manifestUrl = new URL(picker.value, document.baseURI);
+      const cache = new Map();
+      let manifest, loaded;
+      if (isHistory) {
+        if (!historyIndex) {
+          const index = validateHistoryIndex(await (early(HISTORY)?.catch(() => fetchJson(manifestUrl, controller.signal)) ?? fetchJson(manifestUrl, controller.signal)));
+          if (ticket !== revision) return;
+          historyIndex = index;
+          text('history-coverage', `Coverage: ${index.reentryCount.toLocaleString()} catalog reentries from ${index.chunks[0].id.slice(0,4)} to ${index.chunks.at(-1).id.slice(0,4)}, plus one curated launch. Limited to the supplied catalog snapshot; launch coverage is not complete.`);
+          el('year-select').replaceChildren(...years().map(year=>{
+            const option=document.createElement('option');option.value=year;option.textContent=year;return option;
+          }));
+          chunkId ??= index.defaultChunk;
+        }
+        const chunk = historyIndex.chunks.find(c => c.id === chunkId);
+        if (!chunk) throw new Error('Choose an indexed historical passage.');
+        const prepared=await (ready?.id===chunk.id ? ready.promise : prepareHistory(chunk,controller.signal));
+        ({manifest,manifestUrl,loaded}=prepared);
+      } else {
+        manifest=await fetchJson(manifestUrl,controller.signal);
+        loaded=await loadSequence(manifest,timeline,name=>{
+          if (!cache.has(name)) cache.set(name,fetchJson(new URL(name,manifestUrl),controller.signal));
+          return cache.get(name);
+        });
+      }
       if (ticket !== revision) return;
-      sequence = loaded; selected = sequence.events[0];
+      if (automatic) continuationStart=clock.nowMs;
+      sequence = loaded;
+      events.replace(sequence.events.map(s => ({ event: s.event, displayTimeMs: s.endMs })),
+        { id: sequence.sample?.id ?? sequence.events[0].event.eventId, title: sequence.sample?.title ?? sequence.events[0].event.object.name }, {continuation:automatic});
       const mixed = Boolean(sequence.sample);
-      for (const id of ['sample-summary', 'sample-score', 'orbit-object-choice']) el(id).hidden = !mixed;
-      el('orbit-inspector').hidden = false; el('orbit-inspector').open = !mixed;
-      text('orbit-title', mixed ? sequence.sample.title : 'One event, one shared clock');
-      text('orbit-name', mixed ? `${sequence.events.length} reentries · ${sequence.sample.intervalUtc[0].slice(0,10)} to ${new Date(Date.parse(sequence.sample.intervalUtc[1])-1).toISOString().slice(0,10)} · one shared clock` : `${selected.event.object.name} · NORAD ${selected.event.object.noradId}`);
-      objectPicker.replaceChildren(...sequence.events.map(s => {
-        const option = document.createElement('option'); option.value = s.event.eventId;
-        option.textContent = `${s.event.object.name} · ${shortDate(s.endMs)}`; return option;
-      }));
-      el('orbit-provenance').href = manifestUrl.href;
+      el('strip-head').classList.toggle('example', !isHistory);
+      if (isHistory) { provenanceUrl=URL.createObjectURL(new Blob([JSON.stringify(manifest,null,2)],{type:'application/json'})); stripYear = Number(chunkId.slice(0, 4)); showYear(); }
+      el('sel-source').href = provenanceUrl ?? manifestUrl.href;
       if (mixed) {
         const coverage = sequence.sample.coverage;
         const plural = { PAYLOAD: 'payloads', 'ROCKET BODY': 'rocket bodies', DEBRIS: 'debris objects', UNKNOWN: 'unknown objects' };
-        const types = Object.entries(sequence.sample.objectTypes).filter(([,count]) => count).map(([type,count]) => `${count} ${count === 1 ? type.toLowerCase() : plural[type]}`).join(' · ');
-        text('sample-coverage', `Every catalog reentry in this interval: ${types}. ${coverage.propagatedInput+coverage.referenceInput} inputs with geometry; ${coverage.historyQueryEmpty} empty history query; ${coverage.historyNotQueried} histories not yet fetched.`);
-        text('tracer-window-limit', `Applies to every event in this passage. Defaults: ${formatDuration(sequence.sample.defaultLeadSeconds)} before each event and ${formatDuration(sequence.sample.defaultTrailSeconds ?? 1200)} of trail history. Windows over 2 h use reference loops, including Tiangong-1. Surface pulses last at most 4 simulated hours (2 s at passage speed); shorter windows clip them. These are display durations, not reentry durations.`);
-        scene.camera.yaw = 0.8; scene.camera.pitch = 0.2;
-      } else {
-        text('tracer-window-limit', selected.propagated ? 'Up to 2 h uses prepared SGP4 samples. Longer windows use an illustrative reference loop; maximum 48 h.'
-          : selected.representative ? 'Up to 48 h repeats reference geometry without propagating old elements to reentry.'
-            : `One pulse in the final ${formatDuration(selected.pulse.durationSeconds)} before the anchor. Replay focuses the pulse; longer windows do not repeat it.`);
-        if (selected.pulse) focus(selected.pulse.normal);
-      }
-      slider.disabled = replay.disabled = pause.disabled = false;
-      controls = mountTracerControls(sequence.maxSeconds, applySettings, mixed
-        ? { key: SAMPLE_SETTINGS_KEY, defaults: { reentryLeadSeconds: sequence.sample.defaultLeadSeconds, trailSeconds: sequence.sample.defaultTrailSeconds } } : {});
-      if (mixed) makeScore();
-      if (firstLoad && mixed) clock.seek(range()[0]);
-      firstLoad = false;
+        const types = Object.entries(sequence.sample.objectTypes).filter(([,count]) => count).map(([type,count]) => `${count} ${count === 1 ? type.toLowerCase() : plural[type]}`).join(', ');
+        text('sample-coverage', `Loaded now: ${types}. ${coverage.propagatedInput+coverage.referenceInput} with orbital data; ${coverage.historyQueryEmpty} with an empty history query; ${coverage.historyNotQueried} with history not yet fetched.`);
+        if (!automatic && options.seekMs == null) { scene.camera.yaw = 0.8; scene.camera.pitch = 0.2; }
+      } else text('sample-coverage', '');
+      text('tracer-window-limit', 'Settings apply everywhere. Up to 2 h of Tiangong-1 uses SGP4 samples; longer windows use a reference loop. All event windows are capped at 48 h; rings fade within the chosen window.');
+      // In the full catalog the status line stays empty; an example names itself.
+      status.textContent = isHistory ? '' : `Example: ${mixed ? sequence.sample.title : pretty(sequence.events[0].event.object.name)} · choose “Every reentry” under Other examples to return`;
+      applySettings(presentation.values);
+      if (!automatic && mixed) clock.seek(Math.max(range()[0], Math.min(range()[1], options.seekMs ?? range()[0])));
+      if (!mixed) jumpTo(sequence.events[0]);
+      refreshStrip();
       update(clock);
-    } catch (error) { if (ticket === revision) fail(error); }
+      if (isHistory) prefetchNext();
+      if (automatic) { transitioning=false; hasStarted=true; clock.play(range()[1]); }
+    } catch (error) { if (ticket === revision) { transitioning=false; fail(error); } }
   };
+  const loadAt = async ms => { chunkId = chunkAt(ms).id; await load({ seekMs: ms }); };
   const replaySequence = () => {
     if (!sequence) return;
+    continuationStart=null; applySettings(presentation.values);
     let [startMs, endMs] = range();
     if (!sequence.sample) {
-      if (selected.pulse) { startMs = selected.pulse.visibleStartMs; focus(selected.pulse.normal); }
+      const s = sequence.events[0];
+      if (s.pulse) {
+        startMs = s.pulse.visibleStartMs;
+        focus(scene.surfaceToWorld(s.pulse.normal, (startMs + endMs) / 2));
+      }
       else {
-        const head = selected.active.sample(startMs)?.head;
+        const head = s.active.sample(startMs)?.head;
         if (head) focus(head);
       }
     }
     hasStarted = true;
-    onReplay(startMs, endMs, sequence.sample?.playbackRate ?? 300);
+    onReplay(startMs, endMs, playRate());
   };
+  // Charts-only playback: year-scale speeds, or no orbital preview at all.
+  const playTimeline = () => {
+    if (clock.nowMs >= clock.maxMs) clock.seek(clock.minMs);
+    clock.play(clock.maxMs);
+  };
+  const play = async () => {
+    if (clock.playing || transitioning) { clock.pause(); return; }
+    if (failed || tooFast()) { playTimeline(); return; }
+    if (!sequence) return;
+    pinned = null;
+    const [start, end] = range();
+    if (clock.nowMs >= start && clock.nowMs < end) {
+      if (!hasStarted) { hasStarted = true; onReplay(clock.nowMs, end, playRate()); } else clock.play(end);
+    } else if (historical() && historyIndex && clock.nowMs < clock.maxMs) {
+      // The clock is outside the loaded month: continue from the month at that time.
+      const resumeMs = clock.nowMs;
+      await loadAt(resumeMs);
+      if (!sequence) return;
+      const [from, to] = range();
+      hasStarted = true; onReplay(Math.max(from, Math.min(to, resumeMs)), to, playRate());
+    } else replaySequence();
+  };
+
+  // ---- controls that work even before (or without) the globe ----
+  // Moving the clock by hand: pause, seek, and once the gesture ends load the month at that time.
+  const seekTo = (ms, final) => {
+    ms = Math.max(clock.minMs, Math.min(clock.maxMs, ms));
+    clock.pause(); clock.seek(ms);
+    if (final && historical() && historyIndex && sequence && (ms < range()[0] || ms >= range()[1])) loadAt(ms);
+  };
+  const strip = new EventStrip(el('event-strip'), {
+    onToggle: lane => presentation.update({ [SHOW[lane]]: !presentation.values[SHOW[lane]] }),
+    onSeek: seekTo,
+    onPick: async mark => {
+      if (mark.state) { jumpTo(mark.state); return; }
+      const find = () => sequence?.events.find(s => mark.tag ? s.event.eventKind === 'launch' && s.event.object.launchFamily === mark.tag
+        : s.event.eventKind === 'reentry' && s.event.object.noradId === mark.norad);
+      if (!find() && historical() && historyIndex) await loadAt(mark.ms);
+      const s = find();
+      if (s) jumpTo(s); else { clock.pause(); clock.seek(mark.ms); }
+    },
+  });
+  // Fine time: the current UTC day at one-minute resolution, plus ±10 min / ±1 h steps.
+  const fine = el('fine-scrub'), DAY = 86400000;
+  let fineDay = 0, fineText = '';
+  const showFine = nowMs => {
+    fineDay = Math.floor(nowMs / DAY) * DAY;
+    if (document.activeElement !== fine) fine.value = String(Math.floor((nowMs - fineDay) / 60000));
+    const { day, time } = clockParts(nowMs), label = `${day} · ${time}`;
+    if (label !== fineText) { fineText = label; el('fine-out').textContent = label; fine.setAttribute('aria-valuetext', label); }
+  };
+  fine.addEventListener('input', () => seekTo(fineDay + Number(fine.value) * 60000, false), { signal: listeners.signal });
+  fine.addEventListener('change', () => seekTo(fineDay + Number(fine.value) * 60000, true), { signal: listeners.signal });
+  for (const button of document.querySelectorAll('.fine-time [data-step]'))
+    button.addEventListener('click', () => seekTo(clock.nowMs + Number(button.dataset.step) * 1000, true), { signal: listeners.signal });
+  showFine(clock.nowMs);
+  // The Earth view's own clock face: the year apart, the day in words, and how many are down.
+  const clockEls = ['clock-year', 'clock-day', 'clock-time'].map(el), countEl = el('earth-count');
+  const setText = (node, value) => { if (node.textContent !== value) node.textContent = value; };
+  const showClock = nowMs => {
+    const { year, day, time } = clockParts(nowMs);
+    setText(clockEls[0], year); setText(clockEls[1], day); setText(clockEls[2], time);
+    setText(countEl, lowerBound(nowMs + 1).toLocaleString());
+  };
+  showClock(clock.nowMs);
+  const unsubscribePlayState = clock.subscribe(state => {
+    showClock(state.nowMs);
+    const year = new Date(state.nowMs).getUTCFullYear();
+    if (historical() && historyIndex && stripYear !== null && year !== stripYear && !transitioning) { stripYear = year; refreshStrip(); showYear(); }
+    strip.setTime(state.nowMs);
+    showFine(state.nowMs);
+    el('globe-speed-note').hidden = !tooFast();
+    if (state.reason === 'rate' && sequence && settings && scene) applySettings(settings);
+  });
+  hooks.play = play;
+  // Coming back to the Earth view (the other sheets reset the clock to today): return to the loaded month.
+  hooks.resume = () => { if (sequence && !clock.playing) seekTo(range()[0], false); };
+  // Orbit-height range: two thumbs on a log scale, 100 km to 100,000 km; the ends mean no limit.
+  const nice = km => { const step = 10 ** (Math.floor(Math.log10(km)) - 1); return Math.round(km / step) * step; }; // two significant figures
+  const toKm = pos => pos <= 0 ? 0 : pos >= 100 ? HEIGHT_UNBOUNDED_KM : nice(10 ** (2 + 3 * pos / 100));
+  const toPos = km => km <= 0 ? 0 : km >= HEIGHT_UNBOUNDED_KM ? 100 : Math.round((Math.log10(km) - 2) / 3 * 100);
+  const kmText = km => `${km.toLocaleString()} km`;
+  const showHeights = () => {
+    const lo = settings.minHeightKm, hi = settings.maxHeightKm, open = hi >= HEIGHT_UNBOUNDED_KM;
+    if (document.activeElement !== el('height-min')) el('height-min').value = String(toPos(lo));
+    if (document.activeElement !== el('height-max')) el('height-max').value = String(toPos(hi));
+    el('height-out').textContent = !lo && open ? 'Any height' : !lo ? `Below ${kmText(hi)}` : open ? `Above ${kmText(lo)}` : `${kmText(lo)} – ${kmText(hi)}`;
+    el('height-min').setAttribute('aria-valuetext', lo ? kmText(lo) : 'No lower limit');
+    el('height-max').setAttribute('aria-valuetext', open ? 'No upper limit' : kmText(hi));
+  };
+  for (const [id, other, key] of [['height-min', 'height-max', 'minHeightKm'], ['height-max', 'height-min', 'maxHeightKm']]) {
+    el(id).addEventListener('input', () => {
+      // Keep the thumbs from crossing.
+      const pos = Number(el(id).value), limit = Number(el(other).value);
+      if (key === 'minHeightKm' && pos > limit) el(id).value = String(limit);
+      if (key === 'maxHeightKm' && pos < limit) el(id).value = String(limit);
+      presentation.update({ [key]: toKm(Number(el(id).value)) });
+    }, { signal: listeners.signal });
+  }
+  // Skip quiet intervals: a shared setting, surfaced in the playback bar.
+  const skip = el('skip-quiet');
+  const unsubscribeSkip = presentation.subscribe(values => { skip.checked = values.skipQuietIntervals; });
+  skip.addEventListener('change', () => presentation.update({ skipQuietIntervals: skip.checked }), { signal: listeners.signal });
+  // Now | Appearance tabs beside the globe, so appearance changes are visible as they are made.
+  const tabs = [['tab-now', 'panel-now'], ['tab-appearance', 'panel-appearance']];
+  const showTab = id => tabs.forEach(([tab, panel]) => {
+    const on = tab === id;
+    el(tab).setAttribute('aria-selected', String(on)); el(tab).tabIndex = on ? 0 : -1; el(panel).hidden = !on;
+  });
+  for (const [tab] of tabs) {
+    el(tab).addEventListener('click', () => showTab(tab), { signal: listeners.signal });
+    el(tab).addEventListener('keydown', e => {
+      if (!['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+      const other = tabs.find(([t]) => t !== tab)[0]; showTab(other); el(other).focus();
+    }, { signal: listeners.signal });
+  }
+  const goYear = year => {
+    if (!historyIndex || !historical()) return;
+    chunkId = historyIndex.chunks.find(c => c.id.startsWith(year)).id; load();
+  };
+  el('year-select').addEventListener('change', e => goYear(e.target.value), { signal: listeners.signal });
+  for (const [id, step] of [['year-prev', -1], ['year-next', 1]]) el(id).addEventListener('click', () => {
+    if (!historyIndex) return;
+    const list = years(), year = list[list.indexOf(String(stripYear)) + step];
+    if (year) goYear(year);
+  }, { signal: listeners.signal });
+
   try {
     const { EarthScene } = await import('./EarthScene.js');
     scene = new EarthScene(el('earth-scene')); await scene.ready;
-    unsubscribe = clock.subscribe(update);
-    replay.addEventListener('click', replaySequence, { signal: listeners.signal });
-    pause.addEventListener('click', () => {
-      if (!sequence) return;
-      if (clock.playing) clock.pause();
-      else {
-        const [start, end] = range();
-        if (clock.nowMs < start || clock.nowMs >= end) replaySequence();
-        else if (!hasStarted) { hasStarted = true; onReplay(clock.nowMs, end, sequence.sample?.playbackRate ?? 300); }
-        else clock.play(end);
+    if (scene.imageryError) text('earth-render-status', 'Earth imagery unavailable; showing a plain globe.');
+    unsubscribe = clock.subscribe(state => {
+      if (sequence && settings.skipQuietIntervals && state.reason === 'advance' && Number.isFinite(state.skippedToMs)) {
+        const direction = skipFocusDirection({ ...sequence, events: visibleEvents },state.skippedToMs,state.nowMs);
+        if (direction) {
+          scene.clearInspection();
+          // Quiet skips reframe longitude only; preserve the user's viewing latitude.
+          scene.camera.yaw = Math.atan2(direction[0], direction[2]);
+        }
       }
-    }, { signal: listeners.signal });
-    slider.addEventListener('input', () => {
-      if (!sequence) return;
-      // pause() notifies every view and repaints the slider; capture user input first.
-      const targetMs = range()[0] + Number(slider.value) * 1000;
-      clock.pause(); clock.seek(targetMs);
-    }, { signal: listeners.signal });
-    objectPicker.addEventListener('change', () => {
-      if (!sequence) return;
-      selected = sequence.events.find(s => s.event.eventId === objectPicker.value); inspect(); update(clock);
-    }, { signal: listeners.signal });
-    el('orbit-jump').addEventListener('click', () => jumpTo(selected), { signal: listeners.signal });
-    picker.addEventListener('change', load, { signal: listeners.signal });
-    window.addEventListener('pagehide', e => {
-      if (!e.persisted) { revision++; listeners.abort(); controls?.dispose(); unsubscribe(); scene.dispose(); }
+      update(state);
+      if (transitioning && ['pause','seek'].includes(state.reason)) {
+        transitioning=false; revision++; loadController?.abort();
+        if (sequence?.sample && historyIndex) { chunkId = sequence.sample.id; }
+      }
+      if (state.reason==='advance' && !state.playing && sequence && state.nowMs===range()[1] && clock.untilMs===range()[1]
+        && historical() && !transitioning) {
+        const next=nextChunk();
+        if (!next || Date.parse(next.intervalUtc[0])>=clock.maxMs) return;
+        transitioning=true;
+        queueMicrotask(()=>{
+          if (!transitioning) return;
+          chunkId = next.id;
+          load({automatic:true});
+        });
+      }
     });
+    unsubscribeSettings = presentation.subscribe(applySettings);
+    picker.addEventListener('change', () => load(), { signal: listeners.signal });
+    window.addEventListener('pagehide', e => {
+      if (!e.persisted) { revision++; if (provenanceUrl) URL.revokeObjectURL(provenanceUrl); loadController?.abort(); prefetched?.controller.abort(); listeners.abort(); unsubscribePlayState(); unsubscribeSkip(); disposeConfiguration(); strip.dispose(); disposeEventLog(); events.dispose(); clock.setPlaybackWindows(null); unsubscribeSettings?.(); unsubscribe(); scene.dispose(); }
+    });
+    await Promise.all([launchesReady, heightsReady]);
     await load();
-  } catch (error) { fail(error); unsubscribe?.(); scene?.dispose(); }
+    // Integration seam: collaborators receive the same clock, evidence feed, settings, and Earth host.
+    return Object.freeze({ clock, events, settings: presentation,
+      earth: Object.freeze({ addLayer: layer => scene.addLayer(layer) }) });
+  } catch (error) { fail(error); disposeEventLog(); events.dispose(); clock.setPlaybackWindows(null); unsubscribeSettings?.(); unsubscribe?.(); scene?.dispose(); }
 }

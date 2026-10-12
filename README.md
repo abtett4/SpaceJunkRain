@@ -15,8 +15,11 @@ Successor to the 2019 SuperCollider piece (ATLS 4519, Gerald Robinson & Alan Tet
 Three views: **By source** (one row per major breakup, debris on its reentry day, share down on the
 right) and **Time in orbit** (decay date vs. lifespan, log scale). A row appears for any launch
 with 150+ reentered debris pieces, plus every launch linked in `data/events.json`. **Earth view**
-(sheet 3, by Tyler Griffith) replays sample reentries as orbital tracers on a globe, on the same clock as
-the timeline; see [notes/orbital-tracers.md](notes/orbital-tracers.md).
+(sheet 3, by Tyler Griffith) puts every reentry and every orbital launch attempt on a globe, on the
+same clock as the timeline: reentries on a reference orbit from their recorded height and tilt (or a
+ring where none is recorded), launches as an illustrative ascent from their pad, with a year event
+strip, kind and orbit-height filters, and a known-versus-illustrative table on the page; see
+[notes/earth-view.md](notes/earth-view.md) and [notes/orbital-tracers.md](notes/orbital-tracers.md).
 
 No third-party packages; Python 3.8+ standard library only, and plain ES modules in `web/js/`
 (no build step). Pushing to `main` redeploys the site from `web/` (see `.github/workflows/pages.yml`).
@@ -39,6 +42,16 @@ appropriate citation. Keep this citation with any copy of `web/data/decays.json`
 - Families are launch designators (`1993-036` = everything from the Cosmos 2251 launch).
 - `data/events.json` is the hand-edited collision table: kind = bump | crash | explosion | fragmentation.
 - Raw downloads (`data/raw/`, `data/decay.json`) stay out of git for size; each person fetches their own.
+
+**Launches and object details (Earth view):** J. McDowell, *GCAT: General Catalog of Artificial
+Space Objects*, [planet4589.org](https://planet4589.org/space/gcat/), CC BY 4.0. Every orbital launch
+attempt (time, vehicle, outcome, pad coordinates with GCAT's stated uncertainty), and for catalogued
+objects a recorded orbit, decay time of day (used only where it falls on the Space-Track day),
+mass, mission and owner, joined by NORAD number. Space-Track stays the record of which objects
+reentered and on which day. Keep this citation with `web/data/launches.json`,
+`web/data/orbit-heights.json` and the history passages. To refresh: `python tools/fetch_gcat.py`,
+then `tools/gcat_objects.py`, `tools/gcat_launches.py` and
+`tools/build_history_chunks.py --all-history` (details in [notes/earth-view.md](notes/earth-view.md)).
 
 ## Other files
 

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
   "sample": {
     "id": "april-2018-passage",
     "title": "An eight-day passage",
@@ -8,9 +8,6 @@
       "2018-04-10T00:00:00Z"
     ],
     "playbackRate": 7200,
-    "defaultLeadSeconds": 14400,
-    "defaultTrailSeconds": 300,
-    "surfacePulseSeconds": 14400,
     "eventCount": 12,
     "coverage": {
       "propagatedInput": 1,
@@ -30,7 +27,7 @@
   },
   "events": [
     {
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "eventId": "37820:reentry:2018-04-02",
       "eventKind": "reentry",
       "object": {
@@ -166,36 +163,6 @@
           "rule": "positive-perigee-apogee-below-2000km-v1"
         }
       },
-      "presentation": {
-        "mode": "illustrative-replay-of-propagated-orbit",
-        "displayAnchorUtc": "2018-04-02T15:35:52Z",
-        "anchorBasis": "illustrative",
-        "anchorPolicy": {
-          "policy": "sha256-utc-day-v1",
-          "seed": "SpaceJunkRain"
-        },
-        "startTime": "2018-04-02T13:35:52Z",
-        "endTime": "2018-04-02T15:35:52Z",
-        "geometryAsset": "trajectories/37820.json",
-        "geometryFrame": "TEME",
-        "geometryUnits": "km",
-        "geometrySourceIntervalUtc": [
-          "2018-04-01T22:00:00Z",
-          "2018-04-02T00:00:00Z"
-        ],
-        "timeMapping": "Source samples replayed at 1:1 simulation duration, ending at the display anchor.",
-        "locationClaim": "none",
-        "geographicEndpoint": null,
-        "style": {
-          "color": "#ffd166",
-          "trailSeconds": 1200,
-          "markerRadiusEarth": 0.012
-        },
-        "styleMeaning": "Fixed prototype style and exaggerated marker size; no physical size/brightness claim.",
-        "representativeOrbitAsset": "trajectories/37820-representative.json",
-        "maxDisplaySeconds": 172800,
-        "longWindowPolicy": "Beyond the prepared sample duration, the entire selected window uses the representative loop. Original SGP4 samples are never stretched or looped."
-      },
       "bounds": {
         "eventTime": [
           "2018-04-02T00:00:00Z",
@@ -255,10 +222,18 @@
           }
         ],
         "interpretation": "Differences between model inputs, not a calibrated error bound."
+      },
+      "orbitalData": {
+        "propagated": {
+          "asset": "trajectories/37820.json"
+        },
+        "reference": {
+          "asset": "trajectories/37820-representative.json"
+        }
       }
     },
     {
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "eventId": "38249:reentry:2018-04-03",
       "eventKind": "reentry",
       "object": {
@@ -404,31 +379,6 @@
           "note": "Reference orbit does not establish the event-time regime."
         }
       },
-      "presentation": {
-        "mode": "representative-orbit",
-        "modeReason": "Reference elements are 1.2 hours before the reported event. This loop reuses their shape and tilt, without propagation to reentry.",
-        "displayAnchorUtc": "2018-04-03T00:15:39Z",
-        "anchorBasis": "illustrative",
-        "anchorPolicy": {
-          "policy": "sha256-utc-day-v1",
-          "seed": "SpaceJunkRain"
-        },
-        "startTime": "2018-04-02T22:15:39Z",
-        "endTime": "2018-04-03T00:15:39Z",
-        "maxDisplaySeconds": 172800,
-        "geometryAsset": "trajectories/38249-representative.json",
-        "geometryFrame": "illustrative-equatorial",
-        "geometryUnits": "km",
-        "geometrySourceIntervalUtc": null,
-        "timeMapping": "Repeated reference ellipse with fixed period and illustrative phase at the event anchor.",
-        "locationClaim": "none",
-        "geographicEndpoint": null,
-        "style": {
-          "color": "#ffd166",
-          "trailSeconds": 1200,
-          "markerRadiusEarth": 0.012
-        }
-      },
       "bounds": {
         "eventTime": [
           "2018-04-03T00:00:00Z",
@@ -439,7 +389,7 @@
           1.2467412,
           25.246741200000002
         ],
-        "meaning": "Source age and presentation limits only, not physical error bounds."
+        "meaning": "Source age only, not physical error bounds."
       },
       "sources": {
         "gpHistory": {
@@ -460,10 +410,15 @@
         "gpId": "119083585",
         "elementSha256": "4e33a250bcbbbe3488e2f405e2c4e39edadc0fb6eb16d372fb76952b4e1d699b",
         "assetSha256": "3453841aac01064304a69c13560908504e0f8957edf2d1ceb23cfaf25c7c230a"
+      },
+      "orbitalData": {
+        "reference": {
+          "asset": "trajectories/38249-representative.json"
+        }
       }
     },
     {
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "eventId": "31309:reentry:2018-04-03",
       "eventKind": "reentry",
       "object": {
@@ -609,31 +564,6 @@
           "note": "Reference orbit does not establish the event-time regime."
         }
       },
-      "presentation": {
-        "mode": "representative-orbit",
-        "modeReason": "Reference elements are 2.7 hours before the reported event. This loop reuses their shape and tilt, without propagation to reentry.",
-        "displayAnchorUtc": "2018-04-03T07:07:11Z",
-        "anchorBasis": "illustrative",
-        "anchorPolicy": {
-          "policy": "sha256-utc-day-v1",
-          "seed": "SpaceJunkRain"
-        },
-        "startTime": "2018-04-03T05:07:11Z",
-        "endTime": "2018-04-03T07:07:11Z",
-        "maxDisplaySeconds": 172800,
-        "geometryAsset": "trajectories/31309-representative.json",
-        "geometryFrame": "illustrative-equatorial",
-        "geometryUnits": "km",
-        "geometrySourceIntervalUtc": null,
-        "timeMapping": "Repeated reference ellipse with fixed period and illustrative phase at the event anchor.",
-        "locationClaim": "none",
-        "geographicEndpoint": null,
-        "style": {
-          "color": "#ffd166",
-          "trailSeconds": 1200,
-          "markerRadiusEarth": 0.012
-        }
-      },
       "bounds": {
         "eventTime": [
           "2018-04-03T00:00:00Z",
@@ -644,7 +574,7 @@
           2.71736136,
           26.717361359999998
         ],
-        "meaning": "Source age and presentation limits only, not physical error bounds."
+        "meaning": "Source age only, not physical error bounds."
       },
       "sources": {
         "gpHistory": {
@@ -665,10 +595,15 @@
         "gpId": "119077386",
         "elementSha256": "e9d84fca6c41bde1a50d565216213b7a03a49010284ce534936d3ee4a19b0656",
         "assetSha256": "04a759543309fed7c4befbb51beafffd03814e8d1b8cbb27388afd4ea26d59d4"
+      },
+      "orbitalData": {
+        "reference": {
+          "asset": "trajectories/31309-representative.json"
+        }
       }
     },
     {
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "eventId": "41486:reentry:2018-04-05",
       "eventKind": "reentry",
       "object": {
@@ -814,31 +749,6 @@
           "note": "Reference orbit does not establish the event-time regime."
         }
       },
-      "presentation": {
-        "mode": "representative-orbit",
-        "modeReason": "Reference elements are 0.5 hours before the reported event. This loop reuses their shape and tilt, without propagation to reentry.",
-        "displayAnchorUtc": "2018-04-05T00:52:55Z",
-        "anchorBasis": "illustrative",
-        "anchorPolicy": {
-          "policy": "sha256-utc-day-v1",
-          "seed": "SpaceJunkRain"
-        },
-        "startTime": "2018-04-04T22:52:55Z",
-        "endTime": "2018-04-05T00:52:55Z",
-        "maxDisplaySeconds": 172800,
-        "geometryAsset": "trajectories/41486-representative.json",
-        "geometryFrame": "illustrative-equatorial",
-        "geometryUnits": "km",
-        "geometrySourceIntervalUtc": null,
-        "timeMapping": "Repeated reference ellipse with fixed period and illustrative phase at the event anchor.",
-        "locationClaim": "none",
-        "geographicEndpoint": null,
-        "style": {
-          "color": "#ffd166",
-          "trailSeconds": 1200,
-          "markerRadiusEarth": 0.012
-        }
-      },
       "bounds": {
         "eventTime": [
           "2018-04-05T00:00:00Z",
@@ -849,7 +759,7 @@
           0.53440536,
           24.534405359999997
         ],
-        "meaning": "Source age and presentation limits only, not physical error bounds."
+        "meaning": "Source age only, not physical error bounds."
       },
       "sources": {
         "gpHistory": {
@@ -870,10 +780,15 @@
         "gpId": "119129891",
         "elementSha256": "85f48c2598de4efd6a373bfacd2548aca091a85d2059be82051eec218a63fbc2",
         "assetSha256": "fdcd86a90bf3397d00cb0d16e9310d0178f11973da1b9a186c33dd1ee6e0c874"
+      },
+      "orbitalData": {
+        "reference": {
+          "asset": "trajectories/41486-representative.json"
+        }
       }
     },
     {
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "eventId": "41568:reentry:2018-04-05",
       "eventKind": "reentry",
       "object": {
@@ -1019,31 +934,6 @@
           "note": "Reference orbit does not establish the event-time regime."
         }
       },
-      "presentation": {
-        "mode": "representative-orbit",
-        "modeReason": "Reference elements are 2.4 hours before the reported event. This loop reuses their shape and tilt, without propagation to reentry.",
-        "displayAnchorUtc": "2018-04-05T08:06:38Z",
-        "anchorBasis": "illustrative",
-        "anchorPolicy": {
-          "policy": "sha256-utc-day-v1",
-          "seed": "SpaceJunkRain"
-        },
-        "startTime": "2018-04-05T06:06:38Z",
-        "endTime": "2018-04-05T08:06:38Z",
-        "maxDisplaySeconds": 172800,
-        "geometryAsset": "trajectories/41568-representative.json",
-        "geometryFrame": "illustrative-equatorial",
-        "geometryUnits": "km",
-        "geometrySourceIntervalUtc": null,
-        "timeMapping": "Repeated reference ellipse with fixed period and illustrative phase at the event anchor.",
-        "locationClaim": "none",
-        "geographicEndpoint": null,
-        "style": {
-          "color": "#ffd166",
-          "trailSeconds": 1200,
-          "markerRadiusEarth": 0.012
-        }
-      },
       "bounds": {
         "eventTime": [
           "2018-04-05T00:00:00Z",
@@ -1054,7 +944,7 @@
           2.4421464,
           26.4421464
         ],
-        "meaning": "Source age and presentation limits only, not physical error bounds."
+        "meaning": "Source age only, not physical error bounds."
       },
       "sources": {
         "gpHistory": {
@@ -1075,10 +965,15 @@
         "gpId": "119136635",
         "elementSha256": "5bdcd79865120ddfbad6305e0704b66f6d10e6ac5827fe6c58983499193f14df",
         "assetSha256": "0896a464d0bb2572fd761ad1a7cfce2bc6f80792588ef8e10754667076809fd2"
+      },
+      "orbitalData": {
+        "reference": {
+          "asset": "trajectories/41568-representative.json"
+        }
       }
     },
     {
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "eventId": "41569:reentry:2018-04-05",
       "eventKind": "reentry",
       "object": {
@@ -1223,40 +1118,6 @@
           "note": "Reference orbit does not establish the event-time regime."
         }
       },
-      "presentation": {
-        "mode": "symbolic-event",
-        "modeReason": "Catalog-only input: orbital history was not fetched for this sample; it may exist.",
-        "displayAnchorUtc": "2018-04-05T17:41:01Z",
-        "anchorBasis": "illustrative",
-        "anchorPolicy": {
-          "policy": "sha256-utc-day-v1",
-          "seed": "SpaceJunkRain"
-        },
-        "startTime": "2018-04-05T15:41:01Z",
-        "endTime": "2018-04-05T17:41:01Z",
-        "maxDisplaySeconds": 172800,
-        "geometryAsset": null,
-        "geometryFrame": null,
-        "geometryUnits": null,
-        "geometrySourceIntervalUtc": null,
-        "timeMapping": "One surface pulse ending at the display anchor; shared clock, no orbital path.",
-        "surfacePulse": {
-          "basis": "illustrative",
-          "locationPolicy": "sha256-equal-area-surface-v1",
-          "latitudeDeg": 53.3255650171867,
-          "longitudeDeg": -156.81136535983447,
-          "durationSeconds": 14400,
-          "timing": "single-pulse-ending-at-display-anchor",
-          "note": "Persistent random display point, uniform by spherical surface area. Not a reentry location, orbital constraint, or physical probability model. Duration is a presentation choice, not atmospheric descent time. In this passage the 4 h display pulse lasts 2 s at the preset speed."
-        },
-        "locationClaim": "none",
-        "geographicEndpoint": null,
-        "style": {
-          "color": "#ffd166",
-          "trailSeconds": 1200,
-          "markerRadiusEarth": 0.012
-        }
-      },
       "bounds": {
         "eventTime": [
           "2018-04-05T00:00:00Z",
@@ -1264,7 +1125,7 @@
         ],
         "referenceRadiusKm": null,
         "sourceElementAgeAtReportedDecayHours": null,
-        "meaning": "Source age and presentation limits only, not physical error bounds."
+        "meaning": "Source age only, not physical error bounds."
       },
       "sources": {
         "gpHistory": {
@@ -1280,10 +1141,11 @@
       "geometryProvenance": {
         "gpId": null,
         "elementSha256": null
-      }
+      },
+      "orbitalData": {}
     },
     {
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "eventId": "41565:reentry:2018-04-06",
       "eventKind": "reentry",
       "object": {
@@ -1428,40 +1290,6 @@
           "note": "Reference orbit does not establish the event-time regime."
         }
       },
-      "presentation": {
-        "mode": "symbolic-event",
-        "modeReason": "Catalog-only input: orbital history was not fetched for this sample; it may exist.",
-        "displayAnchorUtc": "2018-04-06T14:16:00Z",
-        "anchorBasis": "illustrative",
-        "anchorPolicy": {
-          "policy": "sha256-utc-day-v1",
-          "seed": "SpaceJunkRain"
-        },
-        "startTime": "2018-04-06T12:16:00Z",
-        "endTime": "2018-04-06T14:16:00Z",
-        "maxDisplaySeconds": 172800,
-        "geometryAsset": null,
-        "geometryFrame": null,
-        "geometryUnits": null,
-        "geometrySourceIntervalUtc": null,
-        "timeMapping": "One surface pulse ending at the display anchor; shared clock, no orbital path.",
-        "surfacePulse": {
-          "basis": "illustrative",
-          "locationPolicy": "sha256-equal-area-surface-v1",
-          "latitudeDeg": -11.798958424210742,
-          "longitudeDeg": -68.50279718291651,
-          "durationSeconds": 14400,
-          "timing": "single-pulse-ending-at-display-anchor",
-          "note": "Persistent random display point, uniform by spherical surface area. Not a reentry location, orbital constraint, or physical probability model. Duration is a presentation choice, not atmospheric descent time. In this passage the 4 h display pulse lasts 2 s at the preset speed."
-        },
-        "locationClaim": "none",
-        "geographicEndpoint": null,
-        "style": {
-          "color": "#ffd166",
-          "trailSeconds": 1200,
-          "markerRadiusEarth": 0.012
-        }
-      },
       "bounds": {
         "eventTime": [
           "2018-04-06T00:00:00Z",
@@ -1469,7 +1297,7 @@
         ],
         "referenceRadiusKm": null,
         "sourceElementAgeAtReportedDecayHours": null,
-        "meaning": "Source age and presentation limits only, not physical error bounds."
+        "meaning": "Source age only, not physical error bounds."
       },
       "sources": {
         "gpHistory": {
@@ -1485,10 +1313,11 @@
       "geometryProvenance": {
         "gpId": null,
         "elementSha256": null
-      }
+      },
+      "orbitalData": {}
     },
     {
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "eventId": "24965:reentry:2018-04-07",
       "eventKind": "reentry",
       "object": {
@@ -1634,31 +1463,6 @@
           "note": "Reference orbit does not establish the event-time regime."
         }
       },
-      "presentation": {
-        "mode": "representative-orbit",
-        "modeReason": "Reference elements are 3.4 hours before the reported event. This loop reuses their shape and tilt, without propagation to reentry.",
-        "displayAnchorUtc": "2018-04-07T00:32:48Z",
-        "anchorBasis": "illustrative",
-        "anchorPolicy": {
-          "policy": "sha256-utc-day-v1",
-          "seed": "SpaceJunkRain"
-        },
-        "startTime": "2018-04-06T22:32:48Z",
-        "endTime": "2018-04-07T00:32:48Z",
-        "maxDisplaySeconds": 172800,
-        "geometryAsset": "trajectories/24965-representative.json",
-        "geometryFrame": "illustrative-equatorial",
-        "geometryUnits": "km",
-        "geometrySourceIntervalUtc": null,
-        "timeMapping": "Repeated reference ellipse with fixed period and illustrative phase at the event anchor.",
-        "locationClaim": "none",
-        "geographicEndpoint": null,
-        "style": {
-          "color": "#ffd166",
-          "trailSeconds": 1200,
-          "markerRadiusEarth": 0.012
-        }
-      },
       "bounds": {
         "eventTime": [
           "2018-04-07T00:00:00Z",
@@ -1669,7 +1473,7 @@
           3.44355024,
           27.44355024
         ],
-        "meaning": "Source age and presentation limits only, not physical error bounds."
+        "meaning": "Source age only, not physical error bounds."
       },
       "sources": {
         "gpHistory": {
@@ -1690,10 +1494,15 @@
         "gpId": "119176728",
         "elementSha256": "b875f4f918a75631f99a0a741fb7e9cf946be76732e43edba7644425e4c52f16",
         "assetSha256": "fc3b3a8debe2b04c40e5d39b57efa8bbddb84910ea4ddc9b41f1695f3f0a8908"
+      },
+      "orbitalData": {
+        "reference": {
+          "asset": "trajectories/24965-representative.json"
+        }
       }
     },
     {
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "eventId": "43268:reentry:2018-04-07",
       "eventKind": "reentry",
       "object": {
@@ -1838,40 +1647,6 @@
           "note": "Reference orbit does not establish the event-time regime."
         }
       },
-      "presentation": {
-        "mode": "symbolic-event",
-        "modeReason": "Catalog-only input: orbital history was not fetched for this sample; it may exist.",
-        "displayAnchorUtc": "2018-04-07T07:49:51Z",
-        "anchorBasis": "illustrative",
-        "anchorPolicy": {
-          "policy": "sha256-utc-day-v1",
-          "seed": "SpaceJunkRain"
-        },
-        "startTime": "2018-04-07T05:49:51Z",
-        "endTime": "2018-04-07T07:49:51Z",
-        "maxDisplaySeconds": 172800,
-        "geometryAsset": null,
-        "geometryFrame": null,
-        "geometryUnits": null,
-        "geometrySourceIntervalUtc": null,
-        "timeMapping": "One surface pulse ending at the display anchor; shared clock, no orbital path.",
-        "surfacePulse": {
-          "basis": "illustrative",
-          "locationPolicy": "sha256-equal-area-surface-v1",
-          "latitudeDeg": -41.549880371971824,
-          "longitudeDeg": -87.50850900545787,
-          "durationSeconds": 14400,
-          "timing": "single-pulse-ending-at-display-anchor",
-          "note": "Persistent random display point, uniform by spherical surface area. Not a reentry location, orbital constraint, or physical probability model. Duration is a presentation choice, not atmospheric descent time. In this passage the 4 h display pulse lasts 2 s at the preset speed."
-        },
-        "locationClaim": "none",
-        "geographicEndpoint": null,
-        "style": {
-          "color": "#ffd166",
-          "trailSeconds": 1200,
-          "markerRadiusEarth": 0.012
-        }
-      },
       "bounds": {
         "eventTime": [
           "2018-04-07T00:00:00Z",
@@ -1879,7 +1654,7 @@
         ],
         "referenceRadiusKm": null,
         "sourceElementAgeAtReportedDecayHours": null,
-        "meaning": "Source age and presentation limits only, not physical error bounds."
+        "meaning": "Source age only, not physical error bounds."
       },
       "sources": {
         "gpHistory": {
@@ -1895,10 +1670,11 @@
       "geometryProvenance": {
         "gpId": null,
         "elementSha256": null
-      }
+      },
+      "orbitalData": {}
     },
     {
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "eventId": "43269:reentry:2018-04-07",
       "eventKind": "reentry",
       "object": {
@@ -2043,40 +1819,6 @@
           "note": "Reference orbit does not establish the event-time regime."
         }
       },
-      "presentation": {
-        "mode": "symbolic-event",
-        "modeReason": "Catalog-only input: orbital history was not fetched for this sample; it may exist.",
-        "displayAnchorUtc": "2018-04-07T23:14:18Z",
-        "anchorBasis": "illustrative",
-        "anchorPolicy": {
-          "policy": "sha256-utc-day-v1",
-          "seed": "SpaceJunkRain"
-        },
-        "startTime": "2018-04-07T21:14:18Z",
-        "endTime": "2018-04-07T23:14:18Z",
-        "maxDisplaySeconds": 172800,
-        "geometryAsset": null,
-        "geometryFrame": null,
-        "geometryUnits": null,
-        "geometrySourceIntervalUtc": null,
-        "timeMapping": "One surface pulse ending at the display anchor; shared clock, no orbital path.",
-        "surfacePulse": {
-          "basis": "illustrative",
-          "locationPolicy": "sha256-equal-area-surface-v1",
-          "latitudeDeg": -57.830562091876175,
-          "longitudeDeg": -175.25360971146085,
-          "durationSeconds": 14400,
-          "timing": "single-pulse-ending-at-display-anchor",
-          "note": "Persistent random display point, uniform by spherical surface area. Not a reentry location, orbital constraint, or physical probability model. Duration is a presentation choice, not atmospheric descent time. In this passage the 4 h display pulse lasts 2 s at the preset speed."
-        },
-        "locationClaim": "none",
-        "geographicEndpoint": null,
-        "style": {
-          "color": "#ffd166",
-          "trailSeconds": 1200,
-          "markerRadiusEarth": 0.012
-        }
-      },
       "bounds": {
         "eventTime": [
           "2018-04-07T00:00:00Z",
@@ -2084,7 +1826,7 @@
         ],
         "referenceRadiusKm": null,
         "sourceElementAgeAtReportedDecayHours": null,
-        "meaning": "Source age and presentation limits only, not physical error bounds."
+        "meaning": "Source age only, not physical error bounds."
       },
       "sources": {
         "gpHistory": {
@@ -2100,10 +1842,11 @@
       "geometryProvenance": {
         "gpId": null,
         "elementSha256": null
-      }
+      },
+      "orbitalData": {}
     },
     {
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "eventId": "26926:reentry:2018-04-08",
       "eventKind": "reentry",
       "object": {
@@ -2248,40 +1991,6 @@
           "note": "Reference orbit does not establish the event-time regime."
         }
       },
-      "presentation": {
-        "mode": "symbolic-event",
-        "modeReason": "Catalog-only input: orbital history was not fetched for this sample; it may exist.",
-        "displayAnchorUtc": "2018-04-08T20:06:43Z",
-        "anchorBasis": "illustrative",
-        "anchorPolicy": {
-          "policy": "sha256-utc-day-v1",
-          "seed": "SpaceJunkRain"
-        },
-        "startTime": "2018-04-08T18:06:43Z",
-        "endTime": "2018-04-08T20:06:43Z",
-        "maxDisplaySeconds": 172800,
-        "geometryAsset": null,
-        "geometryFrame": null,
-        "geometryUnits": null,
-        "geometrySourceIntervalUtc": null,
-        "timeMapping": "One surface pulse ending at the display anchor; shared clock, no orbital path.",
-        "surfacePulse": {
-          "basis": "illustrative",
-          "locationPolicy": "sha256-equal-area-surface-v1",
-          "latitudeDeg": 15.206211563813717,
-          "longitudeDeg": 172.48153968495865,
-          "durationSeconds": 14400,
-          "timing": "single-pulse-ending-at-display-anchor",
-          "note": "Persistent random display point, uniform by spherical surface area. Not a reentry location, orbital constraint, or physical probability model. Duration is a presentation choice, not atmospheric descent time. In this passage the 4 h display pulse lasts 2 s at the preset speed."
-        },
-        "locationClaim": "none",
-        "geographicEndpoint": null,
-        "style": {
-          "color": "#ffd166",
-          "trailSeconds": 1200,
-          "markerRadiusEarth": 0.012
-        }
-      },
       "bounds": {
         "eventTime": [
           "2018-04-08T00:00:00Z",
@@ -2289,7 +1998,7 @@
         ],
         "referenceRadiusKm": null,
         "sourceElementAgeAtReportedDecayHours": null,
-        "meaning": "Source age and presentation limits only, not physical error bounds."
+        "meaning": "Source age only, not physical error bounds."
       },
       "sources": {
         "gpHistory": {
@@ -2305,10 +2014,11 @@
       "geometryProvenance": {
         "gpId": null,
         "elementSha256": null
-      }
+      },
+      "orbitalData": {}
     },
     {
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "eventId": "31777:reentry:2018-04-09",
       "eventKind": "reentry",
       "object": {
@@ -2453,40 +2163,6 @@
           "note": "Reference orbit does not establish the event-time regime."
         }
       },
-      "presentation": {
-        "mode": "symbolic-event",
-        "modeReason": "No pre-event orbital records in the supplied snapshot; other historical data may exist.",
-        "displayAnchorUtc": "2018-04-09T04:27:22Z",
-        "anchorBasis": "illustrative",
-        "anchorPolicy": {
-          "policy": "sha256-utc-day-v1",
-          "seed": "SpaceJunkRain"
-        },
-        "startTime": "2018-04-09T02:27:22Z",
-        "endTime": "2018-04-09T04:27:22Z",
-        "maxDisplaySeconds": 172800,
-        "geometryAsset": null,
-        "geometryFrame": null,
-        "geometryUnits": null,
-        "geometrySourceIntervalUtc": null,
-        "timeMapping": "One surface pulse ending at the display anchor; shared clock, no orbital path.",
-        "surfacePulse": {
-          "basis": "illustrative",
-          "locationPolicy": "sha256-equal-area-surface-v1",
-          "latitudeDeg": 33.22713927325786,
-          "longitudeDeg": 149.84129215182355,
-          "durationSeconds": 14400,
-          "timing": "single-pulse-ending-at-display-anchor",
-          "note": "Persistent random display point, uniform by spherical surface area. Not a reentry location, orbital constraint, or physical probability model. Duration is a presentation choice, not atmospheric descent time. In this passage the 4 h display pulse lasts 2 s at the preset speed."
-        },
-        "locationClaim": "none",
-        "geographicEndpoint": null,
-        "style": {
-          "color": "#ffd166",
-          "trailSeconds": 1200,
-          "markerRadiusEarth": 0.012
-        }
-      },
       "bounds": {
         "eventTime": [
           "2018-04-09T00:00:00Z",
@@ -2494,7 +2170,7 @@
         ],
         "referenceRadiusKm": null,
         "sourceElementAgeAtReportedDecayHours": null,
-        "meaning": "Source age and presentation limits only, not physical error bounds."
+        "meaning": "Source age only, not physical error bounds."
       },
       "sources": {
         "gpHistory": {
@@ -2514,7 +2190,8 @@
       "geometryProvenance": {
         "gpId": null,
         "elementSha256": null
-      }
+      },
+      "orbitalData": {}
     }
   ]
 }

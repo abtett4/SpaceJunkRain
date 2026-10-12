@@ -1,5 +1,18 @@
 # Tracer model: useful attributes with bounded approximation
 
+> Current contract (2026-10-10): collection schema 3 / event schema 2 replaces the early
+> `presentation` fields described in the development history below. Event records now
+> contain facts, uncertainty, provenance and `orbitalData` links only. `DisplayPolicy.js`
+> derives render modes, colors, timing and pulse locations from those facts and shared
+> settings. Launches are cyan and start at the sourced pad with a labeled illustrative
+> ascent into the reference orbit. See [the current contract](launch-and-configuration.md#event--visualization-separation).
+
+
+Current implementation (2026-10-10): one sourced launch joins the mixed passage, and a
+single visualization configuration replaces separate sample/single-event preferences.
+[Launch and configuration notes](launch-and-configuration.md) supersede the earlier
+phase-specific control defaults and storage policies documented below.
+
 This is the visualization direction agreed on 2026-10-07. The goal is a recognizable,
 plausible tracer for each catalogued event, carrying useful attributes even when timing,
 location, or orbital history is incomplete. Missing exact reentry times are not blockers.
@@ -10,6 +23,27 @@ The numerical proof of concept remains useful as a geometry source and diagnosti
 deserves a visual representation. For example, NORAD 38023 can still receive an
 illustrative or symbolic tracer even though its final known elements are too old for the
 current near-decay propagation test.
+
+## Collaboration responsibilities (updated 2026-10-10)
+
+- Tyler: orbital-history research and preprocessing, bounded orbital representations,
+  reusable Earth rendering, orbital tracers, geographical inspection and launch/reentry
+  visualization. The scope and scientific constraints discussed here remain unchanged.
+- Original collaborator: existing timeline/data visualizations and sound for orbital events.
+- New collaborator: solar-weather visualization around Earth, with color/transparency driven
+  by solar data, plus sound corresponding to solar measurements and their magnitude. The
+  exact measured quantities, units, spatial meaning and mappings remain hers to define.
+- Shared integration: event schema, simulation time, coordinate conventions, layout and
+  playback/seek behavior. Solar observations and orbital events are distinct data streams
+  subscribed to the same clock; neither needs an independent simulation timer.
+
+Keep the base atmosphere as a decorative rendering effect, explicitly separate from a
+future data-driven solar-weather layer. Provide a small scene-layer attachment interface
+with time and Earth transforms; do not implement guessed solar data, solar-to-color mappings
+or either audio system as part of Tyler's Earth upgrade. Preserve space for both audio
+channels and their independent controls in the eventual shared interface.
+
+Nothing is published or sent to collaborators without Tyler's approval.
 
 ## Keep evidence and presentation separate
 
@@ -87,7 +121,7 @@ Reported times are retained. `cols.p` records day-only versus reported-time prec
 `build_data.py` applies this policy before publishing, sorting all columns together.
 `--retime-existing` upgrades the current processed catalog without changing or downloading
 raw data. It refuses ambiguous legacy files that lack per-event precision flags. Launch
-tracers are not implemented yet; their eventual event IDs can use the same timing helper.
+event IDs now use the same identity helper. The first example has a reported minute, so it does not receive a random anchor.
 The existing launch-date column still describes catalog/parent-launch chronology, not a
 separate launch animation. Curated collision annotations retain their source dates.
 
@@ -143,17 +177,17 @@ accepts positions, timing and style, with no Space-Track or catalog knowledge. R
 uses 300 simulated seconds per real second and stops at the shared event anchor. The
 Earth view interpolates the 30-second samples; it performs no SGP4 propagation.
 
-The plain sphere and camera were adapted from Cosmic Clock. Propagated coordinates remain
-inertial TEME, mapped to scene axes `[x, -z, y] / 6378.135`, a length- and handedness-preserving
-rotation. North is screen-up in the default orientation. The equator is shown; there are
-no longitude lines, surface imagery, geographic endpoint or atmospheric descent. Sphere
-lighting and marker width are presentation choices. The scene redraws on clock, camera,
-or size changes, without a separate simulation timer.
+The first preview used a plain sphere and camera adapted from Cosmic Clock. The
+current Earth upgrade adds textures, lighting, shared-clock rotation and geographic
+inspection; see [Earth implementation](earth-renderer.md). Source positions remain
+inertial TEME. The corrected p5 display mapping is `[x, -z, -y] / 6378.135`, preserving
+lengths while reflecting the screen-down coordinate convention so north is up and
+east appears on the correct side. No atmospheric descent or geographic endpoint is
+inferred. The scene redraws on clock, camera or size changes without a second timer.
 
-Phase 2 adds representative-orbit and symbolic fallbacks, described below. Launch tracers,
-a broader mixed sample, and audio remain later increments. One object is exported per
-adapter run; this is not a bulk manifest merger. The original numerical diagnostic and
-immutable raw caches remain unchanged.
+Phase 2 adds representative-orbit and symbolic fallbacks; Phase 3 adds the mixed sample.
+A sourced launch is now implemented; audio remains a later increment. The original numerical diagnostic
+and immutable raw orbital caches remain unchanged.
 
 
 ## Phase 2: reference loops and symbolic events
@@ -328,17 +362,32 @@ Recommended sequence:
 3. **Small mixed event sample — complete.** Twelve events from April 2–9, 2018 share
    one scene and the existing clock. Six have orbital inputs and six are surface pulses,
    with missing-query and not-yet-queried inputs distinguished. Details below.
-4. **One launch example.** Add a sourced launch-site lookup, site pulse and first-known
-   orbital arc. Distinguish parental launch from fragment creation/deployment; any connecting
-   arc is illustrative rather than a reconstructed powered ascent. Test launch-follow time.
-5. **Unified presentation and audio contract.** Refine Earth presentation with explicit
-   coordinate-frame/time handling before adding geographical imagery. Connect event selection,
-   filters and configuration across views. Define forward-play event crossings, pause, seek
-   and replay behavior with the colleague's audio layer so scrubbing does not accidentally
+4. **Earth, geographical inspection and one sourced launch — complete.** Cosmic
+   Clock's surface textures, day/night lighting and decorative atmosphere now run in the existing
+   scene with shared-clock Earth rotation and an offline geographic inspector.
+   Dragon CRS-14 now adds a sourced pad pulse and separate early reference orbit, with
+   configurable launch-follow time and no powered-ascent connector. Debris parent launches
+   are not converted to fragment-creation events.
+5. **Shared configuration complete; selection, filters and audio contract next.** Define forward-play event crossings, pause, seek
+   and replay behavior with both collaborators' audio layers so scrubbing does not accidentally
    fire a backlog of sound events.
 6. **Broader coverage after profiling.** Measure the small batch, then introduce time-window
    loading and caching only where needed. Report missing geometry/metadata coverage explicitly
    while expanding the locally cached catalog.
+
+## Earth appearance and geographical inspection — implemented 2026-10-10
+
+The mixed passage now uses a textured, lit Earth adapted from Cosmic Clock. Hover
+inspection, click/tap pinning, keyboard inspection and place shortcuts operate on
+bundled geographic data. Names stay below the model; geographic inspection does
+not assign a location to an event. The static imagery and decorative atmosphere
+are separate from the new collaborator's future solar-weather layer.
+
+[Earth implementation notes](earth-renderer.md) record transforms, interaction,
+limitations, source credits, tests and the minimal `EarthScene.addLayer()` hook.
+Earth rotation and sunlight use the existing clock. Surface pulses keep their
+persistent illustrative coordinates as Earth rotates; no event or source orbit
+assets changed by that increment. The launch and shared configuration increment is documented separately.
 
 ## Phase 3: small mixed passage
 
