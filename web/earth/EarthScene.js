@@ -77,7 +77,7 @@ export class EarthScene {
             canvas.elt.tabIndex = 0;
             this.canvas = canvas.elt;
             canvas.elt.setAttribute('aria-label', 'Earth event preview and geographic explorer');
-            canvas.elt.setAttribute('aria-describedby', 'geo-instructions');
+            canvas.elt.setAttribute('aria-describedby', 'globe-help');
             this.camera = new CameraController(canvas.elt, () => p.redraw(), {
               hover: point => { this.pointer = point; this.refreshInspection(); },
               inspect: point => {

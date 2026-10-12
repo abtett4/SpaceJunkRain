@@ -11,7 +11,7 @@ export function mountEventPlaybackLog(container, feed) {
     container.hidden = !state.eventCount;
     summary.textContent = '0';
     status.textContent = state.reason === 'seek'
-      ? 'Clock repositioned. Resume or replay to pass through events.'
+      ? 'Clock moved. Press Play to pass through events.'
       : 'No events reached in playback yet.';
   };
   const offState = feed.subscribeState(clear);

@@ -41,6 +41,9 @@ Earth. Neither hover results nor place shortcuts modify event records.
 
 ## Geographic interaction
 
+> **2026-10-11:** the place readout and "Find a place" panel were removed from the page to keep
+> the view focused on events. `Geography.js`, its data and the globe's picking code remain.
+
 Hover picks the nearest visible sphere intersection using the camera, viewport,
 and inverse Earth rotation. Its label appears below the globe, updates as Earth
 moves beneath a stationary pointer, and clears off the globe or during dragging.

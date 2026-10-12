@@ -50,17 +50,18 @@ Date-only reentries get stable random display times within their reported UTC da
 animation anchors, not estimated reentry times. Missing size, owner, mission, location and
 lifetime-orbit data stays explicitly unknown.
 
-**Layout.** The orbital view sits above the timeline charts. One sticky playback bar drives
-both, since they share a clock: Play/Pause, Replay passage, previous/next passage, Year and
-Passage, the clock readout and Speed. Hour-scale speeds play passage by passage and continue
-automatically. At year-scale speeds ("Charts only") the globe waits and only the charts animate.
-Pressing Play at an hour-scale speed resumes from the passage containing the current clock time.
-The event lanes under the globe share the scrubber's time axis; click a dot to inspect that
-event. Collapsed sections underneath hold the events-reached log, **Configure visualization**
-(shared, saved appearance settings), **About this view** (evidence and limits), and **Other
-examples** (the April 2–9, 2018 sample with Dragon CRS-14, Dragon alone, Tiangong-1, and two
-Iridium 33 debris fallbacks). The globe supports drag, pinch, scroll, arrow keys and +/− zoom.
-Hovering or clicking gives an approximate geographic reference.
+**Layout.** The orbital view sits above the timeline charts. A sticky bar drives both, since
+they share a clock: Play/Pause, the date (year set large, then the day in words, then UTC time),
+the running count of objects down, and Speed. Beside the globe, **Coming down now** lists the
+events in progress and the next one, and a short card describes the selected (or next) event.
+Directly under the globe, the **event strip** shows every reentry of the year, one lane per
+object class, on a month axis. Drag it to move the clock; click a tick to jump to that object.
+◀ year ▶ changes year. Hour-scale speeds play month by month and continue automatically. At
+year-scale speeds ("Charts only") the globe waits and only the charts and strip move.
+Collapsed sections underneath hold the events-reached log, **Settings**, **About this view**
+(evidence and limits), and **Other examples** (the April 2–9, 2018 sample with Dragon CRS-14,
+Dragon alone, Tiangong-1, and two Iridium 33 debris fallbacks). Drag, pinch, scroll, the arrow
+keys and +/− turn and zoom the globe.
 
 ### Code map
 
@@ -71,8 +72,9 @@ Hovering or clicking gives an approximate geographic reference.
 | `web/PresentationConfig.js`, `ConfigurationPanel.js` | Settings schema, defaults, persistence; controls generated from the schema. |
 | `web/DisplayPolicy.js` | Chooses a representation from event facts, available orbital inputs and settings. |
 | `web/OrbitalEventFeed.js`, `EventPlaybackLog.js` | Launch/reentry crossings for collaborators; the "events reached" list. |
-| `web/earth/OrbitPanel.js` | Orbital view controller: shared Play, passages, inspector, scrubber. |
-| `web/earth/EarthScene.js` and neighbours | Renderer (p5/WebGL), shader, camera, tracers, pulses, geography. |
+| `web/earth/OrbitPanel.js` | Orbital view controller: shared Play, month loading, now list, event card. |
+| `web/earth/EventStrip.js`, `web/DateText.js` | The year event strip and its axis; readable UTC dates. |
+| `web/earth/EarthScene.js` and neighbours | Renderer (p5/WebGL), shader, camera, tracers, pulses. |
 
 The full design notes are in [`notes/`](notes/), above all
 [the tracer model](notes/tracer-model.md), [historical loading](notes/historical-loading.md),
@@ -113,7 +115,7 @@ python -m venv .venv
 | April 2018 sample | `python tools/build_tracers.py --sample data/samples/april-2018.json --output-dir web/data/samples/april-2018` |
 | Dragon CRS-14 launch | `tools/build_launch.py` · [launch and configuration](notes/launch-and-configuration.md#reproduce) |
 | Tiangong-1 and Iridium fallbacks | `tools/propagate.py`, `tools/build_tracers.py` · [orbital view reference](notes/orbital-reference.md) |
-| Geography `web/data/geography.json` | `tools/fetch_geography.py`, `tools/build_geography.py` · [credits](web/assets/earth/README.md) |
+| Geography `web/data/geography.json` (not used by the page since the place lookup was removed) | `tools/fetch_geography.py`, `tools/build_geography.py` · [credits](web/assets/earth/README.md) |
 
 `tools/spacetrack_fetch.py decay|gp_history --norad-id N` does targeted historical downloads.
 It saves immutable, hash-checked snapshots under `data/raw/<class>/<NORAD>/<query-hash>/` and

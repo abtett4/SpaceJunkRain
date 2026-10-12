@@ -3,6 +3,12 @@
 **Status: implemented 2026-10-11** (steps 1–6 landed together; see git log). The speed policy
 below was confirmed: above one simulated day per second (`GLOBE_MAX_RATE`) the globe waits.
 
+**Second pass (same day), per Tyler:** removed the Explore Earth panel; moved the event
+sequence directly under the globe as a full-year strip with a month axis and large year;
+replaced the provenance inspector with a short event card; split the clock into a large year
+and a spelled-out day ("September 5"); dropped the passage picker and Replay button from the UI
+(passages remain an internal loading unit).
+
 Last piece of Tyler's work before the PR to Alan (`abtett4/SpaceJunkRain`). Scope: the UI around
 the 3D Earth and tracers. No changes to evidence, data files, rendering semantics or the
 collaborator API.

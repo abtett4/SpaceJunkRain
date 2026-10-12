@@ -13,6 +13,7 @@
   --rule: #2a241c;
   --border: rgba(42, 36, 28, 0.55);
   --event-ink: #986805;
+  --launch-ink: #17808c;
   --series-1: #1f5a9e;           /* Prussian blue */
   --series-2: #c24a1c;           /* vermilion */
   --series-3: #139470;           /* viridian */
@@ -36,6 +37,7 @@
     --rule: #c9d7ec;
     --border: rgba(201, 215, 236, 0.5);
     --event-ink: #ffd166;
+    --launch-ink: #56dce8;
     --series-1: #5b8ff0;
     --series-2: #d27436;
     --series-3: #21a37a;
@@ -58,6 +60,7 @@
   --rule: #c9d7ec;
   --border: rgba(201, 215, 236, 0.5);
   --event-ink: #ffd166;
+  --launch-ink: #56dce8;
   --series-1: #5b8ff0;
   --series-2: #d27436;
   --series-3: #21a37a;
@@ -148,11 +151,6 @@ select option { background-color: var(--surface-1); color: var(--text-primary); 
 button { cursor: pointer; }
 button.primary { border-color: var(--rule); min-width: 86px; }
 button.primary:hover { background: var(--grid); }
-.silent { color: var(--muted); font-style: italic; font-size: 15px; margin-left: -8px; }
-.readout { display: inline-flex; align-items: center; gap: 8px; font-variant-numeric: lining-nums tabular-nums; min-width: 190px; }
-.readout .count { color: var(--muted); font-style: italic; }
-.pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--text-primary); opacity: .25; transition: opacity .25s, transform .25s; }
-.pulse.on { opacity: 1; transform: scale(1.5); transition: none; }
 
 .controls label.check { gap: 5px; cursor: pointer; }
 .controls input[type="checkbox"] { accent-color: var(--text-primary); width: 14px; height: 14px; margin: 0; }
@@ -219,29 +217,43 @@ tbody tr:last-child td { border-bottom: 1px solid var(--rule); }
 }
 
 /* Orbital view: its own section above the timeline charts. */
-.orbit-heading { margin: 0 0 10px; }
-.orbit-heading h2, .orbit-heading p { margin: 0 0 4px; }
-.orbit-heading #orbit-name { color: var(--text-secondary); }
-.orbit-meta { font-size: 15px; color: var(--muted); font-style: italic; }
+.orbit-heading { margin: 0 0 12px; }
+.orbit-heading h2 { margin: 0 0 2px; }
+.orbit-heading p { margin: 0; }
+#orbit-name { color: var(--text-secondary); }
+.orbit-meta { font-size: 14px; color: var(--muted); font-style: italic; }
+#orbit-status:empty { display: none; }
+#orbit-status:not(:empty) { color: var(--text-primary); font-style: normal; margin-right: 6px; }
 
-/* One transport for the globe and the charts; it stays in view while scrolling to the charts. */
+/* One transport for the globe and charts: Play, the date, the running count, speed.
+   It stays in view while scrolling down to the charts. */
 .transport {
   position: sticky; top: 0; z-index: 5;
-  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;
-  margin: 0 -12px 18px; padding: 10px 12px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 28px;
+  margin: 0 -12px 16px; padding: 10px 12px;
   background: var(--surface-1); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
 }
-.transport label { color: var(--text-secondary); font-variant: small-caps; letter-spacing: .05em; }
-.transport .speed { display: inline-flex; align-items: center; gap: 6px; }
-.transport .readout { min-width: 0; margin-left: auto; }
-.passage-nav { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.passage-nav button { padding: 3px 8px; }
-button:disabled { opacity: .45; cursor: default; }
+.transport p { margin: 0; }
+.transport .play { font-size: 17px; min-width: 104px; padding: 6px 14px; border-color: var(--rule); }
+.transport .play:hover { background: var(--grid); }
+.clock { display: flex; align-items: baseline; gap: 14px; font-variant-numeric: lining-nums tabular-nums; }
+.clock-year { font-size: 38px; line-height: 1; font-weight: 500; transition: color .3s; }
+.clock-year.on { color: var(--event-ink); transition: none; }
+.clock-rest { display: flex; flex-direction: column; line-height: 1.15; }
+.clock-day { font-size: 21px; }
+.clock-time { font-size: 13px; color: var(--muted); }
+.clock-count { display: flex; flex-direction: column; line-height: 1.15; font-variant-numeric: lining-nums tabular-nums; }
+#now-count { font-size: 21px; }
+.clock-count-label { font-size: 13px; color: var(--muted); }
+.transport .speed { margin-left: auto; display: inline-flex; align-items: center; gap: 8px;
+  color: var(--text-secondary); font-variant: small-caps; letter-spacing: .05em; }
+button:disabled { opacity: .4; cursor: default; }
 
+/* Stage: the globe with a narrow column for what is happening now. */
 .orbit-panel { margin: 0 0 28px; }
-.orbit-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(260px, 1fr); gap: 24px; }
+.orbit-grid { display: grid; grid-template-columns: minmax(0, 1.9fr) minmax(240px, 1fr); gap: 24px; }
 .orbit-viewport { position: relative; }
-#earth-scene { height: clamp(420px, 62vh, 640px); background: #081b2c; overflow: hidden; }
+#earth-scene { height: clamp(400px, 56vh, 600px); background: #081b2c; overflow: hidden; }
 #earth-scene canvas { display: block; touch-action: none; }
 #earth-scene canvas:focus-visible { outline: 3px solid var(--series-3); outline-offset: -3px; }
 .globe-overlay {
@@ -249,57 +261,73 @@ button:disabled { opacity: .45; cursor: default; }
   padding: 6px 12px; font-size: 15px; text-align: center;
   background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border);
 }
+.orbit-side { min-width: 0; display: flex; flex-direction: column; gap: 18px; }
+.box-title { margin: 0 0 6px; font-variant: small-caps; letter-spacing: .08em; color: var(--muted); font-size: 15px; }
+.now-box { border-top: 1px solid var(--rule); padding-top: 8px; }
+#now-list { list-style: none; margin: 0; padding: 0; }
+#now-list:empty { display: none; }
+#now-list li { margin: 0 0 4px; }
+#now-list button {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px; width: 100%;
+  border: 0; border-left: 3px solid var(--event-ink); border-radius: 0; padding: 2px 0 2px 9px; text-align: left;
+}
+#now-list button.launch { border-left-color: var(--launch-ink); }
+#now-list button:hover { background: var(--grid); }
+.now-name, .sel-name { text-transform: lowercase; font-variant: small-caps; letter-spacing: .03em; }
+.now-kind { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.now-more { font-size: 14px; color: var(--muted); padding-left: 12px; }
+.now-next { margin: 6px 0 0; font-size: 15px; color: var(--text-secondary); }
+.now-next:empty { display: none; }
+.event-card { border-top: 1px solid var(--rule); padding-top: 8px; }
+.event-card p { margin: 0 0 4px; }
+.sel-name { font-size: 24px; line-height: 1.15; font-weight: 500; }
+.sel-kind { color: var(--text-secondary); }
+.sel-date { font-variant-numeric: lining-nums; }
+.event-card .sel-note { font-size: 13px; color: var(--muted); margin-top: -3px; }
+.sel-note:empty { display: none; }
+.sel-shown { font-size: 14px; color: var(--text-secondary); }
+.sel-source { font-size: 13px; }
+.sel-source a { color: var(--muted); text-underline-offset: 2px; }
 
-.orbit-legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px 18px; margin: 12px 0 0; }
-.orbit-key { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; }
-.orbit-key p { margin: 2px 0 0; font-size: 13px; line-height: 1.35; color: var(--text-secondary); }
-.orbit-key-pulse { flex: 0 0 16px; height: 16px; border: 2px solid var(--event-ink); border-radius: 50%; margin-top: 2px; }
-.orbit-key-trace { flex: 0 0 20px; height: 2px; background: var(--event-ink); margin-top: 10px; }
+/* The event strip: the year (or example range) at a glance, directly under the globe. */
+.strip-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 18px 0 8px; }
+.strip-head.example #year-prev, .strip-head.example #year-next, .strip-head.example .year-select { display: none; }
+.strip-head button { padding: 2px 9px; }
+.year-select {
+  font-size: 28px; font-weight: 500; font-variant-numeric: lining-nums; padding: 0 4px;
+  border: 0; border-bottom: 1px solid var(--rule); border-radius: 0; cursor: pointer;
+}
+.strip-summary { margin: 0 0 0 8px; color: var(--text-secondary); }
+.event-strip { --label-w: 128px; }
+.strip-body { display: grid; grid-template-columns: var(--label-w) minmax(0, 1fr); }
+.strip-labels > div { height: 24px; display: flex; align-items: center; gap: 6px; font-size: 14px; }
+.strip-labels .n { color: var(--muted); font-size: 12px; font-variant-numeric: lining-nums; }
+.strip-track { position: relative; border-top: 1px solid var(--border); }
+.strip-track canvas { position: absolute; inset: 0; }
+.strip-progress { position: absolute; left: 0; top: 0; bottom: 0; background: color-mix(in srgb, var(--grid-major) 55%, transparent); pointer-events: none; }
+.strip-playhead { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--text-primary); pointer-events: none; }
+.strip-selected { position: absolute; width: 14px; height: 14px; border: 2px solid var(--text-primary); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+.strip-track input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.strip-track:has(input:focus-visible) { outline: 2px solid var(--series-3); outline-offset: 3px; }
+.strip-tip {
+  position: absolute; transform: translate(-50%, -150%); white-space: nowrap; pointer-events: none; z-index: 2;
+  padding: 2px 8px; font-size: 14px; background: var(--surface-1); border: 1px solid var(--rule);
+}
+.strip-axis { position: relative; height: 22px; margin-left: var(--label-w); }
+.strip-axis span { position: absolute; top: 4px; transform: translateX(-50%); font-size: 14px; color: var(--text-secondary); white-space: nowrap; }
 
-.geography-panel { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--grid-major); font-size: 15px; }
-.geo-readout { margin: 0 0 6px; }
-.geo-readout #geo-detail { color: var(--text-secondary); }
-.geography-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
-.geography-actions select { max-width: 100%; }
-.geography-actions .note { margin: 0 0 0 6px; font-size: 13px; }
-
-.orbit-caption { font-size: 16px; min-width: 0; }
-.orbit-caption p { margin: 0 0 10px; }
-.now-box { border-top: 1px solid var(--rule); padding-top: 8px; margin-bottom: 14px; }
-.box-title { font-variant: small-caps; letter-spacing: .08em; color: var(--muted); margin: 0 0 4px !important; }
-#sample-progress { font-size: 20px; }
-#sample-active { margin: 0 0 10px; padding-left: 18px; font-size: 14px; max-height: 120px; overflow-y: auto; }
-#sample-active:empty { display: none; }
-#sample-active li { margin: 3px 0; }
-.orbit-caption .note { font-size: 14.5px; }
-#orbit-inspector { font-size: 14px; border-top: 1px solid var(--rule); padding-top: 8px; }
-#orbit-inspector summary { cursor: pointer; margin-bottom: 10px; font-size: 16px; }
-#orbit-object-choice { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center; }
-#orbit-object { width: 100%; min-width: 0; }
-#orbit-object-name { font-weight: 600; }
-
-/* Event lanes and the scrubber share one time axis (a 120 px label column, then the track). */
-.orbit-timeline { margin-top: 22px; --progress: 0%; --label-w: 120px; }
-.sample-score-title { margin: 0 0 8px; }
-.sample-lane { display: grid; grid-template-columns: var(--label-w) minmax(0, 1fr); align-items: center; font-size: 13px; height: 30px; }
-.sample-track { height: 26px; position: relative; border-bottom: 1px solid var(--border); background: linear-gradient(to right, var(--grid-major) var(--progress), transparent var(--progress)); }
-.sample-track::after { content: ''; position: absolute; left: var(--progress); width: 1px; height: 100%; background: var(--text-secondary); pointer-events: none; }
-.sample-event { position: absolute; top: 6px; transform: translateX(-50%); width: 13px; height: 13px; min-width: 0; padding: 0; border: 1.5px solid var(--event-ink); border-radius: 50%; background: var(--surface-1); z-index: 1; }
-.sample-event.reached { background: var(--event-ink); }
-.sample-event.active { box-shadow: 0 0 0 4px color-mix(in srgb, var(--event-ink) 33%, transparent); }
-.sample-event[aria-pressed="true"] { outline: 1px solid var(--text-primary); outline-offset: 4px; }
-.sample-event:focus-visible { outline: 3px solid var(--series-3); outline-offset: 4px; }
-.orbit-scrubber { display: grid; grid-template-columns: var(--label-w) minmax(0, 1fr); align-items: center; margin-top: 4px; }
-.scrub-label { font-size: 13px; }
-.orbit-scrubber input { width: 100%; margin: 0; accent-color: var(--series-3); }
-#sample-dates { display: flex; justify-content: space-between; margin: 2px 0 0 var(--label-w); font-size: 12px; color: var(--text-secondary); }
-#tracer-window-times { font-size: 13px; margin: 6px 0 0 var(--label-w); font-variant-numeric: tabular-nums; }
+.orbit-legend { display: flex; flex-wrap: wrap; gap: 4px 22px; list-style: none; margin: 10px 0 0; padding: 0; font-size: 14px; color: var(--text-secondary); }
+.orbit-legend li { display: flex; align-items: center; gap: 8px; }
+.key-trace { width: 18px; height: 2px; background: var(--event-ink); }
+.key-ring { width: 12px; height: 12px; border: 2px solid var(--event-ink); border-radius: 50%; }
+.key-ring.key-launch { border-color: var(--launch-ink); }
+.orbit-legend .legend-note { color: var(--muted); font-style: italic; }
 
 /* Secondary material: collapsed rows under the stage. */
-.orbit-more { margin-top: 18px; border-bottom: 1px solid var(--border); }
+.orbit-more { margin-top: 22px; border-bottom: 1px solid var(--border); }
 .orbit-more > details { border-top: 1px solid var(--border); }
-.orbit-more > details > summary { cursor: pointer; padding: 9px 0; font-weight: 500; }
-.orbit-more > details > :not(summary) { margin-left: 18px; margin-right: 0; }
+.orbit-more > details > summary { cursor: pointer; padding: 9px 0; color: var(--text-secondary); }
+.orbit-more > details > :not(summary) { margin-left: 18px; }
 .orbit-more .note { font-size: 15px; }
 #orbit-about .note:empty { display: none; }
 .orbit-example { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 10px; }
@@ -322,9 +350,13 @@ button:disabled { opacity: .45; cursor: default; }
 }
 @media (max-width: 700px) {
   .tracer-settings-grid { grid-template-columns: 1fr; }
-  .orbit-timeline { --label-w: 95px; }
-  .transport { position: static; margin: 0 0 16px; padding: 8px 0; }
-  #earth-scene { height: 380px; }
+  .event-strip { --label-w: 84px; }
+  .strip-labels > div { font-size: 12px; }
+  .strip-labels .n { display: none; }
+  .strip-axis span { font-size: 11px; }
+  .transport { position: static; margin: 0 0 16px; padding: 8px 0; gap: 10px 18px; }
+  .transport .speed { margin-left: 0; }
+  #earth-scene { height: 360px; }
 }
 
 /* One generated configuration panel shared by page, timeline and Earth. */
@@ -339,4 +371,3 @@ button:disabled { opacity: .45; cursor: default; }
 #event-playback-log p, #event-playback-log li { margin: 8px 0; }
 
 
-#orbit-sample:empty { display: none; }

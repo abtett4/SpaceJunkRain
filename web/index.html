@@ -28,154 +28,104 @@
   </section>
 
   <div class="orbit-heading">
-    <p class="eyebrow">Orbital view</p>
-    <h2 id="orbit-title">Historical passages</h2>
-    <p id="orbit-name">Every catalogued reentry on one shared clock</p>
-    <p class="orbit-meta"><span id="orbit-status" role="status">Loading orbital preview…</span> · <span id="silent-note">silent for now; sound is coming</span></p>
+    <h2 id="orbit-title">Every reentry, on the globe</h2>
+    <p id="orbit-name">Press Play to watch each object come down on its reentry day.</p>
+    <p class="orbit-meta"><span id="orbit-status" role="status">Loading…</span> <span id="silent-note">Silent for now; sound is coming.</span></p>
   </div>
 
   <div class="transport" role="group" aria-label="Playback for the globe and charts">
-    <button id="orbit-pause" type="button" class="primary" aria-describedby="silent-note">▶ Play</button>
-    <button id="orbit-replay" type="button" disabled>Replay passage</button>
-    <span id="history-choice" class="passage-nav" hidden>
-      <button id="orbit-prev" type="button" aria-label="Previous passage">◀</button>
-      <label for="history-year">Year</label>
-      <select id="history-year"></select>
-      <label for="history-month">Passage</label>
-      <select id="history-month"></select>
-      <button id="orbit-next" type="button" aria-label="Next passage">▶</button>
-    </span>
-    <span class="readout"><span id="pulse" class="pulse" aria-hidden="true"></span><span id="date">Today</span><span class="count" id="now-count"></span></span>
+    <button id="orbit-pause" type="button" class="play" aria-describedby="silent-note">▶ Play</button>
+    <p class="clock" aria-live="off">
+      <span id="clock-year" class="clock-year">–</span>
+      <span class="clock-rest"><span id="clock-day" class="clock-day"></span><span id="clock-time" class="clock-time"></span></span>
+    </p>
+    <p class="clock-count"><span id="now-count"></span><span class="clock-count-label">objects down so far</span></p>
     <label class="speed">Speed
-    <select id="speed">
-      <optgroup label="Globe and charts">
-        <option value="105192">5 min / s</option>
-        <option value="17532">30 min / s</option>
-        <option value="2922" selected>3 h / s</option>
-      </optgroup>
-      <optgroup label="Charts only · globe waits">
-        <option value="30">30 s / year</option>
-        <option value="10">10 s / year</option>
-        <option value="3.1470588">3.1 s / year</option>
-        <option value="1">1 s / year</option>
-      </optgroup>
-    </select></label>
+      <select id="speed">
+        <optgroup label="Globe and charts">
+          <option value="105192">5 min / s</option>
+          <option value="17532">30 min / s</option>
+          <option value="2922" selected>3 h / s</option>
+        </optgroup>
+        <optgroup label="Charts only · globe waits">
+          <option value="30">30 s / year</option>
+          <option value="10">10 s / year</option>
+          <option value="3.1470588">3.1 s / year</option>
+          <option value="1">1 s / year</option>
+        </optgroup>
+      </select></label>
   </div>
 
   <section class="orbit-panel" aria-labelledby="orbit-title">
     <div class="orbit-grid">
-      <div class="orbit-stage">
-        <div class="orbit-viewport">
-          <div id="earth-scene"></div>
-          <p id="globe-speed-note" class="globe-overlay" hidden>The globe waits at year-scale speeds. Choose an hour-scale speed to watch passages.</p>
-        </div>
-        <div class="orbit-legend">
-          <div id="orbit-trace-key" class="orbit-key" role="group" aria-label="Orbital representation key" hidden>
-            <span class="orbit-key-trace" aria-hidden="true"></span>
-            <div><strong>Reentries · amber tracers</strong><p>Reference geometry or prepared SGP4 replay · no reentry path claim</p></div>
-          </div>
-          <div id="launch-key" class="orbit-key" role="group" aria-label="Launch representation key" hidden>
-            <span class="orbit-key-pulse" aria-hidden="true"></span>
-            <div><strong>Launches · cyan</strong><p>Sourced pad pulse → illustrative ascent arc → reference orbit. Path, ascent duration, orbit direction and phase are display choices, not a flight reconstruction.</p></div>
-          </div>
-          <div id="symbolic-event" class="orbit-key" role="group" aria-label="Representation key" hidden>
-            <span class="orbit-key-pulse" aria-hidden="true"></span>
-            <div><strong>No orbital data · pulse</strong>
-              <p>Surface pulse · illustrative location, no reentry position claim</p>
-              <p id="symbolic-state"></p>
-            </div>
-          </div>
-        </div>
-        <div class="geography-panel" aria-label="Geographic reference">
-          <p class="geo-readout"><strong id="geo-name">Explore the Earth</strong> <span id="geo-detail">Hover over land or water, or click / tap to pin a geographic point.</span></p>
-          <div class="geography-actions">
-            <label for="geo-place">Find a place</label>
-            <select id="geo-place">
-              <option value="28.608402,-80.604201">Kennedy Space Center</option>
-              <option value="29.741273,-95.348436">Houston</option>
-              <option value="34.049219,-118.231986">Los Angeles</option>
-              <option value="10,-150">Pacific Ocean</option>
-            </select>
-            <button id="geo-go" type="button">Show</button>
-            <button id="geo-clear" type="button" disabled>Clear pin</button>
-            <span id="geo-instructions" class="note">Drag or arrow keys to rotate · scroll or + / − to zoom · click, tap or Enter to pin · Escape clears</span>
-          </div>
-        </div>
+      <div class="orbit-viewport">
+        <div id="earth-scene"></div>
+        <p id="globe-help" hidden>Drag or use the arrow keys to turn the globe; scroll or press + / − to zoom.</p>
+        <p id="globe-speed-note" class="globe-overlay" hidden>The globe waits at year-scale speeds. Choose an hour-scale speed to watch it.</p>
       </div>
-      <div class="orbit-caption">
+      <div class="orbit-side">
         <div class="now-box">
-          <p class="box-title">Now</p>
-          <div id="sample-summary" hidden>
-            <p id="sample-progress"></p>
-            <ul id="sample-active" aria-label="Active sample events"></ul>
-            <p id="sample-quiet" class="note"></p>
-            <p id="sample-next" class="note"></p>
-          </div>
-          <p id="orbit-sample" class="note">Drag the globe to rotate. Scroll or use + / − to zoom.</p>
+          <p class="box-title">Coming down now</p>
+          <ul id="now-list" aria-label="Events in progress"></ul>
+          <p id="now-next" class="now-next"></p>
         </div>
-        <details id="orbit-inspector" open>
-          <summary>Selected event and provenance</summary>
-          <div id="orbit-object-choice" hidden><label for="orbit-object">Inspect event</label>
-            <select id="orbit-object"></select>
-            <button id="orbit-jump" type="button">Jump to event</button>
-          </div>
-          <p id="orbit-object-name"></p>
-          <p id="orbit-object-mode"></p>
-          <p id="orbit-attributes"></p>
-          <p id="orbit-evidence" class="note"></p>
-          <p><strong>Event anchor</strong><br><span id="orbit-anchor">April 2, 2018 · time of day unknown</span></p>
-          <p id="orbit-explanation">Choose a preview input to inspect its representation and limitations.</p>
-          <p class="note">Marker size is exaggerated. Orbit descriptors refer to the source epoch; physical size and lifetime orbit remain unknown unless explicitly sourced. See the JSON for each attribute’s basis.</p>
-          <a id="orbit-provenance" href="data/tracers.json">Event attributes and provenance (JSON)</a>
-        </details>
+        <div class="event-card" id="event-card" hidden>
+          <p class="box-title" id="sel-label">Selected</p>
+          <p class="sel-name" id="sel-name"></p>
+          <p class="sel-kind" id="sel-kind"></p>
+          <p class="sel-date" id="sel-date"></p>
+          <p class="sel-note" id="sel-time-note"></p>
+          <p class="sel-shown" id="sel-shown"></p>
+          <p class="sel-source"><a id="sel-source" href="data/tracers.json">Source data</a></p>
+        </div>
       </div>
     </div>
 
-    <div class="orbit-timeline">
-      <div id="sample-score" hidden>
-        <p class="sample-score-title">Event sequence <span class="note">· click a dot to inspect an event</span></p>
-        <div id="sample-lanes"></div>
-      </div>
-      <div class="orbit-scrubber">
-        <label for="orbit-scrub" class="scrub-label">Time</label>
-        <input id="orbit-scrub" type="range" min="0" max="7200" step="1" value="0" disabled>
-      </div>
-      <div id="sample-dates" aria-hidden="true"></div>
-      <p id="tracer-window-times" class="note"></p>
+    <div class="strip-head" id="strip-head">
+      <button id="year-prev" type="button" aria-label="Previous year">◀</button>
+      <select id="year-select" class="year-select" aria-label="Year"></select>
+      <button id="year-next" type="button" aria-label="Next year">▶</button>
+      <p id="strip-summary" class="strip-summary"></p>
     </div>
+    <div id="event-strip" class="event-strip"></div>
+    <ul class="orbit-legend" aria-label="Key">
+      <li><span class="key-trace" aria-hidden="true"></span>Reentry with orbital data · reference orbit</li>
+      <li><span class="key-ring" aria-hidden="true"></span>Reentry without orbital data · ring</li>
+      <li><span class="key-ring key-launch" aria-hidden="true"></span>Launch</li>
+      <li class="legend-note">Paths, ring positions and marker sizes are illustrative.</li>
+    </ul>
 
     <div class="orbit-more">
       <details id="event-playback-log" hidden>
         <summary>Events reached during playback · <span data-event-count>0</span></summary>
         <p data-event-status role="status" aria-live="polite">No events reached in playback yet.</p>
         <ol aria-label="Five most recent events reached during playback"></ol>
-        <p class="note">Only events in the selected preview are listed. Scrubbing or changing previews clears this list without triggering events; replay starts a new pass. Sound is not enabled yet.</p>
+        <p class="note">Only events in the loaded month are listed. Scrubbing or changing months clears this list without triggering events. Sound is not enabled yet.</p>
       </details>
       <details class="tracer-config" id="tracer-config">
-        <summary>Configure visualization · shared appearance and event windows</summary>
+        <summary>Settings · appearance and event windows</summary>
         <div id="config-fields"></div>
         <div class="config-notes">
           <p id="tracer-window-limit" class="note">Settings apply to all previews and newly loaded events. Source limits can shorten a window.</p>
           <p class="note">Colors follow event kind: cyan launches and amber reentries. Marker sizes and pulses are exaggerated for visibility.</p>
-          <p class="note">Changing settings keeps the clock in place. Replay uses the new window. Default replay speed is 3 simulated hours per second. Use Speed above to change playback.</p>
+          <p class="note">Changing settings keeps the clock in place. Default speed is 3 simulated hours per second.</p>
         </div>
       </details>
       <details id="orbit-about">
         <summary>About this view · evidence and limits</summary>
+        <p class="note"><strong>What the marks mean.</strong> An amber trace follows a reference orbit built from the object’s real inclination and perigee/apogee; its direction and phase are illustrative, and it does not model the descent or claim a reentry location. Tiangong-1 at short windows replays its last known orbit (SGP4). A ring marks an object with no usable orbital history, at a stable random point on the globe chosen evenly by area — not a reentry location. The one curated launch (Dragon CRS-14, April 2018) starts at its sourced pad; the ascent arc is illustrative, not a flight reconstruction.</p>
+        <p class="note"><strong>Times.</strong> Most decay records give only the day. Those objects get a stable, randomly assigned time within that UTC day; it is an animation anchor, not an estimated reentry time. Launch times keep their reported minute.</p>
         <p id="quiet-playback-note" class="note">Quiet intervals skipped by default.</p>
         <p id="history-coverage" class="note"></p>
-        <p class="note">All reentries in the current catalog are available. Dense months are split into passages of at most 50 events. Playback continues automatically through passages and years. Manual selection pauses and resets playback. Launch coverage is limited to the curated Dragon launch. No orbital data means an illustrative pulse. Event windows are clipped at passage edges.</p>
+        <p class="note">The globe loads one month at a time (dense months in parts of at most 50 events) and continues automatically through months and years. Event windows are clipped at those boundaries. At year-scale speeds the globe waits and only the charts animate.</p>
         <p id="sample-coverage" class="note"></p>
-        <p class="note">Every dot in the event sequence is one event. Date-only reentries use assigned times within reported days; curated launches retain their reported precision. The full catalog reentry charts below follow the same clock.</p>
         <p id="earth-render-status" class="note">Sunlight and Earth rotation follow the display clock. The blue atmospheric rim is decorative. Imagery is a fixed composite, not historical weather. <a href="assets/earth/README.md">Map &amp; imagery credits</a></p>
-        <p class="note">Geographic reference: approximate map reference, independent of event locations. “Near” means within 75 km of the listed facility point or 100 km of a listed city point. Generalized coastlines and contemporary place names.</p>
-        <p class="note">At year-scale speeds the globe waits and only the charts animate; passages cannot load that quickly.</p>
       </details>
       <details id="orbit-examples">
         <summary>Other examples · single events and fallbacks</summary>
-        <div class="orbit-example"><label for="orbit-example">Preview input</label>
+        <div class="orbit-example"><label for="orbit-example">Show</label>
           <select id="orbit-example">
-            <option value="data/history/all/index.json" selected>Full historical catalog · by year and passage (default)</option>
+            <option value="data/history/all/index.json" selected>Every reentry, year by year (default)</option>
             <option value="data/samples/april-2018-launch/tracers.json">Launch &amp; reentries · April 2–9, 2018</option>
             <option value="data/samples/april-2018-launch/launch.json">Dragon CRS-14 · sourced launch</option>
             <option value="data/tracers.json">Tiangong-1 · recent orbital history</option>
@@ -183,7 +133,7 @@
             <option value="data/fallbacks/empty/tracers.json">Same debris event · empty near-event query</option>
           </select>
         </div>
-        <p class="note">Each example shows one way an event can be represented: SGP4 replay, a reference loop from stale elements, or a surface pulse when no orbital history was returned.</p>
+        <p class="note">Each example shows one way an event can be drawn: a replay of the last known orbit, a reference loop from old orbital elements, or a ring when no orbital history was returned.</p>
       </details>
     </div>
   </section>
@@ -247,6 +197,8 @@
 <script type="importmap">
 {
   "imports": {
+    "./DateText.js": "./DateText.js?v=20261011-orbital-ui",
+    "./earth/EventStrip.js": "./earth/EventStrip.js?v=20261011-orbital-ui",
     "./SimulationClock.js": "./SimulationClock.js?v=20261011-orbital-ui",
     "./OrbitalEventFeed.js": "./OrbitalEventFeed.js?v=20261011-orbital-ui",
     "./EventPlaybackLog.js": "./EventPlaybackLog.js?v=20261011-orbital-ui",

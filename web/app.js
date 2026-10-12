@@ -3,6 +3,7 @@ import { SimulationClock } from './SimulationClock.js';
 import { mountOrbitPanel } from './earth/OrbitPanel.js';
 import { createPresentationStore, DEFAULT_PLAYBACK_RATE } from './PresentationConfig.js';
 import { mountConfigurationPanel } from './ConfigurationPanel.js';
+import { clockParts } from './DateText.js';
 
 (async function () {
   let storage;
@@ -648,9 +649,11 @@ import { mountConfigurationPanel } from './ConfigurationPanel.js';
 
     let shown = 0;
     for (let i = 0; i < revealed; i++) if (inFamily(i) && typeShown(i)) shown++;
-    document.getElementById('date').textContent = state.playhead >= TIME_END ? 'Today'
-      : new Date(clock.nowMs).toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
-    document.getElementById('now-count').textContent = `${fmtInt(shown)} down`;
+    const when = clockParts(clock.nowMs), today = state.playhead >= TIME_END;
+    document.getElementById('clock-year').textContent = when.year;
+    document.getElementById('clock-day').textContent = today ? 'Today' : when.day;
+    document.getElementById('clock-time').textContent = today ? '' : when.time;
+    document.getElementById('now-count').textContent = fmtInt(shown);
   }
 
   function drawHist() {
@@ -686,7 +689,7 @@ import { mountConfigurationPanel } from './ConfigurationPanel.js';
 
   // ---- playback ------------------------------------------------------------
   // The shared Play button lives in the orbital view's transport (earth/OrbitPanel.js).
-  const pulse = document.getElementById('pulse');
+  const pulse = document.getElementById('clock-year'); // flashes as each new year begins
   clock.subscribe(({ previousMs, reason }) => {
     if (reason === 'advance') {
       const prev = (previousMs - EPOCH_MS) / DAY_MS;
