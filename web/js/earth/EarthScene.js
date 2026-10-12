@@ -1,13 +1,18 @@
+import { DEFAULTS, STYLE } from '../PresentationConfig.js';
 import P5 from '../../vendor/p5.esm.min.js';
+// The friendly-error checks validate every drawing call; they cost several percent per frame.
+P5.disableFriendlyErrors = true;
 import { Tracer } from './Tracer.js';
 import { CameraController } from './CameraController.js';
+import { earthState, earthRotation } from './EarthOrientation.js';
+import { latLonToVector, transform, pickGlobe, normalize, cross } from './GeoMath.js';
+import { earthVertex, earthFragment } from './EarthShader.js';
 
 // Sphere mesh adapted from Cosmic Clock's EarthView; no catalog or clock knowledge.
 function sphereMesh() {
-  const w = 96, h = 48, g = new P5.Geometry(w, h);
+  const w = 144, h = 96, g = new P5.Geometry(w, h);
   for (let y = 0; y <= h; y++) for (let x = 0; x <= w; x++) {
-    const lat = Math.PI / 2 - y / h * Math.PI, lon = x / w * 2 * Math.PI;
-    const v = [Math.cos(lat) * Math.sin(lon), -Math.sin(lat), Math.cos(lat) * Math.cos(lon)];
+    const v = latLonToVector(90 - y / h * 180, x / w * 360 - 180);
     g.vertices.push(new P5.Vector(...v));
     g.vertexNormals.push(new P5.Vector(...v));
     g.uvs.push(x / w, y / h);
@@ -21,7 +26,35 @@ function sphereMesh() {
 
 // A camera-facing ribbon gives continuous width and opacity between source samples.
 // Both taper along the visible path, from zero at the oldest point to full at the head.
-function drawTaperedTrail(p, points, eye, width, color) {
+// A faint whole-orbit path for an active tracer. Built once into p5 geometry (two crossed thin
+// ribbons, so it reads from any angle) and reused; rebuilding per frame cost too much.
+function orbitPathGeometry(p, tracer, width) {
+  const all = tracer.pathPoints(), path = all.filter((_, i) => i % 8 === 0 || i === all.length - 1);
+  const tint = p.color(tracer.color); tint.setAlpha(255 * 0.3 * tracer.opacity);
+  return p.buildGeometry(() => {
+    p.noStroke(); p.fill(tint);
+    for (const crosswise of [false, true]) {
+      p.beginShape(p.TRIANGLE_STRIP);
+      path.forEach((point, i) => {
+        const a = path[Math.max(0, i - 1)], b = path[Math.min(path.length - 1, i + 1)];
+        const tangent = b.map((v, j) => v - a[j]), radial = normalize(point);
+        const side = crosswise ? normalize(cross(tangent, radial)) : radial;
+        p.vertex(...point.map((v, j) => v - side[j] * width / 2));
+        p.vertex(...point.map((v, j) => v + side[j] * width / 2));
+      });
+      p.endShape();
+    }
+  });
+}
+
+// Long trails carry a sample every few seconds; ~40 points draw the same smooth arc, and p5
+// converts colour per vertex, so cost scales with the count. Keeps both ends.
+function thinned(points, max) {
+  if (points.length <= max) return points;
+  return Array.from({ length: max }, (_, i) => points[Math.round(i * (points.length - 1) / (max - 1))]);
+}
+
+function drawTaperedTrail(p, points, eye, width, color, opacity, widthTaper, opacityTaper) {
   if (points.length < 2) return;
   const distances = [0];
   for (let i = 1; i < points.length; i++) {
@@ -45,8 +78,8 @@ function drawTaperedTrail(p, points, eye, width, color) {
     if (i && side.reduce((sum, v, j) => sum + v * previousSide[j], 0) < 0) side = side.map(v => -v);
     previousSide = side;
     const progress = distances[i] / length;
-    const halfWidth = width * progress / 2;
-    tint.setAlpha(255 * progress * progress);
+    const halfWidth = width * progress ** widthTaper / 2;
+    tint.setAlpha(255 * opacity * progress ** opacityTaper);
     p.fill(tint);
     p.vertex(...point.map((v, j) => v - side[j] * halfWidth));
     p.vertex(...point.map((v, j) => v + side[j] * halfWidth));
@@ -56,27 +89,52 @@ function drawTaperedTrail(p, points, eye, width, color) {
 
 export class EarthScene {
   constructor(element) {
+    this.settings = DEFAULTS;
     this.tracers = [];
     this.pulses = [];
     this.timeMs = 0;
+    this.state = earthState(0);
+    this.layers = new Set();
+    this.onInspect = () => {};
+    this.pointer = this.pinned = null;
+    this.disposed = false;
     this.ready = new Promise((resolve, reject) => {
       this.p = new P5((p) => {
-        p.setup = () => {
+        p.setup = async () => {
           try {
-            const canvas = p.createCanvas(element.clientWidth, 380, p.WEBGL);
+            const canvas = p.createCanvas(element.clientWidth, element.clientHeight || 380, p.WEBGL);
             p.pixelDensity(Math.min(devicePixelRatio || 1, 2));
             canvas.elt.tabIndex = 0;
-            canvas.elt.setAttribute('aria-label', 'Earth event preview. Drag or use arrow keys to rotate; plus and minus to zoom.');
-            this.camera = new CameraController(canvas.elt, () => p.redraw());
+            this.canvas = canvas.elt;
+            canvas.elt.setAttribute('aria-label', 'Earth event preview and geographic explorer');
+            canvas.elt.setAttribute('aria-describedby', 'globe-help');
+            this.camera = new CameraController(canvas.elt, () => this.requestRedraw(), {
+              hover: point => { this.pointer = point; this.refreshInspection(); },
+              inspect: point => {
+                this.pinned = this.pick(point); this.pointer = null; this.refreshInspection();
+              },
+              clear: () => this.clearInspection(),
+            });
             this.camera.yaw = 0.8;
             this.mesh = sphereMesh();
             p.noLoop();
             this.resize = new ResizeObserver(() => {
-              p.resizeCanvas(element.clientWidth, 380);
-              p.redraw();
+              p.resizeCanvas(element.clientWidth, element.clientHeight || 380);
+              this.requestRedraw();
             });
             this.resize.observe(element);
-            resolve(this);
+            this.shader = p.createShader(earthVertex, earthFragment);
+            const images = await Promise.allSettled(['earth-day.jpg', 'earth-night.jpg'].map(name =>
+              p.loadImage(new URL(`../../assets/earth/${name}`, import.meta.url).href)));
+            if (this.disposed) return;
+            if (images.every(image => image.status === 'fulfilled')) {
+              this.shader.setUniform('uDay', images[0].value);
+              this.shader.setUniform('uNight', images[1].value);
+              this.textured = true;
+            } else {
+              this.imageryError = true;
+            }
+            resolve(this); p.redraw();
           } catch (error) { reject(error); }
         };
         p.draw = () => this.draw(p);
@@ -88,32 +146,114 @@ export class EarthScene {
     this.tracers.push(tracer);
     return tracer;
   }
-  setTime(timeMs) { this.timeMs = timeMs; this.p.redraw(); }
+  // p5 2.x draws asynchronously and ignores a redraw requested mid-frame, so a camera or
+  // time change made during a busy load could be lost. Queue one more frame instead.
+  requestRedraw() {
+    if (!this.p || this.disposed) return;
+    if (this.drawing) { this.redrawQueued = true; return; }
+    this.drawing = true;
+    Promise.resolve(this.p.redraw()).finally(() => {
+      this.drawing = false;
+      if (this.redrawQueued) { this.redrawQueued = false; this.requestRedraw(); }
+    });
+  }
+  configureAppearance(settings) { this.settings = settings; this.requestRedraw(); }
+  setTime(timeMs) {
+    if (timeMs !== this.timeMs) this.state = earthState(timeMs);
+    this.timeMs = timeMs; this.requestRedraw();
+  }
+  surfaceToWorld(normal, timeMs = this.timeMs) {
+    return transform(timeMs === this.timeMs ? this.state.rotation : earthRotation(timeMs), normal);
+  }
+  pick(clientPoint) {
+    if (!this.canvas) return null;
+    const r = this.canvas.getBoundingClientRect();
+    const [x, y] = clientPoint ? [clientPoint[0] - r.left, clientPoint[1] - r.top] : [r.width / 2, r.height / 2];
+    if (x < 0 || x > r.width || y < 0 || y > r.height) return null;
+    return pickGlobe(x, y, r.width, r.height, this.camera.eye, this.camera.fov, this.state.rotation);
+  }
+  refreshInspection() {
+    this.onInspect(this.pinned ?? (this.pointer ? this.pick(this.pointer) : null), Boolean(this.pinned));
+  }
+  clearInspection() { this.pinned = this.pointer = null; this.refreshInspection(); }
+  focusGeography(lat, lon) {
+    const direction = this.surfaceToWorld(latLonToVector(lat, lon));
+    this.camera.yaw = Math.atan2(direction[0], direction[2]);
+    this.camera.pitch = Math.max(-1.4, Math.min(1.4, Math.asin(-direction[1])));
+    this.pinned = { lat, lon }; this.pointer = null; this.requestRedraw();
+  }
+  // Future data layers receive this scene's clock and transforms. No independent timer.
+  // A layer supplies draw(frame) and optionally dispose(); removal owns disposal.
+  addLayer(layer) {
+    if (typeof layer?.draw !== 'function') throw new Error('Earth layer requires draw(frame).');
+    this.layers.add(layer);
+    this.requestRedraw();
+    return () => { if (this.layers.delete(layer)) { layer.dispose?.(); this.requestRedraw(); } };
+  }
   draw(p) {
     if (!this.camera || !this.mesh) return;
-    const camera = this.camera;
-    p.background('#081b2c');
-    p.perspective(camera.fov, p.width / p.height, 0.05, 100);
-    p.camera(...camera.eye, 0, 0, 0, 0, 1, 0);
-    p.ambientLight(135);
-    p.directionalLight(180, 195, 220, -0.5, 0.5, -1);
-    p.noStroke(); p.fill('#274e65');
-    p.model(this.mesh);
-    p.noLights();
-    // Equator only. Surface pulses have illustrative locations; orbits have no geographic endpoint.
-    p.noFill(); p.stroke('#547f92'); p.strokeWeight(0.003);
-    p.beginShape();
-    for (let i = 0; i <= 128; i++) {
-      const a = i / 128 * 2 * Math.PI;
-      p.vertex(Math.cos(a) * 1.0005, 0, Math.sin(a) * 1.0005);
+    this.paths ??= new Map();
+    if (this.paths.size > this.tracers.length + 20) {
+      const live = new Set(this.tracers);
+      for (const [tracer, cached] of this.paths) if (!live.has(tracer)) { p.freeGeometry(cached.geometry); this.paths.delete(tracer); }
     }
-    p.endShape();
+    const camera = this.camera;
+    p.background(STYLE.background);
+    // Near/far follow the zoom so depth precision holds from close up to far out.
+    p.perspective(camera.fov, p.width / p.height, Math.max(0.05, (camera.distance - 1.05) * 0.5), camera.distance + 160);
+    p.camera(...camera.eye, 0, 0, 0, 0, 1, 0);
+    p.noStroke();
+    if (this.textured) {
+      p.fill(255); p.shader(this.shader);
+      this.shader.setUniform('uEarthRotation', this.state.rotation);
+      this.shader.setUniform('uSun', this.state.sunDirection);
+      this.shader.setUniform('uEye', camera.eye);
+      this.shader.setUniform('uBrightness', this.settings.earthBrightness);
+      this.shader.setUniform('uNightIntensity', this.settings.nightLights);
+      this.shader.setUniform('uAtmosphereOpacity', this.settings.atmosphereOpacity);
+      this.shader.setUniform('uRadius', 1);
+      this.shader.setUniform('uAtmosphere', 0);
+      p.model(this.mesh);
+      // Decorative rim only. Do not write its transparent surface into the depth buffer.
+      p.fill(255, 100);
+      this.shader.setUniform('uRadius', STYLE.atmosphereRadius);
+      this.shader.setUniform('uAtmosphere', 1);
+      p.drawingContext.depthMask(false);
+      p.model(this.mesh);
+      p.drawingContext.depthMask(true);
+      p.resetShader();
+    } else {
+      p.ambientLight(135); p.directionalLight(180, 195, 220, -0.5, 0.5, -1);
+      p.fill('#274e65'); p.model(this.mesh); p.noLights();
+    }
+    // Overlay authors decide what their data means; this host only supplies the frame.
+    for (const layer of this.layers) {
+      p.push();
+      try {
+        layer.draw({ p, timeMs: this.timeMs, earthRotation: [...this.state.rotation],
+          sunDirection: [...this.state.sunDirection], eye: [...camera.eye], earthRadius: 1, settings: this.settings });
+      } finally { p.pop(); p.resetShader(); p.noLights(); p.drawingContext.depthMask(true); }
+    }
+    // Keep markers and trails a steady size on screen as the camera zooms out to high orbits.
+    const zoomScale = Math.max(1, camera.distance / 3.7);
     for (const tracer of this.tracers) {
       const sample = tracer.sample(this.timeMs);
-      if (!sample) continue;
-      drawTaperedTrail(p, sample.tail, camera.eye, tracer.lineWidthEarth, tracer.color);
-      p.push(); p.translate(...sample.head); p.noStroke(); p.fill(tracer.color);
-      p.sphere(tracer.markerRadiusEarth, 12, 8); p.pop();
+      if (!sample || tracer.opacity === 0) continue;
+      if (this.settings.showOrbitPaths && typeof tracer.pathPoints === 'function') {
+        // Rebuild only when the look changes; zoom is bucketed so the line stays about a pixel wide.
+        const width = tracer.lineWidthEarth * 0.3 * 1.5 ** Math.round(Math.log(zoomScale) / Math.log(1.5));
+        const key = `${tracer.color}|${tracer.opacity}|${width}`;
+        let cached = this.paths.get(tracer);
+        if (cached?.key !== key) {
+          if (cached) p.freeGeometry(cached.geometry);
+          cached = { key, geometry: orbitPathGeometry(p, tracer, width) };
+          this.paths.set(tracer, cached);
+        }
+        p.model(cached.geometry);
+      }
+      drawTaperedTrail(p, thinned(sample.tail, 40), camera.eye, tracer.lineWidthEarth * zoomScale, tracer.color, tracer.opacity, tracer.widthTaper, tracer.opacityTaper);
+      p.push(); p.translate(...sample.head); p.noStroke(); const tint = p.color(tracer.color); tint.setAlpha(255 * tracer.opacity); p.fill(tint);
+      p.sphere(tracer.markerRadiusEarth * zoomScale, 12, 8); p.pop();
     }
     for (const pulse of this.pulses) {
       const sample = pulse.sample(this.timeMs);
@@ -122,9 +262,14 @@ export class EarthScene {
       tint.setAlpha(255 * sample.opacity);
       p.noStroke(); p.fill(tint);
       p.beginShape(p.TRIANGLE_STRIP);
-      for (const point of sample.ring) p.vertex(...point);
+      for (const point of sample.ring) p.vertex(...this.surfaceToWorld(point));
       p.endShape();
     }
+    this.refreshInspection();
   }
-  dispose() { this.resize?.disconnect(); this.camera?.dispose(); this.p.remove(); }
+  dispose() {
+    this.disposed = true; this.resize?.disconnect(); this.camera?.dispose();
+    for (const layer of this.layers) layer.dispose?.();
+    this.layers.clear(); this.p.remove();
+  }
 }

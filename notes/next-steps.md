@@ -2,6 +2,10 @@
 
 Paused here. Nothing below is started.
 
+> **Update 2026-10-11:** separately from this list, the orbital Earth view (3D globe, tracers,
+> full-catalog passages, collaborator event feed) was built on `tyler/orbital-earth`; see the
+> README. The items below are still open.
+
 - **Sheet 3, cadence:** solar cycle vs. reentry rate. Two stacked panels on one time axis
   (monthly reentries; sunspot number or F10.7), plus a folded "all cycles on one phase axis"
   view, possibly as a polar clock. Data: SILSO monthly sunspots (check license) or NOAA F10.7.

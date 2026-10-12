@@ -273,6 +273,29 @@ export function createApp(db) {
     $('now-count').textContent = `${fmtInt(shown)} down`;
   }
 
+  // Clock ticks redraw only when something visible changed: the playhead's pixel, the revealed
+  // count, falling rain or a flashing event, or the hover. At hour-scale speeds the playhead
+  // crosses a pixel only every few seconds, so most ticks just update the date readout.
+  let lastFrameKey = '';
+  function drawIfChanged(now = performance.now()) {
+    const flashDays = 0.4 / state.secPerYear * YEAR, upTo = upperBound(D, state.playhead + 1e-9);
+    const raining = state.playhead < TIME_END && upperBound(D, state.playhead - flashDays) < upTo;
+    let glowing = false;
+    for (const t of eventFlash.values()) if (now - t < 1200) { glowing = true; break; }
+    const h = state.hover;
+    // Rain, flashes and dot hover only animate the main chart; a sheet without it (the Earth
+    // view) needs a repaint only when the monthly chart or the count would change.
+    const animated = sheet()?.canvas !== false && (raining || glowing);
+    const key = `${state.view}|${Math.round(xOf(state.playhead, hist, M) * 2)}|${upTo}|${animated ? now : 0}|${h ? `${h.point}/${h.event}/${h.lane}/${h.bin}` : ''}`;
+    if (key === lastFrameKey) {
+      const date = state.playhead >= TIME_END ? 'Today' : fmtDate(state.playhead);
+      if ($('date').textContent !== date) $('date').textContent = date;
+      return;
+    }
+    lastFrameKey = key;
+    draw(now);
+  }
+
   function drawMain(now, s) {
     if (!base.width || !base.height) return; // not laid out yet (hidden tab)
     if (revealed < drawnTo) { bctx.clearRect(0, 0, main.w, main.h); drawnTo = 0; }
@@ -371,15 +394,17 @@ export function createApp(db) {
         requestAnimationFrame(() => requestAnimationFrame(() => pulse.classList.remove('on')));
       }
     } else if (reason === 'seek') eventFlash.clear();
-    if (state.view) draw();
+    if (state.view) drawIfChanged();
   });
-  playBtn.addEventListener('click', () => setPlaying(!state.playing));
+  // A sheet can take over Animate (the Earth view plays month by month); returning false falls back.
+  playBtn.addEventListener('click', () => { if (sheet()?.play?.(app) !== true) setPlaying(!state.playing); });
   speedSel.addEventListener('change', (e) => { state.secPerYear = +e.target.value; });
   window.addEventListener('pagehide', () => clock.pause());
   // play a stretch of time at a given rate (simulated ms per real ms), e.g. an Earth-view passage
   function replay(startMs, endMs, rate) {
     clock.pause();
-    speedSel.value = String(YEAR * 86400 / rate);
+    const secPerYear = YEAR * 86400 / rate; // show the nearest Speed option rather than a blank menu
+    speedSel.value = [...speedSel.options].reduce((a, b) => Math.abs(+b.value - secPerYear) < Math.abs(+a.value - secPerYear) ? b : a).value;
     clock.setRate(rate);
     clock.seek(startMs);
     clock.play(endMs);

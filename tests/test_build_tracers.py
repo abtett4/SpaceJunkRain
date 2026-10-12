@@ -8,7 +8,7 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 from build_tracers import build_manifest
-from event_time import apply_event_times
+from event_time import apply_event_times, display_anchor, iso
 
 
 class TracerManifestTests(unittest.TestCase):
@@ -36,8 +36,9 @@ class TracerManifestTests(unittest.TestCase):
         manifest, geometry = self.build()
         self.assertEqual(geometry["trace"], self.t["trace"])
         self.assertEqual(self.t, before)
-        self.assertEqual(manifest["presentation"]["displayAnchorUtc"], "2018-04-02T15:35:52Z")
-        self.assertEqual(manifest["presentation"]["endTime"], "2018-04-02T15:35:52Z")
+        self.assertEqual(iso(display_anchor(manifest["eventId"], manifest["eventTime"]["date"])), "2018-04-02T15:35:52Z")
+        self.assertNotIn("presentation", manifest)
+        self.assertEqual(manifest["orbitalData"]["propagated"]["asset"], "trajectories/37820.json")
         for key in ("owner", "missionType", "eventLocation", "physicalSize", "orbitRegimeLifetime"):
             self.assertIsNone(manifest["attributes"][key]["value"])
             self.assertEqual(manifest["attributes"][key]["basis"], "unknown")

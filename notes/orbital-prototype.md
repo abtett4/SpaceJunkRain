@@ -95,7 +95,7 @@ its TLE and OMM independently through the two input parsers produced a maximum p
 difference of 9.64e-11 km across the 241 samples. This validates representation consistency,
 not agreement with observations.
 
-Run the commands in the main README using the saved snapshots; no further Space-Track
+Run the commands in [the orbital tracer notes](orbital-tracers.md) using the saved snapshots; no further Space-Track
 downloads are needed locally. The derived plot and JSON are Git-ignored and reproducible.
 The orbital dependencies are optional and pinned separately from the existing timeline.
 

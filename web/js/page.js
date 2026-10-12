@@ -28,6 +28,11 @@ export function fillPage(db, peak) {
     `satellite decay and reentry data, retrieved ${retrieved}. ` +
     `${fmtInt(meta.decayed)} reentered objects from ${fmtInt(families.length)} launches.`;
   $('tb-date').textContent = retrieved;
+  // Data sources section: dates from the catalog's own metadata (GCAT's snapshot is recorded
+  // there by tools/gcat_objects.py), so no extra file loads with the page.
+  $('src-satcat-date').textContent = retrieved;
+  const gcat = meta.gcatTimes?.source;
+  $('src-gcat-date').textContent = gcat ? (gcat.updated ?? '').replace(/^Updated\s+/, '').replace(/\s+\S+$/, '') || gcat.retrievedAt.slice(0, 10) : '–';
   $('tb-span').textContent = `1957–${yearOf(todayDay)}`;
 
   document.querySelector('#events-table tbody').innerHTML = events.map((e) => {

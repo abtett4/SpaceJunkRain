@@ -1,40 +1,49 @@
 # Orbital tracers and the Earth view
 
 *By Tyler Griffith. Moved here from his README sections on the `tyler/orbital-earth` branch when the
-Earth view became sheet 3; the text is unchanged except for this note. File paths now live under
-`web/js/` (`web/js/SimulationClock.js`, `web/js/earth/`).*
+Earth view became sheet 3, then refreshed with the later sections from that branch (launches, the
+full catalogue, collaborator interface). File paths now live under `web/js/`
+(`web/js/SimulationClock.js`, `web/js/earth/`). The current Earth view is summarised in
+[earth-view.md](earth-view.md); this file keeps the detailed history and every rebuild command.*
 
 ## Tracer visualization model and fallback previews
 
-The existing page now includes a Tiangong-1 orbital tracer. Choose **Replay orbit** to
-watch its default two-hour sample segment in 24 seconds. The timeline and Earth share one clock;
-pausing or scrubbing either control changes the same simulation time. The globe supports
-drag, pinch, scroll, arrow keys, and +/− zoom. No browser credentials or propagation are
-needed: the preview uses the checked-in derived data and a local p5.js module.
+The default preview combines 12 reentries with **one sourced launch, Dragon CRS-14**,
+from April 2–9, 2018. Choose **Replay passage** for the 96-second sequence, or select
+**Dragon CRS-14 · sourced launch** to inspect it alone. A documented launch-site pulse
+shares its pad with a cyan launch tracer: an explicitly illustrative ascent connects to a
+reference orbit. This is a visual approximation, not recovered powered-flight data. Reentries are amber.
+The timeline and Earth use one clock. No browser credentials or propagation are needed.
+The globe supports drag, pinch, scroll, arrow keys and +/− zoom.
 
-Open **Configure tracer** to set the time shown before reentry (30 seconds to 48 hours),
-trail history (head only to 2 hours), trail width, and marker size. Preferences
-are saved in this browser; **Reset defaults** restores the two-hour window, 20-minute
-history, and large (3×) width/size. If browser storage is unavailable, the
-controls still work for the current visit. The trail tapers to zero width and opacity
-at its oldest end, reaching the selected width and full opacity at the marker.
-Color comes from event presentation data, with amber as the current default; its future
-object/event-data mapping is still to be decided. Color is not a browser preference.
-Earlier saved preferences retain their timing choices and adopt the large size defaults.
+**Configure visualization** is the shared menu for page theme, timeline notes,
+launch/reentry windows, trail history, width, size, opacity/taper, pulse duration/opacity,
+and Earth brightness, city lights and decorative atmosphere. Defaults are four hours
+before reentry / after launch, five minutes of trail history, four-hour pulses, and large
+3× markers and trails. Pulse durations shorten to fit the event window. Preferences
+persist across previews and reloads; reset restores all defaults. If browser storage is
+unavailable, controls work for the current visit. Colors follow event kind (cyan launch / amber reentry), with no color picker.
 
-Within Tiangong-1’s prepared two-hour segment, a shorter window clips its final portion.
-Longer windows explicitly switch to a representative orbit for the entire display window;
-the SGP4 samples are never stretched or repeated. Window changes keep the event anchor
-and clock fixed. Trail history is clipped to the window and, for representative orbits,
-to at most one revolution. Replay starts the selected window at 300 simulated seconds per real
-second and stops at the event anchor; the existing Speed control remains independent.
-Width and marker size are visual choices, not physical dimensions. The after-launch control
-will follow with the first launch example.
+`web/PresentationConfig.js` owns the current defaults, bounds, migration and subscription
+store. `ConfigurationPanel.js` derives controls from that schema. Page, timeline and Earth
+subscribe to one instance; future layers can add controls there and consume `frame.settings`.
+`DisplayPolicy.js` reads event facts, available orbital inputs and those settings to select
+a visualization. Event JSON contains evidence and `orbitalData` asset links; colors, modes,
+random surface locations and display windows are derived outside those records. Changing
+the visualization does not require rewriting event data or source geometry.
+See [launch sources, rebuild instructions and the configuration contract](launch-and-configuration.md).
+
+For Tiangong-1, windows up to two hours clip its prepared SGP4 segment. Longer windows
+switch to a representative loop without stretching the source samples. Representative
+trails show at most one revolution. Launch windows run forward from the sourced minute;
+the tracer starts at the pad and follows an illustrative transition into its reference orbit. Changing settings leaves the clock in place;
+Replay adopts the new interval. All windows are capped at 48 hours as a presentation limit.
+The existing Speed control sets playback speed. Width and marker size are visual choices.
 
 Date-only reentries receive stable random display times within their reported UTC day.
 Tiangong-1 is assigned **2018-04-02T15:35:52Z**. This is an animation anchor, not an
 estimated reentry time. The original SGP4 sample timestamps remain separate and visible.
-The plain inertial globe makes no reentry-location or ground-impact claim.
+The textured globe makes no reentry-location or ground-impact claim.
 
 After producing the diagnostic trajectory described below, regenerate the preview offline:
 
@@ -53,13 +62,18 @@ preserves source dates, object attributes and column alignment. `cols.p` uses 0 
 reported day and 1 for a reported timestamp. `cols.d` now holds presentation time in days
 since the existing epoch. Do not treat its fractional part as observed timing precision.
 
-See [the tracer model](notes/tracer-model.md), [the consumed manifest](web/data/tracers.json),
-and [the portable example](data/examples/tracer-37820-reentry.json) for attributes and
+See [the tracer model](tracer-model.md), [the consumed manifest](../web/data/tracers.json),
+and [the portable example](../data/examples/tracer-37820-reentry.json) for attributes and
 provenance. Missing size, owner, mission, location and lifetime-orbit information stays
-explicitly unknown. Launch tracers and a broader mixed sample are next steps.
+explicitly unknown. The mixed sample is implemented; the sourced launch example is now included in the default passage.
 
-`web/earth/` adapts Cosmic Clock's sphere mesh and camera only; Cosmic Clock itself is
-unchanged. [Renderer credits](web/vendor/README.md) document the local p5 dependency.
+`web/earth/` adapts Cosmic Clock's textured Earth, day/night lighting, decorative rim,
+and camera/picking components; Cosmic Clock itself is unchanged. Hover over Earth for
+approximate geographic context, click/tap to pin a point, or use the place shortcuts.
+With the globe focused, Enter inspects its center and Escape clears the pin.
+[Earth implementation and integration](earth-renderer.md) documents the coordinate
+convention, map limitations and future solar-weather layer hook. [Renderer credits](../web/vendor/README.md)
+and [imagery/map credits](../web/assets/earth/README.md) document the bundled assets.
 The site remains static, with no new web build step. JavaScript modules require HTTP
 serving, as do the existing JSON requests.
 
@@ -72,7 +86,26 @@ node tests/tracer-settings.test.mjs
 node tests/representative-tracer.test.mjs
 node tests/surface-pulse.test.mjs
 node tests/event-sequence.test.mjs
+node tests/earth-geography.test.mjs
+node tests/earth-camera.test.mjs
+node tests/launch-sequence.test.mjs
+node tests/presentation-config.test.mjs
+node tests/display-policy.test.mjs
+node tests/orbital-event-feed.test.mjs
 ```
+
+## Shared event interface for collaborators
+
+**Events reached during playback** lists the latest five events and counts every event
+crossed in the selected preview. Forward playback emits each crossing once; scrubbing
+clears the list without triggering events. Replay starts a new pass, including a launch
+exactly at its starting timestamp. No sound or solar data is added by this increment.
+
+`OrbitalEventFeed.js` provides immutable evidence records and separate display anchors.
+The experience returned by `mountOrbitPanel()` supplies that feed, the existing clock,
+the shared settings and Earth's layer hook. The original collaborator can attach orbital
+audio while the solar collaborator samples the same clock continuously. See the
+[integration contract and adapter examples](collaborator-integration.md).
 
 ## Phase 2: explicit fallbacks
 
@@ -98,14 +131,13 @@ atmospheric descent. The 48-hour maximum is a presentation limit, not a model-va
 claim. Details, source hashes and null unknowns remain in each manifest.
 
 Missing-orbit pulses use a stable hash of event ID to choose a point uniformly by
-spherical surface area (uniform longitude and uniform sine of latitude). The exported
-`presentation.surfacePulse` is separate from the unknown factual `attributes.eventLocation`.
+spherical surface area (uniform longitude and uniform sine of latitude). The
+point is derived in `DisplayPolicy.js`, outside the unknown factual `attributes.eventLocation`.
 This is a neutral display policy, not a physical reentry distribution. Actual latitude
 patterns depend on orbital inclination and other conditions; see the
-[location policy and sources](notes/tracer-model.md#missing-orbit-surface-pulses).
-One pulse fades in and out during the final ten simulated minutes before the display
-anchor. Replay pulse focuses that interval, taking two seconds at the preset speed.
-Longer windows do not repeat it; shorter windows clip it without shifting its phase.
+[location policy and sources](tracer-model.md#missing-orbit-surface-pulses).
+One pulse fades in and out before the display anchor, using the shared pulse duration
+and event window settings. Longer windows do not repeat it; shorter windows shorten the fade.
 Pause and seek reproduce the same appearance. Trail controls do not apply.
 
 Regenerate Tiangong-1 with the existing command above; it also writes a separate
@@ -130,8 +162,9 @@ sample specification to the same exporter; broader catalog acquisition remains f
 
 ## Phase 3: a small historical passage
 
-The default Earth preview now plays **all 12 catalogued reentries from April 2–9, 2018**:
-six payloads, one rocket body and five debris objects. **Replay passage** takes 96 seconds
+The original reentry sample contains **all 12 catalogued reentries from April 2–9, 2018**:
+six payloads, one rocket body and five debris objects. The default view now adds one
+selected launch; it does not claim complete launch coverage. **Replay passage** takes 96 seconds
 at two simulated hours per second. Reported days keep their original spacing, including
 quiet intervals. Times within date-only days retain the existing stable assigned times.
 This is a visual sequence on the shared clock; the colleague's audio layer remains a
@@ -145,21 +178,21 @@ not been queried for this small sample, and the Fengyun-1C debris query returned
 Those two coverage states remain distinct in the data and inspector. Missing data is not
 evidence that no orbital history exists.
 
-**Event sequence** shows one dot per event in payload/rocket/debris lanes. Click a dot to
+**Event sequence** shows one dot per event in launch and payload/rocket/debris reentry lanes. Click a dot to
 pause, inspect and jump near that event without hiding the others. Expand **Event details
 and provenance** to choose any object and read its source epoch, mode, unknown fields and
 provenance. Active objects and the sample count follow the same clock as the full historical
 charts. Pause/Resume and scrubbing work across the collection; playback stops at April 10
-00:00 UTC. The existing Speed menu also has a slower passage setting. In **Configure tracer**,
-**Show before each reentry** changes the event lead-up and **Visible trail history**
+00:00 UTC. The existing Speed menu also has a slower passage setting. In **Configure visualization**,
+**Before each reentry** changes the event lead-up and **Visible trail history**
 changes the trail length. Both apply to each event and are saved in this browser.
 
 The sample's missing-orbit pulse is a **four-hour simulation-time motif**, taking two
 seconds at the preset speed. It ends at the assigned event anchor, has a stable random
-surface point, and carries no orbital path or factual reentry location. Single-event
-pulse timing remains unchanged. Keys and labels stay outside the globe. Sample settings
-are saved separately from single-event settings; the default marker and trail remain
-large and amber, with width/opacity taper.
+surface point, and carries no orbital path or factual reentry location. Pulses now use
+the same duration preference in single and mixed previews, shortened to fit the event
+window. Keys stay outside the globe. All previews share one preference store; the default
+marker and trail remain large and amber, with width/opacity taper.
 
 Rebuild offline from the explicit specification (all paths in it are repository-relative):
 
@@ -185,7 +218,7 @@ The builder requires complete interval membership, unique NORAD IDs, matching ti
 anchors/classes and intact cached/imported hashes. Corrupt or missing required assets fail
 explicitly. Unknown fields stay null; no browser data acquisition is introduced. The
 original raw inputs and Tiangong geometry are preserved. Scope and scientific limits are
-recorded in [the tracer model notes](notes/tracer-model.md#phase-3-small-mixed-passage).
+recorded in [the tracer model notes](tracer-model.md#phase-3-small-mixed-passage).
 
 ## One-object orbital prototype
 
@@ -193,7 +226,7 @@ The first offline trajectory uses **TIANGONG 1, NORAD 37820**, already present i
 timeline, with reported decay **date 2018-04-02**. It is a last-known orbital estimate,
 not an observed atmospheric reentry or impact path. The original candidate, IRIDIUM 33
 DEB (38023), was rejected because its last available pre-decay element was over a year old.
-See [the evidence and limitations](notes/orbital-prototype.md).
+See [the evidence and limitations](orbital-prototype.md).
 
 The downloader uses the same `.env` credentials as the timeline. Add `--dry-run` to either
 command to inspect its URL without authentication, writes, or network requests:
@@ -240,7 +273,9 @@ Outputs are `data/processed/trajectories/37820-diagnostic.png` and `37820.json` 
 JSON positions are `[UTC timestamp, x, y, z]` in **TEME kilometers**, with NORAD identity,
 source hashes, element age, decay precision, numerical diagnostics, and warnings. The
 radius plot subtracts a WGS72 reference sphere; it is not geodetic altitude. Earth-fixed
-coordinates would require a separate frame conversion before rendering geographic detail.
+coordinates are not stored in this product. The browser now rotates its reference Earth
+using approximate GMST (see the Earth implementation notes); illustrative replay timing
+still prevents interpreting a displayed endpoint as the reentry location.
 
 The retrieved DECAY records only support a calendar day, so this trajectory stops at the
 **start** of April 2 UTC. Midnight is not promoted to an exact decay time. No ground
@@ -250,3 +285,7 @@ later step.
 
 Without orbital dependencies, `python -m unittest discover -s tests -v` still runs the
 acquisition checks and explicitly skips the orbital checks.
+
+## Full historical catalog
+
+The default orbital preview now includes every reentry in the supplied catalog: **35,692 reentries across 1,132 passages (1957–2026)**, plus the one curated Dragon launch. Choose a year and passage, then Replay. Dense months are split to keep at most 50 events loaded. Quiet gaps are skipped by default. Missing orbital history remains a labeled pulse; this expansion adds no fabricated orbits. Playback defaults to three simulated hours per second and automatically continues through passages and years. Manual passage changes pause/reset playback. See [build, validation and limits](historical-loading.md).

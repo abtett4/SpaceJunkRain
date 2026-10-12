@@ -1,0 +1,76 @@
+export const DEFAULT_PLAYBACK_RATE = 3 * 60 * 60; // simulated seconds per real second
+// One presentation policy and observable preference store for every preview/layer.
+// Physics, provenance and event times do not belong in this configuration.
+import { readSettings, SETTINGS_KEY as LEGACY_SINGLE, SAMPLE_SETTINGS_KEY as LEGACY_SAMPLE } from './earth/TracerControls.js';
+export const CONFIG_KEY = 'sjr-presentation-v1';
+// Fixed event-kind palette; intentionally no color picker.
+export const EVENT_COLORS = Object.freeze({ launch: '#56dce8', reentry: '#ffd166', failedLaunch: '#ff4b1f' });
+// Failed launch attempts are drawn smaller, so they read as distinct from successes.
+export const FAILED_LAUNCH_SCALE = 0.6;
+export const STYLE = Object.freeze({ color: EVENT_COLORS.reentry, markerRadiusEarth: 0.012, lineWidthEarth: 0.008,
+  background: '#081b2c', atmosphereRadius: 1.018, pulseExpansion: 7, pulseRingWidth: 0.22 });
+// Orbit-height filter bounds: 0 means no lower limit; this value means no upper limit.
+export const HEIGHT_UNBOUNDED_KM = 100000;
+const field = (key, group, label, value, min, max, step, unit, help = '') =>
+  Object.freeze({ key, group, label, value, min, max, step, unit, help });
+export const CONFIG_FIELDS = Object.freeze([
+  // Page theme and chart notes have their own controls on the page (theme.js, the Notes box).
+  Object.freeze({ key: 'skipQuietIntervals', group: 'Playback', label: 'Skip quiet intervals', value: true, kind: 'boolean', help: 'During passage playback, jump over gaps between configured event windows. Turn off to preserve elapsed historical time.' }),
+  field('reentryLeadSeconds', 'Event windows', 'Before each reentry', 14400, 30, 172800, 30, 'seconds'),
+  field('launchFollowSeconds', 'Event windows', 'After each launch', 14400, 30, 172800, 30, 'seconds'),
+  field('trailSeconds', 'Event windows', 'Visible trail history', 1320, 0, 7200, 30, 'seconds', 'Zero shows the head only. Reference trails show at most one revolution.'),
+  field('pulseSeconds', 'Event windows', 'Surface pulse duration', 14400, 30, 14400, 30, 'seconds', 'Display time, shortened to fit the event window. Launch-pad pulses also fit within the illustrative ascent. Four simulated hours last about 1.3 seconds at the default playback speed.'),
+  field('widthScale', 'Tracers & pulses', 'Trail width', 3, 0.5, 3, 0.25, 'scale'),
+  field('markerScale', 'Tracers & pulses', 'Marker & pulse size', 3, 0.5, 3, 0.25, 'scale'),
+  field('tracerOpacity', 'Tracers & pulses', 'Tracer opacity', 1, 0, 1, 0.05, 'percent'),
+  field('widthTaper', 'Tracers & pulses', 'Width taper', 1, 0, 4, 0.25, 'number', 'Zero gives uniform width; higher values narrow more of the trail.'),
+  field('opacityTaper', 'Tracers & pulses', 'Fade toward tail', 2, 0, 4, 0.25, 'number', 'Zero gives uniform opacity; higher values fade more of the trail.'),
+  field('pulseOpacity', 'Tracers & pulses', 'Pulse opacity', 1, 0, 1, 0.05, 'percent'),
+  Object.freeze({ key: 'showOrbitPaths', group: 'Tracers & pulses', label: 'Show each full orbit faintly', value: false, kind: 'boolean', help: 'Helps when zoomed out to high orbits. The path’s orientation is illustrative, like the tracer.' }),
+  // What the globe and strip show. These have their own controls beside the strip.
+  ...[['showLaunches', 'Launches'], ['showPayloads', 'Payloads'], ['showRocketBodies', 'Rocket bodies'], ['showDebris', 'Debris'], ['showUnknown', 'Unknown']]
+    .map(([key, label]) => Object.freeze({ key, group: 'Show', label, value: true, kind: 'boolean' })),
+  field('minHeightKm', 'Show', 'Lowest orbit height', 0, 0, HEIGHT_UNBOUNDED_KM, 1, 'km', 'Reentries whose recorded orbit reaches this height or above.'),
+  field('maxHeightKm', 'Show', 'Highest orbit height', HEIGHT_UNBOUNDED_KM, 0, HEIGHT_UNBOUNDED_KM, 1, 'km', 'At the maximum there is no upper limit.'),
+  field('earthBrightness', 'Earth', 'Surface brightness', 1, 0.25, 2, 0.05, 'scale'),
+  field('nightLights', 'Earth', 'City lights', 1, 0, 2, 0.05, 'scale'),
+  field('atmosphereOpacity', 'Earth', 'Decorative atmosphere', 1, 0, 1, 0.05, 'percent', 'Appearance only. Solar-weather data will have its own layer.'),
+]);
+export function normalizePresentation(raw, fields = CONFIG_FIELDS) {
+  return Object.freeze(Object.fromEntries(fields.map(f => [f.key,
+    f.choices ? (f.choices.some(([v]) => v === raw?.[f.key]) ? raw[f.key] : f.value)
+      : f.kind === 'boolean' ? (typeof raw?.[f.key] === 'boolean' ? raw[f.key] : f.value)
+      : Number.isFinite(raw?.[f.key]) ? Math.max(f.min, Math.min(f.max, raw[f.key])) : f.value])));
+}
+export const DEFAULTS = normalizePresentation(null);
+export function createPresentationStore(storage, fields = CONFIG_FIELDS) {
+  let values, saved = false;
+  try {
+    const current = storage?.getItem(CONFIG_KEY);
+    if (current !== null && current !== undefined) {
+      const doc = JSON.parse(current);
+      values = normalizePresentation(doc?.version === 1 ? doc.values : null, fields);
+    } else {
+      // The passage was the main preview. Adopt its legacy settings when present.
+      const key = storage?.getItem(LEGACY_SAMPLE) ? LEGACY_SAMPLE : LEGACY_SINGLE;
+      values = normalizePresentation({ ...(storage?.getItem(key)
+        ? readSettings(storage, 172800, { key, defaults: DEFAULTS }) : {}) }, fields);
+    }
+  } catch { values = normalizePresentation(null, fields); }
+  const subscribers = new Set();
+  const persist = () => {
+    try {
+      if (!storage) return false;
+      storage.setItem(CONFIG_KEY, JSON.stringify({ version: 1, values })); return true;
+    } catch { return false; }
+  };
+  saved = persist(); // One-time migration; reset cannot resurrect old preferences.
+  return {
+    fields,
+    get values() { return values; },
+    get saved() { return saved; },
+    subscribe(fn) { subscribers.add(fn); fn(values); return () => subscribers.delete(fn); },
+    update(patch) { values = normalizePresentation({ ...values, ...patch }, fields); saved = persist(); subscribers.forEach(fn => fn(values)); },
+    reset() { values = normalizePresentation(null, fields); saved = persist(); subscribers.forEach(fn => fn(values)); },
+  };
+}
