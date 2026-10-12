@@ -7,6 +7,10 @@ import { mountEventPlaybackLog } from '../EventPlaybackLog.js';
 import { DEFAULT_PLAYBACK_RATE, HEIGHT_UNBOUNDED_KM } from '../PresentationConfig.js';
 import { EventStrip } from './EventStrip.js';
 import { clockParts, longDate, shortDay, MONTH_ABBR } from '../DateText.js';
+import { pretty as prettyCaps } from '../util.js';
+// SATCAT names are all caps and go through the site's pretty(); GCAT names are already mixed case.
+const pretty = name => name && name === name.toUpperCase() ? prettyCaps(name) : name;
+import { mountConfigurationPanel } from '../ConfigurationPanel.js';
 export { selectMode } from './EventSequence.js';
 
 // Above one simulated day per second, months can't load fast enough; the globe waits and
@@ -45,16 +49,15 @@ const shownAs = s => {
 };
 // One short line for the globe's info box: what the object is and whose it is.
 const NO_SATELLITE_NOUN = new Set(['space station', 'crewed spacecraft', 'cargo spacecraft', 'planetary probe', 'calibration target', 'target']);
-const titleWords = name => name.split(/\s+/).map(w => /\d/.test(w) ? w : w[0] + w.slice(1).toLowerCase()).join(' ');
 export const describeObject = (s, familyName) => {
   const a = s.event.attributes;
   if (s.event.eventKind === 'launch') {
     const site = a.launchSite;
-    return [`${isFailedLaunch(s) ? 'Failed launch' : 'Launch'} from ${site?.place ?? 'an unknown site'}`, site?.country].filter(Boolean).join(', ');
+    return [`${isFailedLaunch(s) ? 'Failed launch' : 'Launch'} from ${site?.place ?? site?.name ?? 'an unknown site'}`, site?.country].filter(Boolean).join(', ');
   }
   const m = a.mission?.value, type = a.objectType.value, country = a.ownerCountry?.value;
   const what = type === 'PAYLOAD' ? ([m?.class, m?.category].filter(Boolean).join(' ') + (NO_SATELLITE_NOUN.has(m?.category) ? '' : ' satellite')).trim()
-    : type === 'ROCKET BODY' ? 'rocket stage' : type === 'DEBRIS' ? `debris${familyName ? ` from ${titleWords(familyName)}` : ''}` : 'unidentified object';
+    : type === 'ROCKET BODY' ? 'rocket stage' : type === 'DEBRIS' ? `debris${familyName ? ` from ${pretty(familyName)}` : ''}` : 'unidentified object';
   return capital(what) + (country ? ` · ${country}` : '');
 };
 // Mass, length and owner, from GCAT where it has them: '8,500 kg · 10.4 m long · China · PLA GAD'.
@@ -64,12 +67,16 @@ const objectFacts = s => {
     a.ownerCountry?.value, a.owner?.value !== a.ownerCountry?.value && a.owner?.value].filter(Boolean).join(' · ');
 };
 
-export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
+// hooks.play is set to this panel's passage-aware play/pause; the Earth sheet routes Animate to it.
+export async function mountOrbitPanel(clock, timeline, onReplay, presentation, hooks = {}) {
   const el = id => document.getElementById(id);
   const text = (id, value) => { if (el(id).textContent !== value) el(id).textContent = value; };
   const events = new OrbitalEventFeed(clock);
   const disposeEventLog = mountEventPlaybackLog(el('event-playback-log'), events);
-  const status = el('orbit-status'), pause = el('orbit-pause'), picker = el('orbit-example');
+  const status = el('orbit-status'), picker = el('orbit-example');
+  // Appearance controls beside the globe; filters and skipping have their own controls.
+  const disposeConfiguration = mountConfigurationPanel(el('config-fields'), presentation,
+    { exclude: ['skipQuietIntervals', 'showLaunches', 'showPayloads', 'showRocketBodies', 'showDebris', 'showUnknown', 'minHeightKm', 'maxHeightKm'] });
   let historyIndex = null, chunkId = null, loadController = null, provenanceUrl = null;
   let prefetched = null, transitioning = false, continuationStart = null;
   const PASSAGE_RATE = DEFAULT_PLAYBACK_RATE;
@@ -91,7 +98,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
   const catalogMarks = (startMs, endMs) => {
     const marks = [];
     for (let i = lowerBound(startMs), end = lowerBound(endMs); i < end; i++) marks.push({ ms: catMs[i], lane: timeline.meta.types[timeline.cols.k[i]],
-      kind: 'reentry', name: timeline.names[timeline.cols.nm[i]], norad: timeline.cols.id[i] });
+      kind: 'reentry', name: pretty(timeline.names[timeline.cols.nm[i]]), norad: timeline.cols.id[i] });
     return marks;
   };
   // Every orbital launch attempt (GCAT), for the strip's launch lane.
@@ -102,9 +109,6 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
       if (!index) return;
       launchIndex = { ms: Float64Array.from(index.cols.t, t => EPOCH_MS + t * 1000), ...index };
       const src = launchIndex.source;
-      text('src-launch-count', launchIndex.count.toLocaleString());
-      text('src-launch-failed', launchIndex.failures.toLocaleString());
-      text('src-gcat-date', src.updated?.replace(/^Updated\s+/, '').replace(/\s+\S+$/, '') ?? src.retrievedAt.slice(0, 10));
     }).catch(() => {});
   const launchMarks = (startMs, endMs) => {
     if (!launchIndex) return [];
@@ -144,7 +148,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     stripKey = key;
     const launches = historical() ? launchMarks(startMs, endMs)
       : (sequence?.events ?? []).filter(s => s.event.eventKind === 'launch' && s.endMs >= startMs && s.endMs <= endMs)
-        .map(s => ({ ms: s.endMs, lane: 'LAUNCH', kind: isFailedLaunch(s) ? 'failed' : 'launch', name: s.event.object.name, state: s }));
+        .map(s => ({ ms: s.endMs, lane: 'LAUNCH', kind: isFailedLaunch(s) ? 'failed' : 'launch', name: pretty(s.event.object.name), state: s }));
     const marks = [...launches, ...catalogMarks(startMs, endMs)];
     let hidden = 0;
     for (const m of marks) { m.dim = !markShown(m); hidden += m.dim; }
@@ -180,7 +184,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     el('event-card').hidden = !s;
     if (!s) return;
     text('sel-label', label);
-    text('sel-name', s.event.object.name);
+    text('sel-name', pretty(s.event.object.name));
     text('sel-kind', kindText(s));
     const { time } = clockParts(s.endMs);
     text('sel-date', `${longDate(s.endMs)} · ${time}`);
@@ -199,7 +203,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
         const li = document.createElement('li'), button = document.createElement('button');
         button.type = 'button';
         button.innerHTML = '<span class="now-name"></span><span class="now-kind"></span>';
-        button.children[0].textContent = s.event.object.name;
+        button.children[0].textContent = pretty(s.event.object.name);
         button.children[1].textContent = kindText(s).replace(/ reentry$/, '');
         button.className = `${s.event.eventKind}${isFailedLaunch(s) ? ' failed' : ''}`;
         button.addEventListener('click', () => jumpTo(s));
@@ -209,7 +213,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
       el('now-list').replaceChildren(...shown);
     }
     const next = visibleEvents.find(s => s.endMs > nowMs && !active.includes(s));
-    const nextText = next ? `${active.length ? 'Next' : 'Quiet. Next'}: |${next.event.object.name}|, ${clockParts(next.endMs).day}`
+    const nextText = next ? `${active.length ? 'Next' : 'Quiet. Next'}: |${pretty(next.event.object.name)}|, ${clockParts(next.endMs).day}`
       : active.length ? '' : visibleEvents.length ? 'Nothing more this month.' : 'Nothing shown this month with the current filters.';
     if (el('now-next').dataset.text !== nextText) {
       el('now-next').dataset.text = nextText;
@@ -233,7 +237,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
       const li = document.createElement('li');
       li.className = `${s.event.eventKind}${isFailedLaunch(s) ? ' failed' : ''}${active.length ? '' : ' info-next'}`;
       li.innerHTML = '<span class="info-dot" aria-hidden="true"></span><span class="info-name"></span><span class="info-what"></span>';
-      li.querySelector('.info-name').textContent = (active.length ? '' : 'Next: ') + s.event.object.name;
+      li.querySelector('.info-name').textContent = (active.length ? '' : 'Next: ') + pretty(s.event.object.name);
       li.querySelector('.info-what').textContent = describeObject(s, familyNames.get(s.event.object.launchFamily));
       return li;
     }), ...(active.length > 4 ? [Object.assign(document.createElement('li'), { className: 'info-next', textContent: `and ${active.length - 4} more` })] : []));
@@ -384,8 +388,6 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
         { id: sequence.sample?.id ?? sequence.events[0].event.eventId, title: sequence.sample?.title ?? sequence.events[0].event.object.name }, {continuation:automatic});
       const mixed = Boolean(sequence.sample);
       el('strip-head').classList.toggle('example', !isHistory);
-      text('orbit-title', isHistory ? 'Every reentry, on the globe' : mixed ? sequence.sample.title : sequence.events[0].event.object.name);
-      text('orbit-name', isHistory ? 'Press Play to watch each object come down on its reentry day.' : 'An example from “Other examples” below. Choose “Every reentry” there to return.');
       if (isHistory) { provenanceUrl=URL.createObjectURL(new Blob([JSON.stringify(manifest,null,2)],{type:'application/json'})); stripYear = Number(chunkId.slice(0, 4)); showYear(); }
       el('sel-source').href = provenanceUrl ?? manifestUrl.href;
       if (mixed) {
@@ -396,7 +398,8 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
         if (!automatic && options.seekMs == null) { scene.camera.yaw = 0.8; scene.camera.pitch = 0.2; }
       } else text('sample-coverage', '');
       text('tracer-window-limit', 'Settings apply everywhere. Up to 2 h of Tiangong-1 uses SGP4 samples; longer windows use a reference loop. All event windows are capped at 48 h; rings fade within the chosen window.');
-      status.textContent = '';
+      // In the full catalog the status line stays empty; an example names itself.
+      status.textContent = isHistory ? '' : `Example: ${mixed ? sequence.sample.title : pretty(sequence.events[0].event.object.name)} · choose “Every reentry” under Other examples to return`;
       applySettings(presentation.values);
       if (!automatic && mixed) clock.seek(Math.max(range()[0], Math.min(range()[1], options.seekMs ?? range()[0])));
       if (!mixed) jumpTo(sequence.events[0]);
@@ -481,12 +484,17 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
   for (const button of document.querySelectorAll('.fine-time [data-step]'))
     button.addEventListener('click', () => seekTo(clock.nowMs + Number(button.dataset.step) * 1000, true), { signal: listeners.signal });
   showFine(clock.nowMs);
-  const showPlayState = ({ playing }) => {
-    pause.textContent = playing || transitioning ? '❚❚ Pause' : '▶ Play';
+  // The Earth view's own clock face: the year apart, the day in words, and how many are down.
+  const clockEls = ['clock-year', 'clock-day', 'clock-time'].map(el), countEl = el('earth-count');
+  const setText = (node, value) => { if (node.textContent !== value) node.textContent = value; };
+  const showClock = nowMs => {
+    const { year, day, time } = clockParts(nowMs);
+    setText(clockEls[0], year); setText(clockEls[1], day); setText(clockEls[2], time);
+    setText(countEl, lowerBound(nowMs + 1).toLocaleString());
   };
-  showPlayState(clock);
+  showClock(clock.nowMs);
   const unsubscribePlayState = clock.subscribe(state => {
-    showPlayState(state);
+    showClock(state.nowMs);
     const year = new Date(state.nowMs).getUTCFullYear();
     if (historical() && historyIndex && stripYear !== null && year !== stripYear && !transitioning) { stripYear = year; refreshStrip(); showYear(); }
     strip.setTime(state.nowMs);
@@ -494,7 +502,9 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     el('globe-speed-note').hidden = !tooFast();
     if (state.reason === 'rate' && sequence && settings && scene) applySettings(settings);
   });
-  pause.addEventListener('click', play, { signal: listeners.signal });
+  hooks.play = play;
+  // Coming back to the Earth view (the other sheets reset the clock to today): return to the loaded month.
+  hooks.resume = () => { if (sequence && !clock.playing) seekTo(range()[0], false); };
   // Orbit-height range: two thumbs on a log scale, 100 km to 100,000 km; the ends mean no limit.
   const nice = km => { const step = 10 ** (Math.floor(Math.log10(km)) - 1); return Math.round(km / step) * step; }; // two significant figures
   const toKm = pos => pos <= 0 ? 0 : pos >= 100 ? HEIGHT_UNBOUNDED_KM : nice(10 ** (2 + 3 * pos / 100));
@@ -560,14 +570,14 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
       }
       update(state);
       if (transitioning && ['pause','seek'].includes(state.reason)) {
-        transitioning=false; revision++; loadController?.abort(); showPlayState(clock);
+        transitioning=false; revision++; loadController?.abort();
         if (sequence?.sample && historyIndex) { chunkId = sequence.sample.id; }
       }
       if (state.reason==='advance' && !state.playing && sequence && state.nowMs===range()[1] && clock.untilMs===range()[1]
         && historical() && !transitioning) {
         const next=nextChunk();
         if (!next || Date.parse(next.intervalUtc[0])>=clock.maxMs) return;
-        transitioning=true; showPlayState(clock);
+        transitioning=true;
         queueMicrotask(()=>{
           if (!transitioning) return;
           chunkId = next.id;
@@ -578,7 +588,7 @@ export async function mountOrbitPanel(clock, timeline, onReplay, presentation) {
     unsubscribeSettings = presentation.subscribe(applySettings);
     picker.addEventListener('change', () => load(), { signal: listeners.signal });
     window.addEventListener('pagehide', e => {
-      if (!e.persisted) { revision++; if (provenanceUrl) URL.revokeObjectURL(provenanceUrl); loadController?.abort(); prefetched?.controller.abort(); listeners.abort(); unsubscribePlayState(); unsubscribeSkip(); strip.dispose(); disposeEventLog(); events.dispose(); clock.setPlaybackWindows(null); unsubscribeSettings?.(); unsubscribe(); scene.dispose(); }
+      if (!e.persisted) { revision++; if (provenanceUrl) URL.revokeObjectURL(provenanceUrl); loadController?.abort(); prefetched?.controller.abort(); listeners.abort(); unsubscribePlayState(); unsubscribeSkip(); disposeConfiguration(); strip.dispose(); disposeEventLog(); events.dispose(); clock.setPlaybackWindows(null); unsubscribeSettings?.(); unsubscribe(); scene.dispose(); }
     });
     await Promise.all([launchesReady, heightsReady]);
     await load();

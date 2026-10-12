@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SimulationClock} from '../web/SimulationClock.js';
-import {OrbitalEventFeed} from '../web/OrbitalEventFeed.js';
-import {DEFAULTS,normalizePresentation} from '../web/PresentationConfig.js';
+import {SimulationClock} from '../web/js/SimulationClock.js';
+import {OrbitalEventFeed} from '../web/js/OrbitalEventFeed.js';
+import {DEFAULTS,normalizePresentation} from '../web/js/PresentationConfig.js';
 const make=()=>new SimulationClock({minMs:0,maxMs:1000,nowMs:0,rate:1,requestFrame:()=>1,cancelFrame:()=>{}});
 
 test('skips initial, intermediate and trailing gaps without consuming active duration',()=>{

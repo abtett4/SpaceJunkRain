@@ -21,6 +21,9 @@ satcat.json
 __pycache__/
 .claude/
 
+# reference PDFs kept locally; the site links to the published copies
+/*.pdf
+
 # Local orbital environment and reproducible diagnostic outputs
 .venv/
 data/processed/

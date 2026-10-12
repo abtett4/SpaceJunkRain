@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {validateHistoryIndex,loadHistoryChunk} from '../web/earth/HistoryChunks.js';
-import {loadSequence,configureSequence,sequenceAt} from '../web/earth/EventSequence.js';
-import {DEFAULTS} from '../web/PresentationConfig.js';
-import {SimulationClock} from '../web/SimulationClock.js';
-import {OrbitalEventFeed} from '../web/OrbitalEventFeed.js';
+import {validateHistoryIndex,loadHistoryChunk} from '../web/js/earth/HistoryChunks.js';
+import {loadSequence,configureSequence,sequenceAt} from '../web/js/earth/EventSequence.js';
+import {DEFAULTS} from '../web/js/PresentationConfig.js';
+import {SimulationClock} from '../web/js/SimulationClock.js';
+import {OrbitalEventFeed} from '../web/js/OrbitalEventFeed.js';
 const base=new URL('../web/data/history/all/index.json',import.meta.url);
 const index=JSON.parse(readFileSync(base));
 const catalog=JSON.parse(readFileSync(new URL('../web/data/decays.json',import.meta.url)));

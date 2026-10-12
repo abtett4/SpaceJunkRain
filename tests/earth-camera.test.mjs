@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CameraController } from '../web/earth/CameraController.js';
+import { CameraController } from '../web/js/earth/CameraController.js';
 
 function fixture() {
   const element = new EventTarget();

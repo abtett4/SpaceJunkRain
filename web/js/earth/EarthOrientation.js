@@ -1,4 +1,4 @@
-import { GeoVector, RotateVector, Rotation_EQJ_EQD, SiderealTime } from '../vendor/astronomy.js';
+import { GeoVector, RotateVector, Rotation_EQJ_EQD, SiderealTime } from '../../vendor/astronomy.js';
 import { latLonToVector, normalize, transform, RAD } from './GeoMath.js';
 
 // Vallado's GMST expression. UTC approximates UT1; polar motion is omitted.

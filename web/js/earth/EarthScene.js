@@ -1,5 +1,5 @@
 import { DEFAULTS, STYLE } from '../PresentationConfig.js';
-import P5 from '../vendor/p5.esm.min.js';
+import P5 from '../../vendor/p5.esm.min.js';
 // The friendly-error checks validate every drawing call; they cost several percent per frame.
 P5.disableFriendlyErrors = true;
 import { Tracer } from './Tracer.js';
@@ -45,6 +45,13 @@ function orbitPathGeometry(p, tracer, width) {
       p.endShape();
     }
   });
+}
+
+// Long trails carry a sample every few seconds; ~40 points draw the same smooth arc, and p5
+// converts colour per vertex, so cost scales with the count. Keeps both ends.
+function thinned(points, max) {
+  if (points.length <= max) return points;
+  return Array.from({ length: max }, (_, i) => points[Math.round(i * (points.length - 1) / (max - 1))]);
 }
 
 function drawTaperedTrail(p, points, eye, width, color, opacity, widthTaper, opacityTaper) {
@@ -118,7 +125,7 @@ export class EarthScene {
             this.resize.observe(element);
             this.shader = p.createShader(earthVertex, earthFragment);
             const images = await Promise.allSettled(['earth-day.jpg', 'earth-night.jpg'].map(name =>
-              p.loadImage(new URL(`../assets/earth/${name}`, import.meta.url).href)));
+              p.loadImage(new URL(`../../assets/earth/${name}`, import.meta.url).href)));
             if (this.disposed) return;
             if (images.every(image => image.status === 'fulfilled')) {
               this.shader.setUniform('uDay', images[0].value);
@@ -244,7 +251,7 @@ export class EarthScene {
         }
         p.model(cached.geometry);
       }
-      drawTaperedTrail(p, sample.tail, camera.eye, tracer.lineWidthEarth * zoomScale, tracer.color, tracer.opacity, tracer.widthTaper, tracer.opacityTaper);
+      drawTaperedTrail(p, thinned(sample.tail, 40), camera.eye, tracer.lineWidthEarth * zoomScale, tracer.color, tracer.opacity, tracer.widthTaper, tracer.opacityTaper);
       p.push(); p.translate(...sample.head); p.noStroke(); const tint = p.color(tracer.color); tint.setAlpha(255 * tracer.opacity); p.fill(tint);
       p.sphere(tracer.markerRadiusEarth * zoomScale, 12, 8); p.pop();
     }

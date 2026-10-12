@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { latLonToVector, vectorToLatLon, transform, inverseRotation, dot, cameraBasis, pickGlobe } from '../web/earth/GeoMath.js';
-import { gmst, earthRotation, earthState } from '../web/earth/EarthOrientation.js';
-import { Geography, contains, distanceKm } from '../web/earth/Geography.js';
-import { SurfacePulse } from '../web/earth/SurfacePulse.js';
+import { latLonToVector, vectorToLatLon, transform, inverseRotation, dot, cameraBasis, pickGlobe } from '../web/js/earth/GeoMath.js';
+import { gmst, earthRotation, earthState } from '../web/js/earth/EarthOrientation.js';
+import { Geography, contains, distanceKm } from '../web/js/earth/Geography.js';
+import { SurfacePulse } from '../web/js/earth/SurfacePulse.js';
 
 const near = (a, b, epsilon = 1e-9) => assert.ok(Math.abs(a - b) < epsilon, `${a} != ${b}`);
 const nearVector = (a, b) => a.forEach((v, i) => near(v, b[i]));

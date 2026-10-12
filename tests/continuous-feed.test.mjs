@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SimulationClock} from '../web/SimulationClock.js';
-import {OrbitalEventFeed} from '../web/OrbitalEventFeed.js';
+import {SimulationClock} from '../web/js/SimulationClock.js';
+import {OrbitalEventFeed} from '../web/js/OrbitalEventFeed.js';
 const record=t=>({event:{eventId:String(t),eventKind:'reentry'},displayTimeMs:t});
 test('continuation keeps traversal, includes the new boundary once and preserves rate',()=>{
  const clock=new SimulationClock({minMs:0,maxMs:1000,nowMs:0,rate:10800,requestFrame:()=>1,cancelFrame:()=>{}});

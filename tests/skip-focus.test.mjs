@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {longitudeOffset,skipFocusDirection} from '../web/earth/SkipFocus.js';
-import {latLonToVector,vectorToLatLon,inverseRotation,wrapLongitude} from '../web/earth/GeoMath.js';
-import {earthRotation} from '../web/earth/EarthOrientation.js';
-import {SimulationClock} from '../web/SimulationClock.js';
+import {longitudeOffset,skipFocusDirection} from '../web/js/earth/SkipFocus.js';
+import {latLonToVector,vectorToLatLon,inverseRotation,wrapLongitude} from '../web/js/earth/GeoMath.js';
+import {earthRotation} from '../web/js/earth/EarthOrientation.js';
+import {SimulationClock} from '../web/js/SimulationClock.js';
 test('persistent offsets stay strictly inside plus/minus 45 degrees',()=>{
  const offsets=Array.from({length:10000},(_,i)=>longitudeOffset(String(i)));
  assert.ok(offsets.every(n=>n>-45&&n<45));assert.ok(offsets.some(n=>n<0)&&offsets.some(n=>n>0));

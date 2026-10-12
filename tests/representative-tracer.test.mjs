@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Tracer } from '../web/earth/Tracer.js';
-import { selectMode } from '../web/earth/OrbitPanel.js';
-import { normalizeSettings } from '../web/earth/TracerControls.js';
+import { Tracer } from '../web/js/earth/Tracer.js';
+import { selectMode } from '../web/js/earth/OrbitPanel.js';
+import { normalizeSettings } from '../web/js/earth/TracerControls.js';
 
 const positions = [[0, 2, 0, 0], [15, 0, 2, 0], [30, -2, 0, 0], [45, 0, -2, 0], [60, 2, 0, 0]];
 const options = { positions, loopPeriodSeconds: 60, maxDisplaySeconds: 172800, radiusKm: 1,

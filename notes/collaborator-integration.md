@@ -7,8 +7,9 @@ Earth, launch/reentry visuals, geographic inspection and these shared interfaces
 
 ## What is available
 
-`mountOrbitPanel()` resolves to an experience object after preparing Earth. `web/app.js`
-keeps that promise as `experienceReady`, so Earth preparation does not block the existing
+`mountOrbitPanel()` resolves to an experience object after preparing Earth. Since the Earth view
+became sheet 3, `web/js/sheets/earth.js` exports that promise as `earthExperience` (it resolves the
+first time someone opens the Earth view), so Earth preparation does not block the existing
 timeline. Add collaborator imports and mount calls at that commented integration point.
 No globals, second simulation timer, credentials, or browser orbital propagation are needed.
 
@@ -120,7 +121,7 @@ settings already supplied by Earth. Its temporal variation is continuous and ind
 of whether an orbital event is crossing. Missing values must remain distinct from zero.
 
 ```js
-experienceReady.then(experience => {
+earthExperience.then(experience => { // import { earthExperience } from './sheets/earth.js'
   if (!experience) return; // Earth initialization may fail; timeline still works.
   const removeSolarLayer = experience.earth.addLayer(solarLayer);
   const disposeOrbitalAudio = mountOrbitalAudio(experience, voiceBank);

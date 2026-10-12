@@ -14,9 +14,7 @@ export const HEIGHT_UNBOUNDED_KM = 100000;
 const field = (key, group, label, value, min, max, step, unit, help = '') =>
   Object.freeze({ key, group, label, value, min, max, step, unit, help });
 export const CONFIG_FIELDS = Object.freeze([
-  Object.freeze({ key: 'theme', group: 'Page & timeline', label: 'Page theme', value: 'system',
-    choices: [['system', 'Follow system'], ['light', 'Paper'], ['dark', 'Blueprint']] }),
-  Object.freeze({ key: 'timelineNotes', group: 'Page & timeline', label: 'Show timeline notes', value: true, kind: 'boolean' }),
+  // Page theme and chart notes have their own controls on the page (theme.js, the Notes box).
   Object.freeze({ key: 'skipQuietIntervals', group: 'Playback', label: 'Skip quiet intervals', value: true, kind: 'boolean', help: 'During passage playback, jump over gaps between configured event windows. Turn off to preserve elapsed historical time.' }),
   field('reentryLeadSeconds', 'Event windows', 'Before each reentry', 14400, 30, 172800, 30, 'seconds'),
   field('launchFollowSeconds', 'Event windows', 'After each launch', 14400, 30, 172800, 30, 'seconds'),
@@ -56,7 +54,7 @@ export function createPresentationStore(storage, fields = CONFIG_FIELDS) {
       // The passage was the main preview. Adopt its legacy settings when present.
       const key = storage?.getItem(LEGACY_SAMPLE) ? LEGACY_SAMPLE : LEGACY_SINGLE;
       values = normalizePresentation({ ...(storage?.getItem(key)
-        ? readSettings(storage, 172800, { key, defaults: DEFAULTS }) : {}), theme: storage?.getItem('sjr-theme') }, fields);
+        ? readSettings(storage, 172800, { key, defaults: DEFAULTS }) : {}) }, fields);
     }
   } catch { values = normalizePresentation(null, fields); }
   const subscribers = new Set();

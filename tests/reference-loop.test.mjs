@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { referenceLoop } from '../web/earth/ReferenceLoop.js';
+import { referenceLoop } from '../web/js/earth/ReferenceLoop.js';
 
 // Values from tools/representative_orbit.py for the same inputs (perigee 334, apogee 348, 42.78°).
 const PY = { period: 5481.265462014484, phase: 1.606285596622512, t: [[0.0, -252.39793710863754, 4928.330432217144, 4560.489580837793],

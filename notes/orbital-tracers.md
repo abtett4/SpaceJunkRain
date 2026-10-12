@@ -1,9 +1,10 @@
-# Orbital view: detailed reference
+# Orbital tracers and the Earth view
 
-Moved unchanged from the README (2026-10-11) so the README can stay an overview. Sections are
-in the order they were written; later sections supersede earlier defaults (for example, the
-default preview is now the full historical catalog, see the last section). Relative links
-below were adjusted for this folder.
+*By Tyler Griffith. Moved here from his README sections on the `tyler/orbital-earth` branch when the
+Earth view became sheet 3, then refreshed with the later sections from that branch (launches, the
+full catalogue, collaborator interface). File paths now live under `web/js/`
+(`web/js/SimulationClock.js`, `web/js/earth/`). The current Earth view is summarised in
+[earth-view.md](earth-view.md); this file keeps the detailed history and every rebuild command.*
 
 ## Tracer visualization model and fallback previews
 

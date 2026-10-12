@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { loadSequence, configureSequence, sequenceAt, sequenceRange } from '../web/earth/EventSequence.js';
-import { DEFAULTS, EVENT_COLORS, createPresentationStore } from '../web/PresentationConfig.js';
+import { loadSequence, configureSequence, sequenceAt, sequenceRange } from '../web/js/earth/EventSequence.js';
+import { DEFAULTS, EVENT_COLORS, createPresentationStore } from '../web/js/PresentationConfig.js';
 const json = path => JSON.parse(readFileSync(new URL(path, import.meta.url)));
 const base = '../web/data/samples/april-2018-launch/';
 const timeline = json('../web/data/decays.json');

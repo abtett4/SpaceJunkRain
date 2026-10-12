@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { SimulationClock } from '../web/SimulationClock.js';
-import { OrbitalEventFeed } from '../web/OrbitalEventFeed.js';
-import { displayAnchor } from '../web/DisplayPolicy.js';
+import { SimulationClock } from '../web/js/SimulationClock.js';
+import { OrbitalEventFeed } from '../web/js/OrbitalEventFeed.js';
+import { displayAnchor } from '../web/js/DisplayPolicy.js';
 const record=(id,time,kind='reentry')=>({event:{eventId:id,eventKind:kind,object:{noradId:1,name:id},eventTime:{precision:'day'}},displayTimeMs:time});
 const setup=(records=[record('a',100),record('b',200),record('c',300)])=>{
   const clock=new SimulationClock({minMs:0,maxMs:1000,nowMs:0,rate:1,requestFrame:()=>1,cancelFrame:()=>{}});

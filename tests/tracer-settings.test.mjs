@@ -1,10 +1,10 @@
-import { displayAnchor } from '../web/DisplayPolicy.js';
+import { displayAnchor } from '../web/js/DisplayPolicy.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { Tracer } from '../web/earth/Tracer.js';
-import { SimulationClock } from '../web/SimulationClock.js';
-import { SETTINGS_KEY, normalizeSettings, readSettings, writeSettings } from '../web/earth/TracerControls.js';
+import { Tracer } from '../web/js/earth/Tracer.js';
+import { SimulationClock } from '../web/js/SimulationClock.js';
+import { SETTINGS_KEY, normalizeSettings, readSettings, writeSettings } from '../web/js/earth/TracerControls.js';
 
 const readJson = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url)));
 const geometry = readJson('../web/data/trajectories/37820.json');

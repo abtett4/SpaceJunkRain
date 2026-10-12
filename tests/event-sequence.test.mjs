@@ -1,10 +1,10 @@
-import { DEFAULTS } from '../web/PresentationConfig.js';
+import { DEFAULTS } from '../web/js/PresentationConfig.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { loadSequence, configureSequence, sequenceAt, sequenceRange } from '../web/earth/EventSequence.js';
-import { readSettings, writeSettings, SETTINGS_KEY, SAMPLE_SETTINGS_KEY } from '../web/earth/TracerControls.js';
-import { SimulationClock } from '../web/SimulationClock.js';
+import { loadSequence, configureSequence, sequenceAt, sequenceRange } from '../web/js/earth/EventSequence.js';
+import { readSettings, writeSettings, SETTINGS_KEY, SAMPLE_SETTINGS_KEY } from '../web/js/earth/TracerControls.js';
+import { SimulationClock } from '../web/js/SimulationClock.js';
 
 const json = path => JSON.parse(readFileSync(new URL(path, import.meta.url)));
 const timeline = json('../web/data/decays.json');

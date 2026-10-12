@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { axisTicks } from '../web/earth/EventStrip.js';
-import { clockParts, longDate } from '../web/DateText.js';
+import { axisTicks } from '../web/js/earth/EventStrip.js';
+import { clockParts, longDate } from '../web/js/DateText.js';
 
 // A year reads as twelve abbreviated months, each label centred in its month.
 const year = axisTicks(Date.UTC(2018, 0, 1), Date.UTC(2019, 0, 1));

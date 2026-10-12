@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SurfacePulse } from '../web/earth/SurfacePulse.js';
+import { SurfacePulse } from '../web/js/earth/SurfacePulse.js';
 
 const options = { latitudeDeg: 35, longitudeDeg: -110, durationSeconds: 600, endTime: '2024-01-05T22:11:53Z' };
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-10, `${a} ≈ ${b}`);

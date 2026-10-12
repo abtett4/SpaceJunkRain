@@ -1,9 +1,9 @@
-import { displayAnchor } from '../web/DisplayPolicy.js';
+import { displayAnchor } from '../web/js/DisplayPolicy.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { SimulationClock } from '../web/SimulationClock.js';
-import { Tracer, toScene } from '../web/earth/Tracer.js';
+import { SimulationClock } from '../web/js/SimulationClock.js';
+import { Tracer, toScene } from '../web/js/earth/Tracer.js';
 
 test('one clock notifies both layers and stops at the replay endpoint', () => {
   let scheduled, cancelled = 0;
