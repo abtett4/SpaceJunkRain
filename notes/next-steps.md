@@ -1,12 +1,27 @@
-# Next steps (as of 2026-10-07)
+# Next steps
 
-Paused here. Nothing below is started.
+## Status (2026-10-12)
+- Live with three sheets: By source, Time in orbit, Earth view (Tyler Griffith). `main` at the
+  merge of Tyler's PR #3.
+- Data: SATCAT + historical decay messages retrieved 2026-10-07; GCAT times for 4,108 reentries.
+- Events: 2019 SCD collisions, 2021 Yunhai/Kosmos 1408, USA 32 (2026), Titan 3C (1965) and nine
+  Delta second-stage explosions, the last two groups cited to the 1999 NASA chronology.
 
-> **Update 2026-10-11:** separately from this list, the orbital Earth view (3D globe, tracers,
-> full-catalog passages, collaborator event feed) was built on `tyler/orbital-earth`; see the
-> README. The items below are still open.
+### Open, for Tyler
+- `web/vendor/README.md` says p5 2.3.3; the file's version string reads 2.3.1.
+- Python tests: 3 failures and 2 errors (`test_mixed_sample`, `test_history_chunks`) that fail
+  the same way on his branch. JS tests need Node.
 
-- **Sheet 3, cadence:** solar cycle vs. reentry rate. Two stacked panels on one time axis
+### Open, general
+- Verify the `alt_km` values and 2021 events marked "new" in `data/events.json`.
+- Check Freesound licenses and credits for the SFX in the repo (one uploader account is deleted).
+- Notes switch: on sheet 3 it only controls the monthly chart's April 2022 note, so it looks inert
+  while the globe plays months before April 2022. Consider a note or an Earth-view use for it.
+- The merged `sheet3-earth` branch can be deleted.
+
+## Ideas (not started)
+
+- **Next sheet, cadence:** solar cycle vs. reentry rate. Two stacked panels on one time axis
   (monthly reentries; sunspot number or F10.7), plus a folded "all cycles on one phase axis"
   view, possibly as a polar clock. Data: SILSO monthly sunspots (check license) or NOAA F10.7.
   First, check that the reentry peaks really line up with solar maxima.
@@ -18,10 +33,9 @@ Paused here. Nothing below is started.
   citation; nothing from memory.
 - **Links:** NASA ODPO / ODQN, ESA Space Environment Report, Space-Track, UN debris
   mitigation guidelines, a neutral "find your representative" link.
-- **Possible collaborators (asked 2026-10-07, no reply yet; nothing assigned):** someone for
-  orbital mechanics (e.g. verify `alt_km` in data/events.json, survival-curve physics) and
-  someone for space weather (solar-cycle sheet). If anyone joins: git + a contributor README;
-  each person fetches their own Space-Track data.
+- **Collaborators:** Tyler Griffith built the Earth view (orbital mechanics). Someone for space
+  weather (the cadence sheet) is still an open question; no space-weather data exists yet.
+  Workflow for contributors is in `CONTRIBUTING.md`.
 
 ## What sets us apart from CSET's "Mapping Space Debris" (Nov 2025)
 CSET covers the stock still in orbit: attribution by country/source, top 20 sources, and a
