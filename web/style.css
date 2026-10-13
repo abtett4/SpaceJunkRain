@@ -154,7 +154,9 @@ select option { background-color: var(--surface-1); color: var(--text-primary); 
 button { cursor: pointer; }
 button.primary { border-color: var(--rule); min-width: 86px; }
 button.primary:hover { background: var(--grid); }
-.silent { color: var(--muted); font-style: italic; font-size: 15px; margin-left: -8px; }
+.sound { display: inline-flex; align-items: center; gap: 8px; }
+#sound[aria-pressed="true"] { border-color: var(--rule); background: var(--grid); }
+#volume { width: 90px; accent-color: var(--text-primary); }
 .readout { display: inline-flex; align-items: center; gap: 8px; font-variant-numeric: lining-nums tabular-nums; min-width: 190px; }
 .readout .count { color: var(--muted); font-style: italic; }
 .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--text-primary); opacity: .25; transition: opacity .25s, transform .25s; }

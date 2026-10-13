@@ -8,6 +8,8 @@ import { fillPage } from './page.js';
 import { createSourceSheet } from './sheets/source.js';
 import { createOrbitSheet } from './sheets/orbit.js';
 import { createEarthSheet } from './sheets/earth.js';
+import { createAudioEngine } from './audio/engine.js';
+import { mountSonification } from './audio/sonify.js';
 
 // canvas text needs the web font loaded first; don't wait long if it's offline
 try {
@@ -28,3 +30,15 @@ app.addSheet(createEarthSheet(db));
 
 initThemeSwitch(document.getElementById('theme'), () => app.rebuild());
 app.start('source');
+
+// sound: off until the visitor turns it on (browsers only allow audio after a click)
+const engine = createAudioEngine();
+mountSonification(app, db, engine);
+const soundBtn = document.getElementById('sound');
+soundBtn.addEventListener('click', async () => {
+  const on = soundBtn.getAttribute('aria-pressed') !== 'true';
+  if (on) await engine.enable(); else await engine.disable();
+  soundBtn.setAttribute('aria-pressed', String(on && engine.enabled));
+  soundBtn.textContent = on && engine.enabled ? '♪ Sound on' : '♪ Sound off';
+});
+document.getElementById('volume').addEventListener('input', (e) => engine.setVolume(+e.target.value));

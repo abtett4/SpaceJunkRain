@@ -534,7 +534,7 @@ export function createApp(db) {
     db, state, clock, zoom, main, hist, wrap, PX, PY, hiddenPt, PEAK, replay,
     get M() { return M; },
     get revealed() { return revealed; },
-    xOf, dayOf, clipPlot, narrow, inFamily, haloText, clipText, drawXAxis, drawYTicks, showTip, hideTip,
+    xOf, dayOf, clipPlot, narrow, inFamily, counted, haloText, clipText, drawXAxis, drawYTicks, showTip, hideTip,
     draw, rebuild, relayout, addSheet, setView, setFamily, start,
     familyColor: null, // set by a sheet that colours launches (used by the monthly chart)
   };

@@ -19,6 +19,18 @@
   while the globe plays months before April 2022. Consider a note or an Earth-view use for it.
 - The merged `sheet3-earth` branch can be deleted.
 
+## Sonification (audio assignment, due 2026-10-19)
+- Done on branch `sonification`: Web Audio engine (`web/js/audio/engine.js`) on the shared clock,
+  and the timeline voice (`web/js/audio/sonify.js`): one note per reentry, same-day reentries
+  from one launch merged into a louder note, dense frames folded into "rain", synthesized
+  collision voices by kind. Sound switch and volume in the controls; off until clicked.
+- Placeholder mappings to tune: launch -> pitch (A minor pentatonic) and pan; type -> register
+  and timbre; same-day count -> loudness.
+- Next: per-row listening (solo/combine, name search), port the 2019 SynthDefs, data mappings
+  (altitude, inclination: the build must carry them), the yearly pulse, swap in the 2019
+  collision recordings once their licenses are checked.
+- Planned: the 2019 **organ** SynthDef voices the space-weather data, once that data is in.
+
 ## Ideas (not started)
 
 - **Next sheet, cadence:** solar cycle vs. reentry rate. Two stacked panels on one time axis
