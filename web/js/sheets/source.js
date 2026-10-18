@@ -288,5 +288,7 @@ export function createSourceSheet(db) {
       return true;
     },
     pointTip: (i) => objectTip(db, i),
+    // the folded "Everything else" rows stay silent until they're opened; they still count
+    audible: (i) => laneShown(laneOf[i]),
   };
 }

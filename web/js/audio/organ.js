@@ -1,7 +1,7 @@
 // The Sun as an organ drone under the reentry rain, after the 2019 \organ SynthDef:
 // four sines at 1x, 2x, 4x and 8x the pitch, a quarter each, spread across the stereo field
 // (Splay), plus a sine an octave down at 0.4. Driven by NOAA SWPC's monthly sunspot numbers
-// (web/data/solar.json, built by tools/build_solar.py):
+// (web/data/solar.json, built by tools/build_solar.py and loaded once in main.js):
 //   13-month smoothed sunspot number -> pitch (A2 at zero, up to A3 at the largest maximum)
 //                                      and brightness (upper partials come in as the Sun wakes)
 //   monthly sunspot number           -> loudness
@@ -15,8 +15,7 @@ const SPREAD = [-0.9, -0.3, 0.3, 0.9]; // Splay across the stereo field
 const GLIDE = 0.25;       // seconds for pitch and level to follow the data
 const FADE = 0.6;         // seconds to swell in on play and fade out on pause
 
-export async function mountOrgan(app, engine, url = 'data/solar.json') {
-  const solar = await (await fetch(url, { cache: 'no-store' })).json();
+export function mountOrgan(app, engine, solar) {
   const { t, ssn, smooth } = solar;
   const top = solar.meta.maxSmooth;
   let voice = null, enabled = true;

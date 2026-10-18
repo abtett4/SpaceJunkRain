@@ -32,6 +32,8 @@ web/data/                compact JSON built by tools/ (committed, with citations
 web/js/main.js           start-up: load data, register sheets in tab order
 web/js/chart.js          shared core: canvases, zoomable time axis, monthly chart,
                          collision markers, playback, tooltips, scrubbing
+web/js/sunchart.js       sunspots per month (NOAA SWPC), a strip on the shared time axis
+web/js/audio/            the sonification: engine, timeline voice, the Sun organ
 web/js/util.js           dates, formatting, names, constants (no DOM, no state)
 web/js/theme.js          canvas colours from the CSS tokens; paper / blueprint switch
 web/js/page.js           headline, summary cards, credits, shared data tables
@@ -73,6 +75,7 @@ The sheet object (only the first group is required):
 | `enter(app)`, `leave(app)` | called when the sheet is shown or hidden |
 | `drawUnder(app)` | draw behind the dots (row labels, y-axis ticks) |
 | `drawNotes(app)` | draw notes on the plotting field; only called when Notes is on |
+| `audible(i)` | false to keep object `i` out of the sonification while still counting it (e.g. folded rows) |
 | `counts(i)` | false to leave object `i` out of the monthly chart and the "down" count |
 | `filtered()` | true when your sheet hides part of the catalogue (hides whole-catalogue notes) |
 | `hoverAt(app, x, y)`, `pointerDown(app, x, y)` | your own hover targets and clicks; return `null`/`false` to let the core handle them |
@@ -85,6 +88,11 @@ Helpers on `app`: `xOf(day, cv, M)`, `dayOf`, `M`, `main` (the canvas), `clock` 
 `SimulationClock`; subscribe to it to stay in step), `replay(startMs, endMs, rate)`, `state` (playhead,
 highlighted family, notes), `haloText`, `clipText`, `drawYTicks`, `relayout()` after anything
 changes positions, `rebuild()` after anything changes colours, `draw()` for a repaint.
+
+A chart for every sheet on the same time axis (like the sunspots) is a *strip*:
+`app.addStrip({ layout, draw })`, where `layout` sizes the canvas (`app.size(cv)`) and `draw`
+repaints it with the monthly chart's margins (`app.H`). `app.wireTime(cv, getMargins)` gives it
+wheel zoom and press-to-scrub; its own `pointermove` should start with `if (app.dragMove(ev)) return;`.
 Dates are fractional days since 1957-01-01 UTC; `util.js` converts them.
 
 ## 4. Adding data

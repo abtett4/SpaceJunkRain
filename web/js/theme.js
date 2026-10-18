@@ -10,7 +10,7 @@ export function readColors() {
     types: TYPE_VARS.map(css), groups: GROUP_VARS.map(css), dim: css('--dim'), grid: css('--grid'),
     gridMajor: css('--grid-major'), axis: css('--axis'), muted: css('--muted'), text: css('--text-primary'),
     text2: css('--text-secondary'), hist: css('--hist'), surface: css('--surface-1'), pre: css('--pre'),
-    rule: css('--rule'),
+    rule: css('--rule'), sun: css('--event-ink'),
   });
 }
 

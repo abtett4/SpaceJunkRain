@@ -37,7 +37,7 @@ export function mountSonification(app, db, engine) {
     const groups = new Map();
     const from = upperBound(D, prev + 1e-9), to = upperBound(D, now + 1e-9);
     for (let i = from; i < to; i++) {
-      if (!app.counted(i)) continue; // follows Highlight and the sheet's own filters
+      if (!app.audible(i)) continue; // follows Highlight, the sheet's filters and what's folded away
       const key = `${F[i]}|${K[i]}|${Math.floor(D[i])}`;
       const g = groups.get(key);
       if (g) g.n++; else groups.set(key, { f: F[i], k: K[i], day: D[i], n: 1 });

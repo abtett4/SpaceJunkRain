@@ -32,6 +32,11 @@
 - Done: the Sun organ (`web/js/audio/organ.js`), the 2019 \organ SynthDef as a drone driven by
   NOAA SWPC sunspot numbers: smoothed -> pitch (A2-A3) and brightness, monthly -> loudness;
   sounds while the clock plays. Switch next to the volume. Credited in Data sources.
+- Done: "Sunspots per month" chart (`web/js/sunchart.js`) above the monthly reentries on every
+  sheet, same axis, zoom and scrub; solar maxima labelled with Notes on. What you hear follows
+  what's shown: folded "Everything else" rows are silent until opened (`audible(i)`), and the
+  Highlight menu filters the sound as it does the totals.
+- Maybe: the sun as a sticky strip at the top of sheet 1 instead of (or as well as) the chart.
 
 ## Ideas (not started)
 
