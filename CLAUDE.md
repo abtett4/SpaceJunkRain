@@ -31,9 +31,12 @@ driven by Tyler's `SimulationClock.js`. The sheet interface is documented in `CO
 - `data/events.json` is hand-curated; every entry needs a source. Values marked "from memory"
   (some `alt_km`) still need verifying.
 - **Never state facts from memory as if checked.** Verify citations; say plainly what's unverified.
-- No space-weather data exists in the project yet. Solar-cycle explanations on the page cite the
-  1999 NASA chronology (Portree & Loftus, NASA/TP-1999-208856); solar-maximum years elsewhere are
-  approximate.
+- Space weather: monthly sunspot numbers from NOAA SWPC's Solar Cycle Progression
+  (`data/observed-solar-cycle-indices.json` -> `tools/build_solar.py` -> `web/data/solar.json`).
+  The sunspot numbers are WDC-SILSO's (Royal Observatory of Belgium, **CC BY-NC 4.0**: credit
+  "Source: WDC-SILSO, Royal Observatory of Belgium, Brussels", non-commercial use only). Smoothed
+  maxima: 1958-03, 1968-11, 1979-12, 1989-11, 2001-11, 2014-04, 2024-10; minima 1964-10, 1976-03,
+  1986-09, 1996-05, 2008-12, 2019-12. The page's solar-cycle note also cites the 1999 NASA chronology.
 
 ## Design (see `notes/design-principles.md`)
 Tufte-inspired: real positions, no smoothing, words on the chart instead of legends, mixed-case

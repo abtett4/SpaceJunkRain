@@ -29,35 +29,6 @@
     <div class="tile"><span class="label">Busiest month</span><span class="value" id="t-peak">–</span><span class="foot" id="t-peak-foot"></span></div>
   </section>
 
-  <section class="sources" id="data-sources" aria-labelledby="sources-title">
-    <h2 id="sources-title">Data sources</h2>
-    <div class="source-grid">
-      <article>
-        <p class="source-what">Reentries and catalogued objects</p>
-        <p class="source-name"><a href="https://www.space-track.org">USSPACECOM via Space-Track.org</a></p>
-        <p>Satellite catalog (SATCAT) and historical decay messages: every catalogued object that has come down, with its day, type, size and launch. Retrieved <span id="src-satcat-date">–</span>.</p>
-        <p class="source-terms">Redistribution approved with citation</p>
-      </article>
-      <article>
-        <p class="source-what">Launches</p>
-        <p class="source-name"><a href="https://planet4589.org/space/gcat/">GCAT · Jonathan McDowell</a></p>
-        <p>Every orbital launch attempt since 1957, with pad coordinates; and, for catalogued objects, a recorded orbit, decay times, mass, mission and owner. Snapshot <span id="src-gcat-date">–</span>.</p>
-        <p class="source-terms">CC BY 4.0 · cite “J. McDowell, planet4589.org”</p>
-      </article>
-      <article>
-        <p class="source-what">Orbits</p>
-        <p class="source-name">GCAT, plus Space-Track element history</p>
-        <p>98% of reentries are drawn on a reference orbit: GCAT’s recorded orbit for the object, or Space-Track element history for the hand-checked April 2018 and Tiangong-1 examples. The rest are rings.</p>
-        <p class="source-terms">Orbit shape is real; position on it is illustrative</p>
-      </article>
-      <article>
-        <p class="source-what">Earth</p>
-        <p class="source-name"><a href="https://visibleearth.nasa.gov/images/74218/december-blue-marble-next-generation">NASA Blue Marble &amp; Black Marble</a></p>
-        <p>Day imagery (December 2004 mosaic) and city lights (2016 composite). Fixed images, not the weather or lights on the date shown.</p>
-        <p class="source-terms"><a href="assets/earth/README.md">Imagery credits</a></p>
-      </article>
-    </div>
-  </section>
 
   <section class="chart-card">
     <div class="tabs" role="tablist" aria-label="Chart view">
@@ -69,8 +40,12 @@
     <p class="note" id="chart-note"></p>
 
     <div class="controls" aria-label="Playback and filters">
-      <button id="play" type="button" class="primary" aria-label="Animate" aria-describedby="silent-note">▶ Animate</button>
-      <span class="silent" id="silent-note">silent for now; sound is coming</span>
+      <button id="play" type="button" class="primary" aria-label="Animate">▶ Animate</button>
+      <span class="sound" role="group" aria-label="Sound">
+        <button id="sound" type="button" aria-pressed="false">♪ Sound off</button>
+        <input id="volume" type="range" min="0" max="1" step="0.05" value="0.7" aria-label="Volume">
+        <label class="check"><input type="checkbox" id="organ" checked> Sun organ</label>
+      </span>
       <span class="readout"><span id="pulse" class="pulse" aria-hidden="true"></span><span id="date">Today</span><span class="count" id="now-count"></span></span>
       <label>Speed
         <select id="speed">
@@ -237,6 +212,8 @@
 
     <div class="canvas-wrap" id="main-wrap"><canvas id="main" aria-label="Reentries chart"></canvas></div>
     <button type="button" class="disclosure" id="agg-toggle" aria-expanded="false" aria-controls="main-wrap" data-sheet-only="source" hidden></button>
+    <h2 class="second sun-only">Sunspots per month</h2>
+    <div class="canvas-wrap short sun sun-only"><canvas id="sun" aria-label="Sunspots per month, NOAA SWPC"></canvas></div>
     <h2 class="second">Reentries per month</h2>
     <div class="canvas-wrap short"><canvas id="hist" aria-label="Reentries per month"></canvas></div>
 
@@ -261,6 +238,42 @@
     <h3>Largest sources</h3>
     <table id="families-table"><thead><tr><th>Launch</th><th>Source</th><th class="num">Reentered</th><th class="num">Still in orbit</th></tr></thead><tbody></tbody></table>
   </details>
+
+  <section class="sources" id="data-sources" aria-labelledby="sources-title">
+    <h3 id="sources-title">Data sources</h3>
+    <div class="source-grid">
+      <article>
+        <p class="source-what">Reentries and catalogued objects</p>
+        <p class="source-name"><a href="https://www.space-track.org">USSPACECOM via Space-Track.org</a></p>
+        <p>Satellite catalog (SATCAT) and historical decay messages: every catalogued object that has come down, with its day, type, size and launch. Retrieved <span id="src-satcat-date">–</span>.</p>
+        <p class="source-terms">Redistribution approved with citation</p>
+      </article>
+      <article>
+        <p class="source-what">Launches</p>
+        <p class="source-name"><a href="https://planet4589.org/space/gcat/">GCAT · Jonathan McDowell</a></p>
+        <p>Every orbital launch attempt since 1957, with pad coordinates; and, for catalogued objects, a recorded orbit, decay times, mass, mission and owner. Snapshot <span id="src-gcat-date">–</span>.</p>
+        <p class="source-terms">CC BY 4.0 · cite “J. McDowell, planet4589.org”</p>
+      </article>
+      <article>
+        <p class="source-what">Orbits</p>
+        <p class="source-name">GCAT, plus Space-Track element history</p>
+        <p>98% of reentries are drawn on a reference orbit: GCAT’s recorded orbit for the object, or Space-Track element history for the hand-checked April 2018 and Tiangong-1 examples. The rest are rings.</p>
+        <p class="source-terms">Orbit shape is real; position on it is illustrative</p>
+      </article>
+      <article>
+        <p class="source-what">Earth</p>
+        <p class="source-name"><a href="https://visibleearth.nasa.gov/images/74218/december-blue-marble-next-generation">NASA Blue Marble &amp; Black Marble</a></p>
+        <p>Day imagery (December 2004 mosaic) and city lights (2016 composite). Fixed images, not the weather or lights on the date shown.</p>
+        <p class="source-terms"><a href="assets/earth/README.md">Imagery credits</a></p>
+      </article>
+      <article>
+        <p class="source-what">The Sun (sunspot chart and organ)</p>
+        <p class="source-name"><a href="https://www.spaceweather.gov/products/solar-cycle-progression">NOAA Space Weather Prediction Center</a></p>
+        <p>Monthly and 13-month smoothed sunspot numbers, 1957 on, from SWPC's Solar Cycle Progression. They are drawn in the sunspot chart and set the organ's pitch, brightness and loudness. The most recent six months are preliminary; smoothed values not yet published are estimated and drawn dashed.</p>
+        <p class="source-terms">Sunspot numbers: <a href="https://www.sidc.be/silso/datafiles">WDC-SILSO, Royal Observatory of Belgium, Brussels</a> · CC BY-NC 4.0</p>
+      </article>
+    </div>
+  </section>
 
   <footer class="notes">
     <h3>About the data</h3>

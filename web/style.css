@@ -154,7 +154,9 @@ select option { background-color: var(--surface-1); color: var(--text-primary); 
 button { cursor: pointer; }
 button.primary { border-color: var(--rule); min-width: 86px; }
 button.primary:hover { background: var(--grid); }
-.silent { color: var(--muted); font-style: italic; font-size: 15px; margin-left: -8px; }
+.sound { display: inline-flex; align-items: center; gap: 8px; }
+#sound[aria-pressed="true"] { border-color: var(--rule); background: var(--grid); }
+#volume { width: 90px; accent-color: var(--text-primary); }
 .readout { display: inline-flex; align-items: center; gap: 8px; font-variant-numeric: lining-nums tabular-nums; min-width: 190px; }
 .readout .count { color: var(--muted); font-style: italic; }
 .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--text-primary); opacity: .25; transition: opacity .25s, transform .25s; }
@@ -181,6 +183,7 @@ button.primary:hover { background: var(--grid); }
 .typefilter button[aria-pressed="false"] .sw { background: transparent !important; box-shadow: inset 0 0 0 1px var(--muted); }
 .canvas-wrap { position: relative; height: 460px; touch-action: none; }
 .canvas-wrap.short { height: 150px; }
+.canvas-wrap.sun { height: 110px; }
 .disclosure {
   display: block; width: 100%; margin: 2px 0 0; padding: 8px 0 9px; text-align: left;
   border: 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--grid-major); border-radius: 0;
@@ -239,8 +242,8 @@ td.src a { color: inherit; }
 }
 
 /* Data sources: stated up front, before any chart. */
-.sources { margin: 0 0 30px; }
-.sources h2 { font-size: 20px; margin: 0 0 10px; }
+.sources { margin: 26px 0 0; } /* after the data tables, before "About the data" */
+.sources h3 { margin: 0 0 8px; }
 .source-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
 .source-grid article { padding: 10px 16px 12px; border-left: 1px solid var(--grid-major); font-size: 15px; color: var(--text-secondary); }
 .source-grid article:first-child { border-left: 0; padding-left: 0; }

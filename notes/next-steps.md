@@ -19,6 +19,25 @@
   while the globe plays months before April 2022. Consider a note or an Earth-view use for it.
 - The merged `sheet3-earth` branch can be deleted.
 
+## Sonification (audio assignment, due 2026-10-19)
+- Done on branch `sonification`: Web Audio engine (`web/js/audio/engine.js`) on the shared clock,
+  and the timeline voice (`web/js/audio/sonify.js`): one note per reentry, same-day reentries
+  from one launch merged into a louder note, dense frames folded into "rain", synthesized
+  collision voices by kind. Sound switch and volume in the controls; off until clicked.
+- Placeholder mappings to tune: launch -> pitch (A minor pentatonic) and pan; type -> register
+  and timbre; same-day count -> loudness.
+- Next: per-row listening (solo/combine, name search), port the 2019 SynthDefs, data mappings
+  (altitude, inclination: the build must carry them), the yearly pulse, swap in the 2019
+  collision recordings once their licenses are checked.
+- Done: the Sun organ (`web/js/audio/organ.js`), the 2019 \organ SynthDef as a drone driven by
+  NOAA SWPC sunspot numbers: smoothed -> pitch (A2-A3) and brightness, monthly -> loudness;
+  sounds while the clock plays. Switch next to the volume. Credited in Data sources.
+- Done: "Sunspots per month" chart (`web/js/sunchart.js`) above the monthly reentries on every
+  sheet, same axis, zoom and scrub; solar maxima labelled with Notes on. What you hear follows
+  what's shown: folded "Everything else" rows are silent until opened (`audible(i)`), and the
+  Highlight menu filters the sound as it does the totals.
+- Maybe: the sun as a sticky strip at the top of sheet 1 instead of (or as well as) the chart.
+
 ## Ideas (not started)
 
 - **Next sheet, cadence:** solar cycle vs. reentry rate. Two stacked panels on one time axis

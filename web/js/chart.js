@@ -42,6 +42,9 @@ export function createApp(db) {
   const base = document.createElement('canvas'), bctx = base.getContext('2d'); // revealed dots, painted once
   let M = { l: 64, r: 16, t: 34, b: 26 };
   const H = { l: 64, r: 16, t: 8, b: 22 };
+  // extra charts on the shared time axis (e.g. sunspots), drawn after the monthly chart
+  const strips = [];
+  const addStrip = (st) => { strips.push(st); if (state.view) relayout(); };
   const PX = new Float32Array(N), PY = new Float32Array(N);
   const hiddenPt = new Uint8Array(N); // set by the sheet: 1 = not drawn on this sheet
   let spatial = new Map(), revealed = N, drawnTo = 0;
@@ -115,6 +118,7 @@ export function createApp(db) {
     M = frame.M;
     wrap.style.height = frame.height == null ? '' : `${frame.height}px`;
     size(main); size(hist);
+    for (const st of strips) st.layout?.();
     base.width = main.c.width; base.height = main.c.height;
     bctx.setTransform(main.dpr, 0, 0, main.dpr, 0, 0);
     for (let i = 0; i < N; i++) PX[i] = xOf(D[i], main, M);
@@ -156,6 +160,9 @@ export function createApp(db) {
   }
   // a sheet's `counts(i)` decides what the totals include (e.g. its type filter)
   const counted = (i) => inFamily(i) && (sheet()?.counts?.(i) ?? true);
+  // what the sonification plays: the counted objects, minus anything the sheet hides from view
+  // without removing it from the totals (sheet 1's folded "Everything else" rows)
+  const audible = (i) => counted(i) && (sheet()?.audible?.(i) ?? true);
   function buildHistogram() {
     bins = new Array(BIN_STARTS.length).fill(0);
     let b = 0;
@@ -266,6 +273,7 @@ export function createApp(db) {
     const s = sheet();
     if (s.canvas !== false) drawMain(now, s);
     drawHist();
+    for (const st of strips) st.draw?.();
 
     let shown = 0;
     for (let i = 0; i < revealed; i++) if (counted(i)) shown++;
@@ -356,7 +364,7 @@ export function createApp(db) {
   });
   // pinch or ctrl + wheel zooms at the cursor; sideways swipe or shift + wheel pans;
   // a plain vertical wheel is left alone so the page still scrolls
-  for (const [cv, getM] of [[main, () => M], [hist, () => H]]) {
+  function wireZoom(cv, getM) {
     cv.c.addEventListener('wheel', (e) => {
       const m = getM(), x = e.clientX - cv.c.getBoundingClientRect().left;
       const span = zoom.hi - zoom.lo, plotW = cv.w - m.l - m.r;
@@ -457,7 +465,9 @@ export function createApp(db) {
     const x = clientX - cv.c.getBoundingClientRect().left;
     state.playhead = Math.max(X_MIN, Math.min(TIME_END, dayOf(x, cv, m))); // the clock redraws
   }
-  for (const [cv, getM] of [[main, () => M], [hist, () => H]]) {
+  // any chart on the shared time axis: wheel zoom, and press-and-drag to move the playhead
+  function wireTime(cv, getM) {
+    wireZoom(cv, getM);
     cv.c.addEventListener('pointerdown', (ev) => {
       const r = cv.c.getBoundingClientRect();
       if (cv === main && sheet().pointerDown?.(app, ev.clientX - r.left, ev.clientY - r.top)) return;
@@ -468,6 +478,9 @@ export function createApp(db) {
     cv.c.addEventListener('pointerup', () => { dragging = null; });
     cv.c.addEventListener('pointerleave', () => { state.hover = null; hideTip(); if (!state.playing) draw(); });
   }
+  wireTime(main, () => M); wireTime(hist, () => H);
+  // a chart's pointermove calls this first; true means a drag is scrubbing, so skip the hover
+  const dragMove = (ev) => { if (!dragging) return false; scrubTo(...dragging, ev.clientX); return true; };
   main.c.addEventListener('pointermove', (ev) => {
     if (dragging) { scrubTo(...dragging, ev.clientX); return; }
     const r = main.c.getBoundingClientRect();
@@ -533,9 +546,10 @@ export function createApp(db) {
   const app = {
     db, state, clock, zoom, main, hist, wrap, PX, PY, hiddenPt, PEAK, replay,
     get M() { return M; },
+    get H() { return H; },   // the monthly chart's margins; strips share its x scale
     get revealed() { return revealed; },
-    xOf, dayOf, clipPlot, narrow, inFamily, haloText, clipText, drawXAxis, drawYTicks, showTip, hideTip,
-    draw, rebuild, relayout, addSheet, setView, setFamily, start,
+    xOf, dayOf, clipPlot, narrow, inFamily, counted, audible, haloText, clipText, drawXAxis, drawYTicks, showTip, hideTip,
+    draw, rebuild, relayout, addSheet, addStrip, size, wireTime, dragMove, setView, setFamily, start,
     familyColor: null, // set by a sheet that colours launches (used by the monthly chart)
   };
   readColors();
