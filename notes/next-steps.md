@@ -29,7 +29,9 @@
 - Next: per-row listening (solo/combine, name search), port the 2019 SynthDefs, data mappings
   (altitude, inclination: the build must carry them), the yearly pulse, swap in the 2019
   collision recordings once their licenses are checked.
-- Planned: the 2019 **organ** SynthDef voices the space-weather data, once that data is in.
+- Done: the Sun organ (`web/js/audio/organ.js`), the 2019 \organ SynthDef as a drone driven by
+  NOAA SWPC sunspot numbers: smoothed -> pitch (A2-A3) and brightness, monthly -> loudness;
+  sounds while the clock plays. Switch next to the volume. Credited in Data sources.
 
 ## Ideas (not started)
 

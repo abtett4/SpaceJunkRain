@@ -105,6 +105,8 @@ export function createAudioEngine() {
   return {
     get enabled() { return !!ctx && ctx.state === 'running'; },
     get now() { return ctx ? ctx.currentTime : 0; },
+    get context() { return ctx; },   // for continuous voices (the organ) that build their own graph
+    get input() { return master; },  // where those voices connect: master volume and compression
     async enable() {
       if (!ctx) chain();
       if (ctx.state !== 'running') await ctx.resume();
