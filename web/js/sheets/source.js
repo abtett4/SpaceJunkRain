@@ -28,7 +28,8 @@ export function createSourceSheet(db) {
       fam: f, label: evs.map((ei) => events[ei].row).find(Boolean) || pretty(fam.name), events: evs,
       sub: `${fam.key} · ` + (ev ? `${KIND_WORD[ev.kind]} ${yearOf(ev.t)}` : 'breakup debris'),
       origin: ev ? ev.t : fam.launch ?? 0,
-      group: ev && (ev.kind === 'crash' || ev.kind === 'explosion') ? 0 : 1, // colour: 0 collision/ASAT, 1 other
+      // colour: 0 anti-satellite tests, 3 the one accidental collision, 1 other breakups
+      group: ev?.kind === 'crash' ? 0 : ev?.kind === 'explosion' ? 3 : 1,
       n: fam.n, orbit: fam.orbit, h: 30,
     };
   }).sort((a, b) => a.origin - b.origin); // in the order they broke apart
@@ -48,7 +49,8 @@ export function createSourceSheet(db) {
     if (li == null) { const a = AGG.findIndex((g) => g.test(i)); li = lanes.length + a; LANES[li].n++; }
     laneOf[i] = li;
   }
-  // in an event row, pieces that came down before the breakup weren't its debris
+  // In an event row, the few pieces that came down before the breakup (10 in all) weren't its
+  // debris; they take the colour of what they were: shed debris or an intact stage or satellite.
   const preEvent = new Uint8Array(N);
   for (let i = 0; i < N; i++) {
     const ln = LANES[laneOf[i]];
@@ -156,10 +158,10 @@ export function createSourceSheet(db) {
     id: 'source',
     title: 'Where the falling debris came from',
     caption: () => `Each row is one source, in the order it broke apart; each dot is one object on the day it reentered. ` +
-      `${key('--series-1', 'Blue')} is debris from collisions and anti-satellite tests, ` +
+      `${key('--series-1', 'Blue')} is debris from anti-satellite tests, ` +
+      `${key('--series-4', 'violet')} from the one accidental collision (Iridium 33 and Cosmos 2251), ` +
       `${key('--series-2', 'vermilion')} other breakups and shed parts, ` +
-      `${key('--series-3', 'green')} intact rocket stages and satellites; ` +
-      `${key('--pre', 'grey')} pieces fell before their source broke up. Symbols mark the event (${glyphs}); ` +
+      `${key('--series-3', 'green')} intact rocket stages and satellites. Symbols mark the event (${glyphs}); ` +
       `the bar at right is the share of each source that has come down.`,
     topAxis: true,        // year labels along the top as well, for the rows far from the bottom axis
     eventLines: 'hover',  // full-height event lines only on hover or as the playhead passes
@@ -201,7 +203,7 @@ export function createSourceSheet(db) {
         if (PX[i] > laneLastX[laneOf[i]]) laneLastX[laneOf[i]] = PX[i];
       }
     },
-    colorOf: (i, app) => !app.inFamily(i) ? C.dim : preEvent[i] ? C.pre : C.groups[LANES[laneOf[i]].group],
+    colorOf: (i, app) => !app.inFamily(i) ? C.dim : C.groups[preEvent[i] ? (K[i] === 0 ? 1 : 2) : LANES[laneOf[i]].group],
     radius: (i) => (LANES[laneOf[i]].agg ? 1.4 : 1.8),
 
     drawUnder(app) {

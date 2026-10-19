@@ -59,3 +59,12 @@ soundBtn.addEventListener('click', () => setSound(soundBtn.getAttribute('aria-pr
 // auditioning a voice turns the sound on, so the switch always says what you'll hear
 mountAudition(db, engine, sonify, () => engine.enabled || setSound(true));
 document.getElementById('volume').addEventListener('input', (e) => engine.setVolume(+e.target.value));
+// "What you hear" opens the listening key before jumping to it
+document.getElementById('key-link').addEventListener('click', (e) => {
+  const key = document.getElementById('listening');
+  e.preventDefault();
+  key.open = true;
+  key.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  // a smooth scroll can stall if the page reflows on the way; finish the trip if it did
+  setTimeout(() => { if (Math.abs(key.getBoundingClientRect().top) > 4) key.scrollIntoView({ block: 'start' }); }, 1200);
+});

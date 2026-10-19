@@ -39,6 +39,7 @@
         <button id="sound" type="button" aria-pressed="false">♪ Sound off</button>
         <input id="volume" type="range" min="0" max="1" step="0.05" value="0.7" aria-label="Volume">
         <label class="check"><input type="checkbox" id="organ" checked> Sun organ</label>
+        <a href="#listening" class="key-link" id="key-link">What you hear</a>
       </span>
       <span class="readout"><span id="pulse" class="pulse" aria-hidden="true"></span><span id="date">Today</span><span class="count" id="now-count"></span></span>
       <label>Speed
@@ -204,10 +205,6 @@
       </div>
     </section>
 
-    <details class="audition">
-      <summary>Audition the voices</summary>
-      <div id="audition-body"></div>
-    </details>
 
     <div id="main-clip"><div class="canvas-wrap" id="main-wrap"><canvas id="main" aria-label="Reentries chart"></canvas><button type="button" class="disclosure" id="agg-toggle" aria-expanded="false" aria-controls="main-wrap" data-sheet-only="source" hidden></button></div></div>
     <h2 class="second sun-only">Sunspots per month</h2>
@@ -232,6 +229,11 @@
     <div class="tile"><span class="label">Fengyun-1C, still in orbit</span><span class="value" id="t-fy">–</span><span class="foot" id="t-fy-foot"></span></div>
     <div class="tile"><span class="label">Busiest month</span><span class="value" id="t-peak">–</span><span class="foot" id="t-peak-foot"></span></div>
   </section>
+
+  <details class="tables listening" id="listening">
+    <summary>Listening key</summary>
+    <div id="audition-body"></div>
+  </details>
 
   <details class="tables">
     <summary>Data tables</summary>

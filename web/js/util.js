@@ -7,7 +7,7 @@ export const YEAR = 365.25;
 export const TYPE_LABELS = ['Debris', 'Rocket body', 'Payload', 'Unknown'];
 export const TYPE_PLURALS = ['Debris', 'Rocket bodies', 'Payloads', 'Unknown'];
 export const TYPE_VARS = ['--series-1', '--series-2', '--series-3', '--series-unknown'];
-export const GROUP_VARS = ['--series-1', '--series-2', '--series-3'];
+export const GROUP_VARS = ['--series-1', '--series-2', '--series-3', '--series-4']; // ASAT, other breakups, intact, the accidental collision
 export const KIND_GLYPH = { bump: '◇', crash: '✕', explosion: '✷', fragmentation: '⁂' };
 export const KIND_WORD = { bump: 'glancing contact', crash: 'impact', explosion: 'collision', fragmentation: 'fragmentation' };
 

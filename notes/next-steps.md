@@ -43,6 +43,9 @@
 - Done: pitch slots. The 34 named sources each get one of 15 pentatonic steps (three octaves)
   x 3 stereo places, biggest first: no two share both. Impact has more weight and a sizzle
   tail; rocket bodies have a sub-octave (E2 base); rain is a patter of droplets.
+- Done: the audition panel became the "Listening key", folded next to Data tables, with a
+  "What you hear" link by the sound controls: the mappings in words, the events, types, sizes,
+  rain, four example sources and all 34 behind a fold. `?tune` opens it all with the numbers.
 - Done: diatonic scale (A natural minor, three octaves, 21 steps): the 21 biggest sources have
   distinct pitches in the centre, the other 13 sit left. Folds tween open and shut.
 - Done: each named source also has its own brightness and attack (sources sharing a pitch
