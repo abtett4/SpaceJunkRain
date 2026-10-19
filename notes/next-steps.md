@@ -40,8 +40,17 @@
   collision kind, each named source's note (single, then a busy day), the three timbres, rain.
   Folded "Everything else" now also leaves the monthly chart and the "down" count; its banner
   stays put when opened. Speed default is a flat 3 s per year (was 3.147).
-- To tune: sources share pitches (10 scale steps for ~40 sources; e.g. Cosmos 1408 and
-  Mir are both A4). Consider a mapping from data (altitude, inclination) instead of the index.
+- Done: pitch slots. The 34 named sources each get one of 15 pentatonic steps (three octaves)
+  x 3 stereo places, biggest first: no two share both. Impact has more weight and a sizzle
+  tail; rocket bodies have a sub-octave (E2 base); rain is a patter of droplets.
+- Done: diatonic scale (A natural minor, three octaves, 21 steps): the 21 biggest sources have
+  distinct pitches in the centre, the other 13 sit left. Folds tween open and shut.
+- Done: each named source also has its own brightness and attack (sources sharing a pitch
+  differ in both); radar size (Space-Track RCS_SIZE) sets loudness. ~10,700 reentries have no
+  size, most before 1980; they take their type's usual size (debris medium, others large).
+- Maybe: GCAT mass for loudness where it exists (payloads and stages; rarely debris). Needs a
+  GCAT download and a column in the build.
+- Maybe: map pitch from data (altitude, inclination) instead of size rank.
 - Maybe: the sun as a sticky strip at the top of sheet 1 instead of (or as well as) the chart.
 
 ## Ideas (not started)

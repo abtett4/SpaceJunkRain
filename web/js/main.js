@@ -41,7 +41,9 @@ else document.querySelectorAll('.sun-only').forEach((el) => { el.hidden = true; 
 
 // sound: off until the visitor turns it on (browsers only allow audio after a click)
 const engine = createAudioEngine();
-const sonify = mountSonification(app, db, engine);
+// the named sources get their own pitch and stereo place, biggest first (the Highlight menu's order)
+const named = [...document.getElementById('family').options].map((o) => +o.value).filter((f) => f >= 0);
+const sonify = mountSonification(app, db, engine, named);
 const organ = solar ? mountOrgan(app, engine, solar) : null;
 const organBox = document.getElementById('organ');
 organBox.addEventListener('change', async () => organ?.setEnabled(organBox.checked));

@@ -114,7 +114,28 @@ export function createSourceSheet(db) {
     aggBtn.innerHTML = `${showAgg ? '▾' : '▸'} Everything else <span class="count">· ${fmtInt(aggTotal)} more reentries in ${AGG.length} rows</span>: ` +
       'thousands of smaller breakups, spent rocket stages, Starlink and other satellites';
   }
-  aggBtn.addEventListener('click', () => { showAgg = !showAgg; renderAggBtn(); appRef?.relayout(); });
+  // Opening draws the rows at once and reveals them downward; closing slides shut over them
+  // first and only then drops them, so nothing below the chart jumps.
+  const clip = document.getElementById('main-clip');
+  let folding = false;
+  function toggleAgg() {
+    if (folding) return;
+    const flip = () => { showAgg = !showAgg; renderAggBtn(); appRef?.relayout(); };
+    if (!clip?.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) { flip(); return; }
+    const from = clip.offsetHeight;
+    // closed, the chart ends at the bottom of the banner
+    const to = showAgg ? parseFloat(aggBtn.style.top) + aggBtn.offsetHeight : null;
+    if (!showAgg) flip();
+    const end = to ?? clip.offsetHeight;
+    folding = true; clip.style.overflow = 'hidden';
+    const ms = Math.min(420, 220 + Math.abs(end - from) / 3);
+    clip.animate([{ height: `${from}px` }, { height: `${end}px` }], { duration: ms, easing: 'cubic-bezier(.4,0,.2,1)' })
+      .finished.then(() => {
+        if (to != null) flip();
+        clip.style.overflow = ''; folding = false;
+      });
+  }
+  aggBtn.addEventListener('click', toggleAgg);
   renderAggBtn();
   // the banner wraps to more lines on a phone; lay the rows out again when its height changes
   let aggH = 0;

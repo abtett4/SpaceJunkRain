@@ -53,20 +53,25 @@ export function mountAudition(db, engine, sonify, ensureSound) {
 
   // the named sources, in the order of the Highlight menu (biggest first)
   const src = group('Sources', 'One reentry, then a busy day of twelve from the same source (a louder note). ' +
-    'Pitch and stereo place come from the source; timbre from its commonest type.');
+    'Pitch, stereo place, brightness and attack come from the source; timbre from its commonest type.');
   const fams = [...document.getElementById('family').options].map((o) => +o.value).filter((f) => f >= 0);
   for (const f of fams) {
-    const k = typeOf.get(f) ?? 0, hz = sonify.freqOf(f, k), pan = sonify.panOf(f);
+    const k = typeOf.get(f) ?? 0, hz = sonify.freqOf(f, k), pan = sonify.panOf(f), ch = sonify.charOf(f);
     const name = pretty(families[f].name), key = families[f].key; // key: the launch, e.g. 1999-025
     src.appendChild(button(`${name}, ${key.slice(0, 4)} <span class="n">· ${noteName(hz)}</span>`,
-      `${name} (${key}) · ${TYPE_LABELS[k]} voice · ${Math.round(hz)} Hz · ${side(pan)}`,
+      `${name} (${key}) · ${TYPE_LABELS[k]} voice · ${Math.round(hz)} Hz · ${side(pan)} · brightness ×${ch.bright} · attack ${Math.round(ch.attack * 1000)} ms`,
       () => { sonify.voice(f, k, 1); setTimeout(() => sonify.voice(f, k, 12), 700); }));
   }
+
+  // radar size sets loudness
+  const sz = group('Sizes', 'Radar size sets loudness: one debris note at each size (Fengyun 1C’s voice).');
+  const fy = fams.find((f) => families[f].key === '1999-025') ?? fams[0];
+  ['Small', 'Medium', 'Large'].forEach((label, size) => sz.appendChild(button(label, '', () => sonify.voice(fy, 0, 1, size))));
 
   // the three timbres on one pitch, and the rain
   const ty = group('Timbres and rain', 'The three object-type voices, and the noise that stands in for crowded moments.');
   TYPE_LABELS.slice(0, 3).forEach((label, k) => ty.appendChild(button(label, '', () =>
-    engine.note(engine.now + 0.02, { freq: [440, 110, 220][k], gain: 0.2, kind: k, pan: 0 }))));
+    engine.note(engine.now + 0.02, { freq: [440, 82.5, 220][k], gain: 0.2, kind: k, pan: 0 }))));
   ty.appendChild(button('Rain', 'what folds in when a moment is too crowded for separate notes',
-    () => [0, 0.12, 0.24].forEach((d) => engine.rain(engine.now + 0.02 + d, { gain: 0.12 }))));
+    () => engine.rain(engine.now + 0.02, { gain: 0.16, length: 1.2 })));
 }
