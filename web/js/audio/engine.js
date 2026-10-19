@@ -72,22 +72,25 @@ export function createAudioEngine() {
   // One object coming down: a short note whose pitch falls as it "lands",
   // after the 2019 \decay SynthDef (Blip with a falling XLine).
   // kind: 0 debris (bright blip), 1 rocket body (driven, heavy growl), 2 payload / other (soft bell)
-  function note(t, { freq, gain = 0.15, kind = 0, pan = 0 }) {
+  // bright scales the filter (1 = the type's own); attack, in seconds, overrides the type's
+  function note(t, { freq, gain = 0.15, kind = 0, pan = 0, bright = 1, attack = null }) {
     if (!free()) return false;
     const shape = [
       { type: 'square', attack: 0.004, release: 0.22, fall: 0.5, cutoff: 3200 },
       // a sawtooth through soft clipping, its filter closing as it falls: bright on the hit, dark after
-      { type: 'sawtooth', attack: 0.006, release: 0.6, fall: 0.5, cutoff: 2600, close: 500, drive: true },
+      { type: 'sawtooth', attack: 0.006, release: 1.0, fall: 0.5, cutoff: 2600, close: 500, drive: true },
       { type: 'triangle', attack: 0.008, release: 0.6, fall: 0.85, cutoff: 4000 },
     ][Math.min(kind, 2)];
-    const p = panner(pan), end = t + shape.attack + shape.release;
+    const att = attack ?? shape.attack;
+    const p = panner(pan), end = t + att + shape.release;
     const osc = ctx.createOscillator();
     osc.type = shape.type;
     osc.frequency.setValueAtTime(freq, t);
     osc.frequency.exponentialRampToValueAtTime(freq * shape.fall, end);
-    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(shape.cutoff, t);
-    if (shape.close) lp.frequency.exponentialRampToValueAtTime(shape.close, end);
-    const env = envelope(t, gain, shape.attack, shape.release);
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(Math.min(16000, shape.cutoff * bright), t);
+    if (shape.close) lp.frequency.exponentialRampToValueAtTime(shape.close * bright, end);
+    const env = envelope(t, gain, att, shape.release);
     if (shape.drive) {
       const ws = ctx.createWaveShaper(); ws.curve = grit; ws.oversample = '2x';
       const pre = ctx.createGain(); pre.gain.value = 1.6; // how hard it hits the curve
@@ -101,9 +104,9 @@ export function createAudioEngine() {
       const sub = ctx.createOscillator(); sub.type = 'sine';
       sub.frequency.setValueAtTime(freq / 2, t);
       sub.frequency.exponentialRampToValueAtTime(freq / 2 * 0.8, end);
-      const se = envelope(t, gain * 0.9, 0.01, shape.release * 0.8);
+      const se = envelope(t, gain * 0.9, 0.01, shape.release + 0.2);
       sub.connect(se); se.connect(p);
-      sub.start(t); track(sub, end + 0.05);
+      sub.start(t); track(sub, end + 0.3);
     }
     return true;
   }

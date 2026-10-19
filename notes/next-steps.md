@@ -43,6 +43,11 @@
 - Done: pitch slots. The 34 named sources each get one of 15 pentatonic steps (three octaves)
   x 3 stereo places, biggest first: no two share both. Impact has more weight and a sizzle
   tail; rocket bodies have a sub-octave (E2 base); rain is a patter of droplets.
+- Done: each named source also has its own brightness and attack (sources sharing a pitch
+  differ in both); radar size (Space-Track RCS_SIZE) sets loudness. ~10,700 reentries have no
+  size, most before 1980; they take their type's usual size (debris medium, others large).
+- Maybe: GCAT mass for loudness where it exists (payloads and stages; rarely debris). Needs a
+  GCAT download and a column in the build.
 - Maybe: map pitch from data (altitude, inclination) instead of size rank.
 - Maybe: the sun as a sticky strip at the top of sheet 1 instead of (or as well as) the chart.
 

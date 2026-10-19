@@ -9,8 +9,12 @@
 //                       so the 15 biggest have distinct pitches in the centre, the next 15 sit
 //                       left and the rest right. Other launches share the steps, panned by hash.
 //                       Pitch alone can't name 42 sources; pitch + place keeps them apart.
+//                       Each named source also has its own brightness and attack, spread so
+//                       that sources sharing a pitch differ in both.
 //   object type      -> register and timbre (debris high blips, rocket bodies low, payloads mid)
-//   same-day count   -> loudness
+//   radar size       -> loudness: small, medium, large (Space-Track's RCS_SIZE; objects without
+//                       one, most reentries before 1980, take their type's usual size)
+//   same-day count   -> loudness too: a busy day from one source is a louder note
 
 import { EPOCH_MS, DAY_MS, upperBound, hash01 } from '../util.js';
 
@@ -19,10 +23,14 @@ const NOTES_PER_FRAME = 10;    // the busiest groups in a frame get notes; the r
 const STEPS = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22, 24, 27, 29, 31, 34]; // A minor pentatonic, three octaves
 const PLACES = [0, -0.6, 0.6];        // stereo positions for the named sources: centre, left, right
 const BASE = [220, 82.5, 110, 110];    // Hz by type: debris (A3), rocket body (E2), payload, unknown
+const SIZE_GAIN = [0.55, 1, 1.6];      // loudness by radar size: small, medium, large
+const USUAL_SIZE = [1, 2, 2, 1];       // by type, for objects without a radar size: debris medium, others large
+const BRIGHT = [0.45, 0.7, 1, 1.4, 2]; // filter multipliers, dark to bright
+const ATTACK = [0.003, 0.012, 0.03, 0.06]; // seconds: a click to a swell
 
 // named: family indices of the named sources, biggest first (the Highlight menu's order)
 export function mountSonification(app, db, engine, named = []) {
-  const { D, F, K, events } = db;
+  const { D, F, K, R, events } = db;
   const toDay = (ms) => (ms - EPOCH_MS) / DAY_MS;
   const slot = new Map(named.map((f, j) => [f, j]));
   const stepOf = (f) => (slot.has(f) ? slot.get(f) : f) % STEPS.length;
@@ -30,10 +38,18 @@ export function mountSonification(app, db, engine, named = []) {
   const panOf = (f) => slot.has(f)
     ? PLACES[Math.min(PLACES.length - 1, Math.floor(slot.get(f) / STEPS.length))]
     : (hash01(f + 1) * 2 - 1) * 0.7;
+  // brightness and attack: stepped through at different strides, so slots j, j+15 and j+30
+  // (same pitch, different places) also differ in colour and onset
+  const charOf = (f) => {
+    const j = slot.has(f) ? slot.get(f) : Math.floor(hash01(f + 7) * 60);
+    return { bright: BRIGHT[(j * 2 + Math.floor(j / 15)) % BRIGHT.length], attack: ATTACK[(j + Math.floor(j / 15) * 2) % ATTACK.length] };
+  };
+  const sizeOf = (i) => (R[i] >= 0 ? R[i] : USUAL_SIZE[K[i]]);
+  const gainOf = (n, size) => Math.min(0.42, 0.12 * (1 + Math.log2(n)) * SIZE_GAIN[size]);
+  const play = (t, f, k, n, size) => engine.note(t, { freq: freqOf(f, k), gain: gainOf(n, size), kind: k, pan: panOf(f), ...charOf(f) });
   let lastReal = null;
   // the same voice the timeline uses for a group of n same-day reentries, sounded now
-  const voice = (f, k, n = 1) => engine.note(engine.now + 0.02,
-    { freq: freqOf(f, k), gain: Math.min(0.32, 0.12 * (1 + Math.log2(n))), kind: k, pan: panOf(f) });
+  const voice = (f, k, n = 1, size = USUAL_SIZE[k]) => play(engine.now + 0.02, f, k, n, size);
 
   app.clock.subscribe(({ reason, previousMs, nowMs }) => {
     if (reason === 'seek' || reason === 'pause') { engine.cancelAll(); lastReal = null; return; }
@@ -53,13 +69,13 @@ export function mountSonification(app, db, engine, named = []) {
       if (!app.audible(i)) continue; // follows Highlight, the sheet's filters and what's folded away
       const key = `${F[i]}|${K[i]}|${Math.floor(D[i])}`;
       const g = groups.get(key);
-      if (g) g.n++; else groups.set(key, { f: F[i], k: K[i], day: D[i], n: 1 });
+      if (g) { g.n++; g.size = Math.max(g.size, sizeOf(i)); } // a group sounds as big as its biggest piece
+      else groups.set(key, { f: F[i], k: K[i], day: D[i], n: 1, size: sizeOf(i) });
     }
     const list = [...groups.values()].sort((a, b) => b.n - a.n);
     let folded = 0;
     list.forEach((g, idx) => {
-      const gain = Math.min(0.32, 0.12 * (1 + Math.log2(g.n)));
-      if (idx >= NOTES_PER_FRAME || !engine.note(at(g.day), { freq: freqOf(g.f, g.k), gain, kind: g.k, pan: panOf(g.f) })) folded += g.n;
+      if (idx >= NOTES_PER_FRAME || !play(at(g.day), g.f, g.k, g.n, g.size)) folded += g.n;
     });
     if (folded) engine.rain(at((prev + now) / 2), { gain: Math.min(0.24, 0.04 * Math.sqrt(folded)) });
 
@@ -67,5 +83,5 @@ export function mountSonification(app, db, engine, named = []) {
     for (const e of events) if (e.t > prev && e.t <= now) engine.collision(at(e.t), e.kind);
   });
 
-  return { voice, freqOf, panOf };
+  return { voice, freqOf, panOf, charOf };
 }
