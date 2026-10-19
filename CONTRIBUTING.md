@@ -33,7 +33,7 @@ web/js/main.js           start-up: load data, register sheets in tab order
 web/js/chart.js          shared core: canvases, zoomable time axis, monthly chart,
                          collision markers, playback, tooltips, scrubbing
 web/js/sunchart.js       sunspots per month (NOAA SWPC), a strip on the shared time axis
-web/js/audio/            the sonification: engine, timeline voice, the Sun organ, the audition panel
+web/js/audio/            the sonification: engine, timeline voice, the Sun organ, the listening key (?tune shows its numbers)
 web/js/util.js           dates, formatting, names, constants (no DOM, no state)
 web/js/theme.js          canvas colours from the CSS tokens; paper / blueprint switch
 web/js/page.js           headline, summary cards, credits, shared data tables
