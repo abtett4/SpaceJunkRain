@@ -6,7 +6,7 @@
 const MAX_VOICES = 48; // a ceiling on overlapping sounds, so dense years stay listenable
 
 export function createAudioEngine() {
-  let ctx = null, master = null, out = null, noise = null, drops = null;
+  let ctx = null, master = null, out = null, noise = null, drops = null, room = null, grit = null;
   let volume = 0.7;
   const live = new Set(); // sources started or scheduled and not yet ended
 
@@ -18,6 +18,18 @@ export function createAudioEngine() {
     out.attack.value = 0.005; out.release.value = 0.25;
     master = ctx.createGain(); master.gain.value = volume;
     master.connect(out); out.connect(ctx.destination);
+    // a reverb send: 2.5 s of decaying stereo noise as the impulse response, a plain hall
+    const ir = ctx.createBuffer(2, ctx.sampleRate * 2.5, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const c = ir.getChannelData(ch);
+      for (let i = 0; i < c.length; i++) c[i] = (Math.random() * 2 - 1) * Math.exp(-4.5 * i / c.length);
+    }
+    const conv = ctx.createConvolver(); conv.buffer = ir;
+    room = ctx.createGain(); room.gain.value = 0.5;
+    room.connect(conv); conv.connect(master);
+    // a soft-clipping curve (tanh) for voices that want grit
+    grit = new Float32Array(1024);
+    for (let i = 0; i < grit.length; i++) { const x = i / 511.5 - 1; grit[i] = Math.tanh(3.5 * x) / Math.tanh(3.5); }
     // two seconds of white noise, shared by the noisy voices
     noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const d = noise.getChannelData(0);
@@ -40,7 +52,7 @@ export function createAudioEngine() {
     src.stop(end);
     return src;
   }
-  const room = () => live.size < MAX_VOICES;
+  const free = () => live.size < MAX_VOICES;
 
   // a gain envelope: fast attack, exponential fall
   function envelope(t, peak, attack, release) {
@@ -59,39 +71,46 @@ export function createAudioEngine() {
 
   // One object coming down: a short note whose pitch falls as it "lands",
   // after the 2019 \decay SynthDef (Blip with a falling XLine).
-  // kind: 0 debris (bright blip), 1 rocket body (low thump), 2 payload / other (soft bell)
+  // kind: 0 debris (bright blip), 1 rocket body (driven, heavy growl), 2 payload / other (soft bell)
   function note(t, { freq, gain = 0.15, kind = 0, pan = 0 }) {
-    if (!room()) return false;
+    if (!free()) return false;
     const shape = [
       { type: 'square', attack: 0.004, release: 0.22, fall: 0.5, cutoff: 3200 },
-      { type: 'triangle', attack: 0.008, release: 0.7, fall: 0.4, cutoff: 700 },
+      // a sawtooth through soft clipping, its filter closing as it falls: bright on the hit, dark after
+      { type: 'sawtooth', attack: 0.006, release: 0.6, fall: 0.5, cutoff: 2600, close: 500, drive: true },
       { type: 'triangle', attack: 0.008, release: 0.6, fall: 0.85, cutoff: 4000 },
     ][Math.min(kind, 2)];
+    const p = panner(pan), end = t + shape.attack + shape.release;
     const osc = ctx.createOscillator();
     osc.type = shape.type;
     osc.frequency.setValueAtTime(freq, t);
-    osc.frequency.exponentialRampToValueAtTime(freq * shape.fall, t + shape.attack + shape.release);
-    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = shape.cutoff;
+    osc.frequency.exponentialRampToValueAtTime(freq * shape.fall, end);
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(shape.cutoff, t);
+    if (shape.close) lp.frequency.exponentialRampToValueAtTime(shape.close, end);
     const env = envelope(t, gain, shape.attack, shape.release);
-    const p = panner(pan), end = t + shape.attack + shape.release;
-    osc.connect(lp); lp.connect(env); env.connect(p);
+    if (shape.drive) {
+      const ws = ctx.createWaveShaper(); ws.curve = grit; ws.oversample = '2x';
+      const pre = ctx.createGain(); pre.gain.value = 1.6; // how hard it hits the curve
+      osc.connect(pre); pre.connect(ws); ws.connect(lp);
+    } else osc.connect(lp);
+    lp.connect(env); env.connect(p);
     osc.start(t);
     track(osc, end + 0.05);
     if (kind === 1) {
-      // rocket body: weight from a sine an octave down that rings on past the note
+      // weight: a clean sine an octave down, held in pitch so it thumps rather than rumbles
       const sub = ctx.createOscillator(); sub.type = 'sine';
       sub.frequency.setValueAtTime(freq / 2, t);
-      sub.frequency.exponentialRampToValueAtTime(freq / 2 * shape.fall, end + 0.3);
-      const se = envelope(t, gain * 1.1, 0.012, shape.release + 0.3);
+      sub.frequency.exponentialRampToValueAtTime(freq / 2 * 0.8, end);
+      const se = envelope(t, gain * 0.9, 0.01, shape.release * 0.8);
       sub.connect(se); se.connect(p);
-      sub.start(t); track(sub, end + 0.35);
+      sub.start(t); track(sub, end + 0.05);
     }
     return true;
   }
 
   // A patter of droplets: the many reentries folded together in a dense moment
   function rain(t, { gain = 0.08, pan = 0, length = 0.4 } = {}) {
-    if (!room()) return false;
+    if (!free()) return false;
     const src = ctx.createBufferSource(); src.buffer = drops;
     const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 3000; bp.Q.value = 0.5;
     const env = ctx.createGain(); // swell in, hold, fall away
@@ -107,10 +126,11 @@ export function createAudioEngine() {
 
   // Collision and breakup events, by the 2019 categories (stand-ins for the recordings)
   function collision(t, kind) {
-    const thud = (f, peak, rel) => {
+    const thud = (f, peak, rel, wet = 0) => {
       const o = ctx.createOscillator(); o.type = 'sine';
       o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 0.5, t + rel);
       const e = envelope(t, peak, 0.005, rel); o.connect(e); e.connect(panner(0));
+      if (wet) { const w = ctx.createGain(); w.gain.value = wet; e.connect(w); w.connect(room); }
       o.start(t); track(o, t + rel + 0.1);
     };
     const burst = (cutoff, peak, rel, at = t) => {
@@ -126,13 +146,13 @@ export function createAudioEngine() {
       const e = envelope(t + 0.01, peak, 0.02, rel); s.connect(f); f.connect(e); e.connect(panner(0));
       s.start(t, Math.random()); track(s, t + rel + 0.1);
     };
-    if (kind === 'bump') thud(90, 0.5, 0.35);                                     // glancing contact
-    else if (kind === 'crash') {                                                  // impact
+    if (kind === 'bump') thud(90, 0.5, 0.35, 0.8);                                // glancing contact, in a room
+    else if (kind === 'crash') { burst(500, 0.6, 2.6); thud(45, 0.6, 1.8); }      // impact: the anti-satellite tests, a long low blast
+    else if (kind === 'explosion') {                                              // collision: a sharp hit
       thud(55, 0.8, 1.0); thud(130, 0.4, 0.22);   // weight, then a punch on top
       burst(2400, 0.5, 0.7);                      // the crunch
       hiss(5500, 0.22, 1.8);                      // the sizzle
     }
-    else if (kind === 'explosion') { burst(500, 0.6, 2.6); thud(45, 0.6, 1.8); }  // collision
     else for (let k = 0; k < 7; k++) burst(3500, 0.25, 0.12, t + k * 0.07 + Math.random() * 0.04); // fragmentation
   }
 
