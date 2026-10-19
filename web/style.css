@@ -118,7 +118,7 @@ h1 .soft { color: var(--text-secondary); font-style: italic; font-weight: 400; }
 .tiles {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
-  margin: 24px 0 28px;
+  margin: 28px 0 0;
 }
 .tile { padding: 12px 16px 14px; display: flex; flex-direction: column; border-left: 1px solid var(--grid-major); }
 .tile:first-child { border-left: 0; padding-left: 0; }
@@ -126,7 +126,7 @@ h1 .soft { color: var(--text-secondary); font-style: italic; font-weight: 400; }
 .tile .value { font-size: 28px; font-weight: 500; line-height: 1.2; }
 .tile .foot { color: var(--text-secondary); font-size: 15px; font-style: italic; }
 
-.chart-card { border-top: 1px solid var(--rule); padding-top: 10px; }
+.chart-card { border-top: 1px solid var(--rule); padding-top: 10px; margin-top: 24px; }
 .tabs { display: flex; gap: 22px; margin-bottom: 12px; }
 .tabs button {
   font: inherit; font-variant: small-caps; letter-spacing: .08em; font-size: 16px;
@@ -189,6 +189,8 @@ button.primary:hover { background: var(--grid); }
   border: 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--grid-major); border-radius: 0;
   font: inherit; font-size: 16px; font-style: italic; color: var(--text-secondary);
 }
+#main-wrap .disclosure { position: absolute; left: 0; right: 0; margin: 0; background: var(--surface-1); }
+#main-wrap .disclosure:hover { background: var(--grid); }
 .disclosure:hover { color: var(--text-primary); background: var(--grid); }
 .disclosure .count { color: var(--muted); font-style: normal; font-variant-numeric: lining-nums; }
 canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
@@ -214,6 +216,14 @@ canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
 .tooltip .row { color: var(--text-secondary); }
 
 .tables { margin-top: 22px; }
+.audition { margin: 0 0 10px; }
+.audition summary { cursor: pointer; color: var(--text-secondary); font-variant: small-caps; letter-spacing: .06em; }
+.aud-group { margin: 8px 0 4px; }
+.aud-h { margin: 0; font-style: italic; color: var(--text-secondary); }
+.aud-note { margin: 0 0 4px; color: var(--muted); font-size: 15px; }
+.aud-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.aud-row button { font: inherit; font-size: 15px; padding: 2px 9px; }
+.aud-row .n { color: var(--muted); font-variant-numeric: lining-nums; }
 .tables summary { cursor: pointer; color: var(--text-secondary); font-variant: small-caps; letter-spacing: .06em; }
 table { border-collapse: collapse; width: 100%; margin: 6px 0 16px; font-size: 15.5px; }
 /* wide tables scroll inside themselves on phones instead of widening the page */

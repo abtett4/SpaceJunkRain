@@ -10,7 +10,7 @@ import { YEAR } from '../util.js';
 let resolveExperience;
 export const earthExperience = new Promise((resolve) => { resolveExperience = resolve; });
 
-const DEFAULT_SEC_PER_YEAR = 3.1470588; // the Speed menu's default, the 2019 piece's tempo
+const DEFAULT_SEC_PER_YEAR = 3; // the Speed menu's default (was 3.147, the 2019 piece's tempo)
 const EARTH_SEC_PER_YEAR = YEAR * 86400 / DEFAULT_PLAYBACK_RATE; // 3 simulated hours per second
 
 export function createEarthSheet(db) {

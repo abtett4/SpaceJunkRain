@@ -110,13 +110,15 @@ export function createSourceSheet(db) {
   let appRef = null;
   function renderAggBtn() {
     aggBtn.setAttribute('aria-expanded', String(showAgg));
-    aggBtn.innerHTML = showAgg
-      ? '▾ Hide everything else'
-      : `▸ Everything else <span class="count">· ${fmtInt(aggTotal)} more reentries in ${AGG.length} rows</span>: ` +
-        'thousands of smaller breakups, spent rocket stages, Starlink and other satellites';
+    // the same words open or closed, so the banner keeps its height and place, like a summary
+    aggBtn.innerHTML = `${showAgg ? '▾' : '▸'} Everything else <span class="count">· ${fmtInt(aggTotal)} more reentries in ${AGG.length} rows</span>: ` +
+      'thousands of smaller breakups, spent rocket stages, Starlink and other satellites';
   }
   aggBtn.addEventListener('click', () => { showAgg = !showAgg; renderAggBtn(); appRef?.relayout(); });
   renderAggBtn();
+  // the banner wraps to more lines on a phone; lay the rows out again when its height changes
+  let aggH = 0;
+  new ResizeObserver(() => { if (aggBtn.offsetHeight && aggBtn.offsetHeight !== aggH) { aggH = aggBtn.offsetHeight; appRef?.relayout(); } }).observe(aggBtn);
 
   // the Highlight menu lists these rows, biggest first
   const famSel = document.getElementById('family');
@@ -150,12 +152,18 @@ export function createSourceSheet(db) {
       const narrow = app.narrow();
       // taller top margin: event symbols, then a row of year labels above the rows
       const M = { l: narrow ? 120 : 196, r: narrow ? 12 : 128, t: 52, b: 26 };
+      // The "Everything else" banner sits just under the named rows' year labels whether it's
+      // open or closed (like the Data tables summary); the folded rows open beneath it.
+      const AXIS = 26, btnH = aggBtn.offsetHeight;
       let y = M.t;
       laneY = LANES.map((ln, li) => {
         if (!laneShown(li)) return null;
-        if (ln.agg && !LANES[li - 1].agg) y += 30; // gap + heading before the aggregates
+        if (ln.agg && !LANES[li - 1].agg) y += AXIS + btnH + 10; // room for the banner
         const top = y; y += ln.h; return top;
       });
+      const named = laneY[lanes.length - 1] + lanes[lanes.length - 1].h;
+      aggBtn.style.top = `${named + AXIS}px`;
+      if (!showAgg) M.b = AXIS + btnH; // closed: the bottom axis sits under the named rows, the banner below it
       return { M, height: y + M.b };
     },
     layout(app) {
@@ -182,11 +190,6 @@ export function createSourceSheet(db) {
         const top = laneY[li], mid = top + ln.h / 2;
         const hl = state.family >= 0 && ln.fam === state.family;
         const hov = state.hover && state.hover.lane === li;
-        if (ln.agg && !LANES[li - 1].agg) {
-          ctx.font = FONT(15, 400, 'italic'); ctx.fillStyle = C.text2; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
-          ctx.fillText('Everything else', 0, top - 7);
-          ctx.strokeStyle = C.rule; ctx.beginPath(); ctx.moveTo(0, top - 2.5); ctx.lineTo(main.w, top - 2.5); ctx.stroke();
-        }
         if (hl || hov) { ctx.fillStyle = C.gridMajor; ctx.globalAlpha = 0.45; ctx.fillRect(0, top, main.w, ln.h); ctx.globalAlpha = 1; }
         // lifeline from launch to today; when zoomed it's cut at the plot edges and the
         // launch tick only shows if the launch is in view
@@ -288,7 +291,8 @@ export function createSourceSheet(db) {
       return true;
     },
     pointTip: (i) => objectTip(db, i),
-    // the folded "Everything else" rows stay silent until they're opened; they still count
-    audible: (i) => laneShown(laneOf[i]),
+    // the folded "Everything else" rows leave the monthly chart, the count and the sound until opened
+    counts: (i) => laneShown(laneOf[i]),
+    filtered: () => !showAgg,
   };
 }

@@ -36,6 +36,12 @@
   sheet, same axis, zoom and scrub; solar maxima labelled with Notes on. What you hear follows
   what's shown: folded "Everything else" rows are silent until opened (`audible(i)`), and the
   Highlight menu filters the sound as it does the totals.
+- Done: "Audition the voices" panel under the controls (`web/js/audio/audition.js`): each
+  collision kind, each named source's note (single, then a busy day), the three timbres, rain.
+  Folded "Everything else" now also leaves the monthly chart and the "down" count; its banner
+  stays put when opened. Speed default is a flat 3 s per year (was 3.147).
+- To tune: sources share pitches (10 scale steps for ~40 sources; e.g. Cosmos 1408 and
+  Mir are both A4). Consider a mapping from data (altitude, inclination) instead of the index.
 - Maybe: the sun as a sticky strip at the top of sheet 1 instead of (or as well as) the chart.
 
 ## Ideas (not started)

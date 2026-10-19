@@ -23,12 +23,6 @@
     <p class="lede">Each one is placed on the day it came down and traced back to the launch it came from. A single collision or anti-satellite test can keep debris raining down for decades, or clear out within months, depending on how high it happened.</p>
   </header>
 
-  <section class="tiles" aria-label="Summary">
-    <div class="tile"><span class="label">Biggest single source</span><span class="value" id="t-big">–</span><span class="foot" id="t-big-foot"></span></div>
-    <div class="tile"><span class="label">Fengyun-1C, still in orbit</span><span class="value" id="t-fy">–</span><span class="foot" id="t-fy-foot"></span></div>
-    <div class="tile"><span class="label">Busiest month</span><span class="value" id="t-peak">–</span><span class="foot" id="t-peak-foot"></span></div>
-  </section>
-
 
   <section class="chart-card">
     <div class="tabs" role="tablist" aria-label="Chart view">
@@ -50,7 +44,7 @@
       <label>Speed
         <select id="speed">
           <option value="1">1 s per year</option>
-          <option value="3.1470588" selected>3.1 s per year</option>
+          <option value="3" selected>3 s per year</option>
           <option value="10">10 s per year</option>
           <option value="30">30 s per year</option>
           <option value="105192">5 min per second · orbit detail</option>
@@ -210,8 +204,12 @@
       </div>
     </section>
 
-    <div class="canvas-wrap" id="main-wrap"><canvas id="main" aria-label="Reentries chart"></canvas></div>
-    <button type="button" class="disclosure" id="agg-toggle" aria-expanded="false" aria-controls="main-wrap" data-sheet-only="source" hidden></button>
+    <details class="audition">
+      <summary>Audition the voices</summary>
+      <div id="audition-body"></div>
+    </details>
+
+    <div class="canvas-wrap" id="main-wrap"><canvas id="main" aria-label="Reentries chart"></canvas><button type="button" class="disclosure" id="agg-toggle" aria-expanded="false" aria-controls="main-wrap" data-sheet-only="source" hidden></button></div>
     <h2 class="second sun-only">Sunspots per month</h2>
     <div class="canvas-wrap short sun sun-only"><canvas id="sun" aria-label="Sunspots per month, NOAA SWPC"></canvas></div>
     <h2 class="second">Reentries per month</h2>
@@ -227,6 +225,12 @@
       <div><span class="k">Scale</span>1 dot = 1 object</div>
       <div><span class="k">Drawn by</span>A. Tett · Earth view T. Griffith</div>
     </div>
+  </section>
+
+  <section class="tiles" aria-label="Summary">
+    <div class="tile"><span class="label">Biggest single source</span><span class="value" id="t-big">–</span><span class="foot" id="t-big-foot"></span></div>
+    <div class="tile"><span class="label">Fengyun-1C, still in orbit</span><span class="value" id="t-fy">–</span><span class="foot" id="t-fy-foot"></span></div>
+    <div class="tile"><span class="label">Busiest month</span><span class="value" id="t-peak">–</span><span class="foot" id="t-peak-foot"></span></div>
   </section>
 
   <details class="tables">

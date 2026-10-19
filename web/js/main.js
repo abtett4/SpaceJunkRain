@@ -11,6 +11,7 @@ import { createEarthSheet } from './sheets/earth.js';
 import { createAudioEngine } from './audio/engine.js';
 import { mountSonification } from './audio/sonify.js';
 import { mountOrgan } from './audio/organ.js';
+import { mountAudition } from './audio/audition.js';
 import { mountSunChart } from './sunchart.js';
 
 // canvas text needs the web font loaded first; don't wait long if it's offline
@@ -40,16 +41,19 @@ else document.querySelectorAll('.sun-only').forEach((el) => { el.hidden = true; 
 
 // sound: off until the visitor turns it on (browsers only allow audio after a click)
 const engine = createAudioEngine();
-mountSonification(app, db, engine);
+const sonify = mountSonification(app, db, engine);
 const organ = solar ? mountOrgan(app, engine, solar) : null;
 const organBox = document.getElementById('organ');
 organBox.addEventListener('change', async () => organ?.setEnabled(organBox.checked));
 const soundBtn = document.getElementById('sound');
-soundBtn.addEventListener('click', async () => {
-  const on = soundBtn.getAttribute('aria-pressed') !== 'true';
+async function setSound(on) {
   if (on) await engine.enable(); else await engine.disable();
   if (on) organ?.resume();
   soundBtn.setAttribute('aria-pressed', String(on && engine.enabled));
   soundBtn.textContent = on && engine.enabled ? '♪ Sound on' : '♪ Sound off';
-});
+  return engine.enabled;
+}
+soundBtn.addEventListener('click', () => setSound(soundBtn.getAttribute('aria-pressed') !== 'true'));
+// auditioning a voice turns the sound on, so the switch always says what you'll hear
+mountAudition(db, engine, sonify, () => engine.enabled || setSound(true));
 document.getElementById('volume').addEventListener('input', (e) => engine.setVolume(+e.target.value));
