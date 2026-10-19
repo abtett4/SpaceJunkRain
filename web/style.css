@@ -18,8 +18,8 @@
   --series-1: #1f5a9e;           /* Prussian blue */
   --series-2: #c24a1c;           /* vermilion */
   --series-3: #139470;           /* viridian */
+  --series-4: #6d1dcd;           /* violet: the one accidental collision */
   --series-unknown: #877e6f;
-  --pre: rgba(135, 126, 111, 0.55);
   --dim: rgba(135, 126, 111, 0.16);
   --hist: #5a5146;
   --serif: "EB Garamond", Garamond, "Iowan Old Style", Georgia, serif;
@@ -43,8 +43,8 @@
     --series-1: #5b8ff0;
     --series-2: #d27436;
     --series-3: #21a37a;
+    --series-4: #d8b4fe;
     --series-unknown: #8198bb;
-    --pre: rgba(129, 152, 187, 0.5);
     --dim: rgba(129, 152, 187, 0.16);
     --hist: #b9c7dc;
   }
@@ -67,8 +67,8 @@
   --series-1: #5b8ff0;
   --series-2: #d27436;
   --series-3: #21a37a;
+  --series-4: #d8b4fe;
   --series-unknown: #8198bb;
-  --pre: rgba(129, 152, 187, 0.5);
   --dim: rgba(129, 152, 187, 0.16);
   --hist: #b9c7dc;
 }
