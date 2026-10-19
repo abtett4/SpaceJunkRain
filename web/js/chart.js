@@ -19,7 +19,7 @@ export function createApp(db) {
   // One clock for every view (and, later, the sound): Tyler Griffith's SimulationClock.
   // The playhead, play state and speed are views onto it.
   const toMs = (day) => EPOCH_MS + day * DAY_MS, toDay = (ms) => (ms - EPOCH_MS) / DAY_MS;
-  const clock = new SimulationClock({ minMs: toMs(X_MIN), maxMs: toMs(TIME_END), rate: YEAR * 86400 / 3.1470588 });
+  const clock = new SimulationClock({ minMs: toMs(X_MIN), maxMs: toMs(TIME_END), rate: YEAR * 86400 / 3 });
   const state = {
     get playhead() { return toDay(clock.nowMs); },
     set playhead(day) { clock.seek(toMs(day)); },

@@ -33,7 +33,7 @@ web/js/main.js           start-up: load data, register sheets in tab order
 web/js/chart.js          shared core: canvases, zoomable time axis, monthly chart,
                          collision markers, playback, tooltips, scrubbing
 web/js/sunchart.js       sunspots per month (NOAA SWPC), a strip on the shared time axis
-web/js/audio/            the sonification: engine, timeline voice, the Sun organ
+web/js/audio/            the sonification: engine, timeline voice, the Sun organ, the audition panel
 web/js/util.js           dates, formatting, names, constants (no DOM, no state)
 web/js/theme.js          canvas colours from the CSS tokens; paper / blueprint switch
 web/js/page.js           headline, summary cards, credits, shared data tables
@@ -75,8 +75,8 @@ The sheet object (only the first group is required):
 | `enter(app)`, `leave(app)` | called when the sheet is shown or hidden |
 | `drawUnder(app)` | draw behind the dots (row labels, y-axis ticks) |
 | `drawNotes(app)` | draw notes on the plotting field; only called when Notes is on |
-| `audible(i)` | false to keep object `i` out of the sonification while still counting it (e.g. folded rows) |
-| `counts(i)` | false to leave object `i` out of the monthly chart and the "down" count |
+| `audible(i)` | false to keep object `i` out of the sonification while still counting it |
+| `counts(i)` | false to leave object `i` out of the monthly chart, the "down" count and the sound (e.g. sheet 2's type filters, sheet 1's folded rows) |
 | `filtered()` | true when your sheet hides part of the catalogue (hides whole-catalogue notes) |
 | `hoverAt(app, x, y)`, `pointerDown(app, x, y)` | your own hover targets and clicks; return `null`/`false` to let the core handle them |
 | `drawEventMark(app, e, x)`, `eventHitY(app, e, y)` | extra collision-marker drawing, and where it can be hovered |

@@ -21,6 +21,9 @@ export function mountSonification(app, db, engine) {
   const freqOf = (f, k) => BASE[k] * 2 ** (STEPS[f % STEPS.length] / 12);
   const panOf = (f) => (hash01(f + 1) * 2 - 1) * 0.7;
   let lastReal = null;
+  // the same voice the timeline uses for a group of n same-day reentries, sounded now
+  const voice = (f, k, n = 1) => engine.note(engine.now + 0.02,
+    { freq: freqOf(f, k), gain: Math.min(0.32, 0.12 * (1 + Math.log2(n))), kind: k, pan: panOf(f) });
 
   app.clock.subscribe(({ reason, previousMs, nowMs }) => {
     if (reason === 'seek' || reason === 'pause') { engine.cancelAll(); lastReal = null; return; }
@@ -53,4 +56,6 @@ export function mountSonification(app, db, engine) {
     // collision and breakup markers
     for (const e of events) if (e.t > prev && e.t <= now) engine.collision(at(e.t), e.kind);
   });
+
+  return { voice, freqOf, panOf };
 }
