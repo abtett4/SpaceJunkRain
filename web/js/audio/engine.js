@@ -6,7 +6,7 @@
 const MAX_VOICES = 48; // a ceiling on overlapping sounds, so dense years stay listenable
 
 export function createAudioEngine() {
-  let ctx = null, master = null, out = null, noise = null;
+  let ctx = null, master = null, out = null, noise = null, drops = null;
   let volume = 0.7;
   const live = new Set(); // sources started or scheduled and not yet ended
 
@@ -22,6 +22,15 @@ export function createAudioEngine() {
     noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const d = noise.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    // two seconds of rain: about 1,500 droplets a second, each a few milliseconds of decaying
+    // noise at a random level, so dense moments patter instead of hiss
+    drops = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+    const r = drops.getChannelData(0), sr = ctx.sampleRate;
+    for (let k = 0; k < 3000; k++) {
+      const at = Math.floor(Math.random() * (r.length - sr * 0.01)), len = Math.floor(sr * (0.001 + Math.random() * 0.004));
+      const amp = 0.2 + 0.8 * Math.random() ** 2;
+      for (let j = 0; j < len; j++) r[at + j] += amp * (Math.random() * 2 - 1) * Math.exp(-5 * j / len);
+    }
   }
 
   // keep track of every source so a seek or pause can silence what's queued
@@ -55,7 +64,7 @@ export function createAudioEngine() {
     if (!room()) return false;
     const shape = [
       { type: 'square', attack: 0.004, release: 0.22, fall: 0.5, cutoff: 3200 },
-      { type: 'sine', attack: 0.006, release: 0.45, fall: 0.35, cutoff: 900 },
+      { type: 'triangle', attack: 0.008, release: 0.7, fall: 0.4, cutoff: 700 },
       { type: 'triangle', attack: 0.008, release: 0.6, fall: 0.85, cutoff: 4000 },
     ][Math.min(kind, 2)];
     const osc = ctx.createOscillator();
@@ -64,20 +73,34 @@ export function createAudioEngine() {
     osc.frequency.exponentialRampToValueAtTime(freq * shape.fall, t + shape.attack + shape.release);
     const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = shape.cutoff;
     const env = envelope(t, gain, shape.attack, shape.release);
-    osc.connect(lp); lp.connect(env); env.connect(panner(pan));
+    const p = panner(pan), end = t + shape.attack + shape.release;
+    osc.connect(lp); lp.connect(env); env.connect(p);
     osc.start(t);
-    track(osc, t + shape.attack + shape.release + 0.05);
+    track(osc, end + 0.05);
+    if (kind === 1) {
+      // rocket body: weight from a sine an octave down that rings on past the note
+      const sub = ctx.createOscillator(); sub.type = 'sine';
+      sub.frequency.setValueAtTime(freq / 2, t);
+      sub.frequency.exponentialRampToValueAtTime(freq / 2 * shape.fall, end + 0.3);
+      const se = envelope(t, gain * 1.1, 0.012, shape.release + 0.3);
+      sub.connect(se); se.connect(p);
+      sub.start(t); track(sub, end + 0.35);
+    }
     return true;
   }
 
-  // A soft burst of filtered noise: the many reentries folded together in a dense moment
-  function rain(t, { gain = 0.08, pan = 0, length = 0.25 } = {}) {
+  // A patter of droplets: the many reentries folded together in a dense moment
+  function rain(t, { gain = 0.08, pan = 0, length = 0.4 } = {}) {
     if (!room()) return false;
-    const src = ctx.createBufferSource(); src.buffer = noise;
-    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2400; bp.Q.value = 0.7;
-    const env = envelope(t, gain, 0.01, length);
+    const src = ctx.createBufferSource(); src.buffer = drops;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 3000; bp.Q.value = 0.5;
+    const env = ctx.createGain(); // swell in, hold, fall away
+    env.gain.setValueAtTime(0.0001, t);
+    env.gain.exponentialRampToValueAtTime(Math.max(gain, 0.0002), t + 0.04);
+    env.gain.setValueAtTime(Math.max(gain, 0.0002), t + length * 0.5);
+    env.gain.exponentialRampToValueAtTime(0.0001, t + length);
     src.connect(bp); bp.connect(env); env.connect(panner(pan));
-    src.start(t, Math.random());
+    src.start(t, Math.random() * 1.4);
     track(src, t + length + 0.05);
     return true;
   }
@@ -96,8 +119,19 @@ export function createAudioEngine() {
       const e = envelope(at, peak, 0.004, rel); s.connect(f); f.connect(e); e.connect(panner(0));
       s.start(at, Math.random()); track(s, at + rel + 0.1);
     };
+    // high-passed noise that hangs on after a hit: the sizzle
+    const hiss = (cutoff, peak, rel) => {
+      const s = ctx.createBufferSource(); s.buffer = noise;
+      const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = cutoff;
+      const e = envelope(t + 0.01, peak, 0.02, rel); s.connect(f); f.connect(e); e.connect(panner(0));
+      s.start(t, Math.random()); track(s, t + rel + 0.1);
+    };
     if (kind === 'bump') thud(90, 0.5, 0.35);                                     // glancing contact
-    else if (kind === 'crash') { burst(1800, 0.45, 0.8); thud(70, 0.5, 0.6); }    // impact
+    else if (kind === 'crash') {                                                  // impact
+      thud(55, 0.8, 1.0); thud(130, 0.4, 0.22);   // weight, then a punch on top
+      burst(2400, 0.5, 0.7);                      // the crunch
+      hiss(5500, 0.22, 1.8);                      // the sizzle
+    }
     else if (kind === 'explosion') { burst(500, 0.6, 2.6); thud(45, 0.6, 1.8); }  // collision
     else for (let k = 0; k < 7; k++) burst(3500, 0.25, 0.12, t + k * 0.07 + Math.random() * 0.04); // fragmentation
   }

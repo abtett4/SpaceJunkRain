@@ -40,8 +40,10 @@
   collision kind, each named source's note (single, then a busy day), the three timbres, rain.
   Folded "Everything else" now also leaves the monthly chart and the "down" count; its banner
   stays put when opened. Speed default is a flat 3 s per year (was 3.147).
-- To tune: sources share pitches (10 scale steps for ~40 sources; e.g. Cosmos 1408 and
-  Mir are both A4). Consider a mapping from data (altitude, inclination) instead of the index.
+- Done: pitch slots. The 34 named sources each get one of 15 pentatonic steps (three octaves)
+  x 3 stereo places, biggest first: no two share both. Impact has more weight and a sizzle
+  tail; rocket bodies have a sub-octave (E2 base); rain is a patter of droplets.
+- Maybe: map pitch from data (altitude, inclination) instead of size rank.
 - Maybe: the sun as a sticky strip at the top of sheet 1 instead of (or as well as) the chart.
 
 ## Ideas (not started)

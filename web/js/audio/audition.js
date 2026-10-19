@@ -66,7 +66,7 @@ export function mountAudition(db, engine, sonify, ensureSound) {
   // the three timbres on one pitch, and the rain
   const ty = group('Timbres and rain', 'The three object-type voices, and the noise that stands in for crowded moments.');
   TYPE_LABELS.slice(0, 3).forEach((label, k) => ty.appendChild(button(label, '', () =>
-    engine.note(engine.now + 0.02, { freq: [440, 110, 220][k], gain: 0.2, kind: k, pan: 0 }))));
+    engine.note(engine.now + 0.02, { freq: [440, 82.5, 220][k], gain: 0.2, kind: k, pan: 0 }))));
   ty.appendChild(button('Rain', 'what folds in when a moment is too crowded for separate notes',
-    () => [0, 0.12, 0.24].forEach((d) => engine.rain(engine.now + 0.02 + d, { gain: 0.12 }))));
+    () => engine.rain(engine.now + 0.02, { gain: 0.16, length: 1.2 })));
 }
